@@ -16,7 +16,7 @@ import (
 
 	tlsutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/tls"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/metadata"
 )
 
@@ -44,7 +44,7 @@ func (e KongGatewayUnsupportedVersionError) Error() string {
 
 // NewKongAPIClient returns a Kong API client for a given root API URL.
 // It ensures that proper User-Agent is set. Do not use kong.NewClient directly.
-func NewKongAPIClient(adminURL string, kongAdminAPIConfig config.AdminAPIClientConfig, kongAdminToken string) (*kong.Client, error) {
+func NewKongAPIClient(adminURL string, kongAdminAPIConfig managercfg.AdminAPIClientConfig, kongAdminToken string) (*kong.Client, error) {
 	httpClient, err := makeHTTPClient(kongAdminAPIConfig, kongAdminToken)
 	if err != nil {
 		return nil, err
@@ -63,7 +63,7 @@ func NewKongAPIClient(adminURL string, kongAdminAPIConfig config.AdminAPIClientC
 // or KongGatewayUnsupportedVersionError if it can't check Kong Gateway's version or it is not >= 3.4.1.
 // If the workspace does not already exist, NewKongClientForWorkspace will create it.
 func NewKongClientForWorkspace(
-	ctx context.Context, adminURL string, wsName string, kongAdminAPIConfig config.AdminAPIClientConfig, kongAdminToken string,
+	ctx context.Context, adminURL string, wsName string, kongAdminAPIConfig managercfg.AdminAPIClientConfig, kongAdminToken string,
 ) (*Client, error) {
 	// Create the base client, and if no workspace was provided then return that.
 	client, err := NewKongAPIClient(adminURL, kongAdminAPIConfig, kongAdminToken)
@@ -130,7 +130,7 @@ const (
 )
 
 // makeHTTPClient returns an HTTP client with the specified mTLS/headers configuration.
-func makeHTTPClient(opts config.AdminAPIClientConfig, kongAdminToken string) (*http.Client, error) {
+func makeHTTPClient(opts managercfg.AdminAPIClientConfig, kongAdminToken string) (*http.Client, error) {
 	var tlsConfig tls.Config
 
 	if opts.TLSSkipVerify {

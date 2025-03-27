@@ -34,7 +34,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/builder"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/scheme"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
 )
@@ -1179,7 +1179,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		require.Len(t, state.Services, 1, "expected one service to be rendered")
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Service.Tags = nil
+		state.Services[0].Tags = nil
 		assert.Equal(t, kong.Service{
 			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
@@ -1195,7 +1195,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		require.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Routes[0].Route.Tags = nil
+		state.Services[0].Routes[0].Tags = nil
 		assert.Equal(t, kong.Route{
 			Name:              kong.String("default.bar.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(true),
@@ -1268,7 +1268,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		require.Len(t, state.Services, 1, "expected one service to be rendered")
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Service.Tags = nil
+		state.Services[0].Tags = nil
 		assert.Equal(t, kong.Service{
 			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
@@ -1284,7 +1284,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		require.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Routes[0].Route.Tags = nil
+		state.Services[0].Routes[0].Tags = nil
 		assert.Equal(t, kong.Route{
 			Name:              kong.String("default.bar.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
@@ -1357,7 +1357,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		require.Len(t, state.Services, 1, "expected one service to be rendered")
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Service.Tags = nil
+		state.Services[0].Tags = nil
 		assert.Equal(t, kong.Service{
 			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
@@ -1372,7 +1372,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 		}, state.Services[0].Service)
 
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Routes[0].Route.Tags = nil
+		state.Services[0].Routes[0].Tags = nil
 		assert.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
 		assert.Equal(t, kong.Route{
 			Name:                    kong.String("default.bar.foo-svc.example.com.80"),
@@ -1449,7 +1449,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 			require.Len(t, state.Services, 1, "expected one service to be rendered")
 			// Translator tests do not check tags, these are tested independently
-			state.Services[0].Service.Tags = nil
+			state.Services[0].Tags = nil
 			assert.Equal(t, kong.Service{
 				Name:           kong.String("default.foo-svc.80"),
 				Host:           kong.String("foo-svc.default.80.svc"),
@@ -1465,7 +1465,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 			require.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
 			// Translator tests do not check tags, these are tested independently
-			state.Services[0].Routes[0].Route.Tags = nil
+			state.Services[0].Routes[0].Tags = nil
 			assert.Equal(t, kong.Route{
 				Name:              kong.String("default.bar.foo-svc.example.com.80"),
 				StripPath:         kong.Bool(false),
@@ -1538,7 +1538,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		require.Len(t, state.Services, 1, "expected one service to be rendered")
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Service.Tags = nil
+		state.Services[0].Tags = nil
 		assert.Equal(t, kong.Service{
 			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
@@ -1554,7 +1554,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		require.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Routes[0].Route.Tags = nil
+		state.Services[0].Routes[0].Tags = nil
 		assert.Equal(t, kong.Route{
 			Name:              kong.String("default.bar.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
@@ -1629,7 +1629,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		require.Len(t, state.Services, 1, "expected one service to be rendered")
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Service.Tags = nil
+		state.Services[0].Tags = nil
 		assert.Equal(t, kong.Service{
 			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
@@ -1645,7 +1645,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		require.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Routes[0].Route.Tags = nil
+		state.Services[0].Routes[0].Tags = nil
 		assert.Equal(t, kong.Route{
 			Name:              kong.String("default.bar.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
@@ -1719,7 +1719,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		require.Len(t, state.Services, 1, "expected one service to be rendered")
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Service.Tags = nil
+		state.Services[0].Tags = nil
 		assert.Equal(t, kong.Service{
 			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
@@ -1735,7 +1735,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		require.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Routes[0].Route.Tags = nil
+		state.Services[0].Routes[0].Tags = nil
 		assert.Equal(t, kong.Route{
 			Name:              kong.String("default.bar.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
@@ -1809,7 +1809,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		require.Len(t, state.Services, 1, "expected one service to be rendered")
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Service.Tags = nil
+		state.Services[0].Tags = nil
 		assert.Equal(t, kong.Service{
 			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
@@ -1825,7 +1825,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		require.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Routes[0].Route.Tags = nil
+		state.Services[0].Routes[0].Tags = nil
 		assert.Equal(t, kong.Route{
 			Name:              kong.String("default.bar.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
@@ -1900,7 +1900,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		assert.Len(t, state.Services, 1, "expected one service to be rendered")
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Service.Tags = nil
+		state.Services[0].Tags = nil
 		assert.Equal(t, kong.Service{
 			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
@@ -1916,7 +1916,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		assert.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Routes[0].Route.Tags = nil
+		state.Services[0].Routes[0].Tags = nil
 		assert.Equal(t, kong.Route{
 			Name:              kong.String("default.route-buffering-test.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
@@ -1990,7 +1990,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		assert.Len(t, state.Services, 1, "expected one service to be rendered")
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Service.Tags = nil
+		state.Services[0].Tags = nil
 		assert.Equal(t, kong.Service{
 			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
@@ -2006,7 +2006,7 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		assert.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Routes[0].Route.Tags = nil
+		state.Services[0].Routes[0].Tags = nil
 		assert.Equal(t, kong.Route{
 			Name:              kong.String("default.route-buffering-test.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
@@ -2081,8 +2081,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 		kongTrue := kong.Bool(true)
 		assert.Len(t, state.Services, 1, "expected one service to be rendered")
 		assert.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
-		assert.Equal(t, kongTrue, state.Services[0].Routes[0].Route.RequestBuffering)
-		assert.Equal(t, kongTrue, state.Services[0].Routes[0].Route.ResponseBuffering)
+		assert.Equal(t, kongTrue, state.Services[0].Routes[0].RequestBuffering)
+		assert.Equal(t, kongTrue, state.Services[0].Routes[0].ResponseBuffering)
 	})
 }
 
@@ -2266,7 +2266,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 
 		assert.Len(t, state.Services, 1, "expected one service to be rendered")
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Service.Tags = nil
+		state.Services[0].Tags = nil
 		assert.Equal(t, kong.Service{
 			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
@@ -2282,7 +2282,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 
 		assert.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Routes[0].Route.Tags = nil
+		state.Services[0].Routes[0].Tags = nil
 		assert.Equal(t, kong.Route{
 			Name:              kong.String("default.bar.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
@@ -2358,7 +2358,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 
 		assert.Len(t, state.Services, 1, "expected one service to be rendered")
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Service.Tags = nil
+		state.Services[0].Tags = nil
 		assert.Equal(t, kong.Service{
 			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
@@ -2374,7 +2374,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 
 		assert.Len(t, state.Upstreams, 1, "expected one upstream to be rendered")
 		// Translator tests do not check tags, these are tested independently
-		state.Upstreams[0].Upstream.Tags = nil
+		state.Upstreams[0].Tags = nil
 		assert.Equal(t, kong.Upstream{
 			Name:       kong.String("foo-svc.default.80.svc"),
 			HostHeader: kong.String("example.com"),
@@ -2382,7 +2382,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 
 		assert.Len(t, state.Services[0].Routes, 1, "expected one route to be rendered")
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Routes[0].Route.Tags = nil
+		state.Services[0].Routes[0].Tags = nil
 		assert.Equal(t, kong.Route{
 			Name:              kong.String("default.bar.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
@@ -2456,7 +2456,7 @@ func TestKongServiceAnnotations(t *testing.T) {
 
 		require.Len(t, state.Services, 1, "expected one service to be rendered")
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Service.Tags = nil
+		state.Services[0].Tags = nil
 		assert.Equal(t, kong.Service{
 			Name:           kong.String("default.foo-svc.80"),
 			Host:           kong.String("foo-svc.default.80.svc"),
@@ -3143,11 +3143,11 @@ func TestTranslatorSNI(t *testing.T) {
 		// in deterministic order.
 		{
 			route, ok := lo.Find(state.Services[0].Routes, func(r kongstate.Route) bool {
-				return r.Route.ID != nil && *r.Route.ID == "99296cc1-ab30-59f8-b204-7b1a45e64cac"
+				return r.ID != nil && *r.ID == "99296cc1-ab30-59f8-b204-7b1a45e64cac"
 			})
 			if assert.True(t, ok) {
 				// Translator tests do not check tags, these are tested independently
-				route.Route.Tags = nil
+				route.Tags = nil
 				assert.Equal(t, kong.Route{
 					Name:              kong.String("default.foo.foo-svc.example.com.80"),
 					StripPath:         kong.Bool(false),
@@ -3164,11 +3164,11 @@ func TestTranslatorSNI(t *testing.T) {
 		}
 		{
 			route, ok := lo.Find(state.Services[0].Routes, func(r kongstate.Route) bool {
-				return r.Route.ID != nil && *r.Route.ID == "cbdfe994-15d4-5336-909a-e302ed66e19a"
+				return r.ID != nil && *r.ID == "cbdfe994-15d4-5336-909a-e302ed66e19a"
 			})
 			if assert.True(t, ok) {
 				// Translator tests do not check tags, these are tested independently
-				route.Route.Tags = nil
+				route.Tags = nil
 				assert.Equal(t, kong.Route{
 					Name:              kong.String("default.foo.foo-svc._.example.com.80"),
 					StripPath:         kong.Bool(false),
@@ -3233,7 +3233,7 @@ func TestTranslatorSNI(t *testing.T) {
 		state := result.KongState
 		require.NotNil(t, state)
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Routes[0].Route.Tags = nil
+		state.Services[0].Routes[0].Tags = nil
 		assert.Equal(t, kong.Route{
 			Name:              kong.String("default.foo.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
@@ -3300,7 +3300,7 @@ func TestTranslatorHostAliases(t *testing.T) {
 		state := result.KongState
 		require.NotNil(t, state)
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Routes[0].Route.Tags = nil
+		state.Services[0].Routes[0].Tags = nil
 		assert.Equal(t, kong.Route{
 			Name:              kong.String("default.foo.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
@@ -3361,7 +3361,7 @@ func TestTranslatorHostAliases(t *testing.T) {
 		state := result.KongState
 		require.NotNil(t, state)
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Routes[0].Route.Tags = nil
+		state.Services[0].Routes[0].Tags = nil
 		assert.Equal(t, kong.Route{
 			Name:              kong.String("default.foo.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
@@ -3423,7 +3423,7 @@ func TestTranslatorHostAliases(t *testing.T) {
 		state := result.KongState
 		require.NotNil(t, state)
 		// Translator tests do not check tags, these are tested independently
-		state.Services[0].Routes[0].Route.Tags = nil
+		state.Services[0].Routes[0].Tags = nil
 		assert.Equal(t, kong.Route{
 			Name:              kong.String("default.foo.foo-svc.example.com.80"),
 			StripPath:         kong.Bool(false),
@@ -4774,7 +4774,7 @@ func TestNewFeatureFlags(t *testing.T) {
 		{
 			name: "ServiceFacade enabled and enterprise edition",
 			featureGates: map[string]bool{
-				config.KongServiceFacadeFeature: true,
+				managercfg.KongServiceFacadeFeature: true,
 			},
 			enterpriseEdition: true,
 			expectedFeatureFlags: FeatureFlags{

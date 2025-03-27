@@ -351,8 +351,8 @@ func updateTargetMap(targetMap map[string]kongstate.Target, t kongstate.Target) 
 	// instead requires t.Target.Target. For consistency, everything below explicitly includes the nested object
 	// name, so t.Target.Weight instead of t.Weight.
 	if existing, ok := targetMap[*t.Target.Target]; ok {
-		sum := targetWeightOrDefault(existing.Target.Weight) + targetWeightOrDefault(t.Target.Weight)
-		existing.Target.Weight = &sum
+		sum := targetWeightOrDefault(existing.Weight) + targetWeightOrDefault(t.Weight)
+		existing.Weight = &sum
 		targetMap[*t.Target.Target] = existing
 	} else {
 		targetMap[*t.Target.Target] = t

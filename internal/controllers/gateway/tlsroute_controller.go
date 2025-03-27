@@ -123,7 +123,7 @@ func (r *TLSRouteReconciler) listTLSRoutesForGatewayClass(ctx context.Context, o
 
 	// map all Gateway objects
 	gatewayList := gatewayapi.GatewayList{}
-	if err := r.Client.List(ctx, &gatewayList); err != nil {
+	if err := r.List(ctx, &gatewayList); err != nil {
 		r.Log.Error(err, "Failed to list gateway objects from the cached client")
 		return nil
 	}
@@ -153,7 +153,7 @@ func (r *TLSRouteReconciler) listTLSRoutesForGatewayClass(ctx context.Context, o
 
 	// map all TLSRoute objects
 	tlsrouteList := gatewayapi.TLSRouteList{}
-	if err := r.Client.List(ctx, &tlsrouteList); err != nil {
+	if err := r.List(ctx, &tlsrouteList); err != nil {
 		r.Log.Error(err, "Failed to list tlsroute objects from the cached client")
 		return nil
 	}
@@ -220,7 +220,7 @@ func (r *TLSRouteReconciler) listTLSRoutesForGateway(ctx context.Context, obj cl
 
 	// map all TLSRoute objects
 	tlsrouteList := gatewayapi.TLSRouteList{}
-	if err := r.Client.List(ctx, &tlsrouteList); err != nil {
+	if err := r.List(ctx, &tlsrouteList); err != nil {
 		r.Log.Error(err, "Failed to list tlsroute objects from the cached client")
 		return nil
 	}

@@ -87,13 +87,13 @@ spec:
 	assert.True(t, exists)
 	gotSvc, ok := got.(*corev1.Service)
 	require.True(t, ok)
-	require.NotEmpty(t, gotSvc.TypeMeta.Kind)
+	require.NotEmpty(t, gotSvc.Kind)
 	got, exists, err = cs.Get(ing)
 	assert.NoError(t, err)
 	assert.True(t, exists)
 	gotIng, ok := got.(*netv1.Ingress)
 	require.True(t, ok)
-	require.NotEmpty(t, gotIng.TypeMeta.Kind)
+	require.NotEmpty(t, gotIng.Kind)
 }
 
 func TestGetIngressClassHandling(t *testing.T) {

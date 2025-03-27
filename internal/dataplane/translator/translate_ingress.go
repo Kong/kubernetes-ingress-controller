@@ -16,7 +16,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 func (t *Translator) ingressRulesFromIngressV1() ingressRules {
@@ -138,7 +138,7 @@ func translateIngressDefaultBackendResource(
 	}
 	if !features.KongServiceFacade {
 		failuresCollector.PushResourceFailure(
-			fmt.Sprintf("default backend: KongServiceFacade is not enabled, please set the %q feature gate to 'true' to enable it", config.KongServiceFacadeFeature),
+			fmt.Sprintf("default backend: KongServiceFacade is not enabled, please set the %q feature gate to 'true' to enable it", managercfg.KongServiceFacadeFeature),
 			&ingress,
 		)
 		return kongstate.Service{}, false
@@ -261,9 +261,9 @@ func translateIngressDefaultBackendRoute(ingress *netv1.Ingress, tags []*string,
 		)
 		atc.ApplyExpression(&r.Route, catchAllMatcher, subtranslator.IngressDefaultBackendPriority)
 	} else {
-		r.Route.Paths = kong.StringSlice("/")
-		r.Route.Protocols = kong.StringSlice("http", "https")
-		r.Route.RegexPriority = kong.Int(0)
+		r.Paths = kong.StringSlice("/")
+		r.Protocols = kong.StringSlice("http", "https")
+		r.RegexPriority = kong.Int(0)
 	}
 	return r
 }

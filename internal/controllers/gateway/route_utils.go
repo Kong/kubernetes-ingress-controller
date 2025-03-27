@@ -157,7 +157,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 			if parentRef.Namespace != nil {
 				parentNamespace = string(*parentRef.Namespace)
 			}
-			if !(parentNamespace == gatewayToReconcile.Namespace && string(parentRef.Name) == gatewayToReconcile.Name) {
+			if parentNamespace != gatewayToReconcile.Namespace || string(parentRef.Name) != gatewayToReconcile.Name {
 				continue
 			}
 		}
@@ -382,7 +382,7 @@ func routeTypeMatchesListenerType[T gatewayapi.RouteT](route T, listener gateway
 		// HTTPRoutes support Terminate only
 		// Note: this is a guess we are doing as the upstream documentation is unclear at the moment.
 		// see https://github.com/kubernetes-sigs/gateway-api/issues/1474
-		if !(listener.Protocol == gatewayapi.HTTPProtocolType || listener.Protocol == gatewayapi.HTTPSProtocolType) {
+		if listener.Protocol != gatewayapi.HTTPProtocolType && listener.Protocol != gatewayapi.HTTPSProtocolType {
 			return false
 		}
 		if listener.TLS != nil && *listener.TLS.Mode != gatewayapi.TLSModeTerminate {

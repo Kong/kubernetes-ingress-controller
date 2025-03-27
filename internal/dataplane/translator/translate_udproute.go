@@ -58,7 +58,7 @@ func (t *Translator) ingressRulesFromUDPRoute(result *ingressRules, udproute *ga
 		return subtranslator.ErrRouteValidationNoRules
 	}
 
-	gwPorts := t.getGatewayListeningPorts(udproute.Namespace, gatewayapi.UDPProtocolType, spec.CommonRouteSpec.ParentRefs)
+	gwPorts := t.getGatewayListeningPorts(udproute.Namespace, gatewayapi.UDPProtocolType, spec.ParentRefs)
 	// Each rule may represent a different set of backend services that will be accepting
 	// traffic, so we make separate routes and Kong services for every present rule.
 	for ruleNumber, rule := range spec.Rules {
@@ -76,8 +76,8 @@ func (t *Translator) ingressRulesFromUDPRoute(result *ingressRules, udproute *ga
 		service.Routes = append(service.Routes, routes...)
 
 		// cache the service to avoid duplicates in further loop iterations
-		result.ServiceNameToServices[*service.Service.Name] = service
-		result.ServiceNameToParent[*service.Service.Name] = udproute
+		result.ServiceNameToServices[*service.Name] = service
+		result.ServiceNameToParent[*service.Name] = udproute
 	}
 
 	return nil

@@ -23,7 +23,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/nodes"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	testkonnect "github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers/konnect"
 )
 
@@ -198,10 +198,10 @@ func createKonnectClientSecretAndConfigMap(ctx context.Context, t *testing.T, en
 func createKonnectAdminAPIClient(t *testing.T, rgID, cert, key string) *adminapi.KonnectClient {
 	t.Helper()
 
-	c, err := adminapi.NewKongClientForKonnectControlPlane(config.KonnectConfig{
+	c, err := adminapi.NewKongClientForKonnectControlPlane(managercfg.KonnectConfig{
 		ControlPlaneID: rgID,
 		Address:        konnectControlPlaneAdminAPIBaseURL,
-		TLSClient: config.TLSClientConfig{
+		TLSClient: managercfg.TLSClientConfig{
 			Cert: cert,
 			Key:  key,
 		},
@@ -212,12 +212,12 @@ func createKonnectAdminAPIClient(t *testing.T, rgID, cert, key string) *adminapi
 
 // createKonnectNodeClient creates a konnect.NodeClient to get nodes in konnect control plane.
 func createKonnectNodeClient(t *testing.T, rgID, cert, key string) *nodes.Client {
-	cfg := config.KonnectConfig{
+	cfg := managercfg.KonnectConfig{
 		ConfigSynchronizationEnabled: true,
 		ControlPlaneID:               rgID,
 		Address:                      konnectControlPlaneAdminAPIBaseURL,
 		RefreshNodePeriod:            konnect.MinRefreshNodePeriod,
-		TLSClient: config.TLSClientConfig{
+		TLSClient: managercfg.TLSClientConfig{
 			Cert: cert,
 			Key:  key,
 		},
@@ -305,7 +305,7 @@ func requireAllProxyReplicasIDsConsistentWithKonnect(
 
 		// Anything related to TLS can be ignored, because only availability is being tested here.
 		// Testing communicating as part of actual E2E test.
-		kongClient, err := adminapi.NewKongAPIClient(address, config.AdminAPIClientConfig{TLSSkipVerify: true}, "")
+		kongClient, err := adminapi.NewKongAPIClient(address, managercfg.AdminAPIClientConfig{TLSSkipVerify: true}, "")
 		require.NoError(t, err)
 
 		nodeID, err := adminapi.NewClient(kongClient).NodeID(ctx)

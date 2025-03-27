@@ -10,7 +10,7 @@ import (
 	"go.uber.org/zap"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
@@ -29,7 +29,7 @@ func TestTryFetchingValidConfigFromGateways(t *testing.T) {
 		// the status of the Kong Gateway but just returns the client.
 		client, err := adminapi.NewKongAPIClient(
 			adminAPIServer.URL,
-			config.AdminAPIClientConfig{},
+			managercfg.AdminAPIClientConfig{},
 			"",
 		)
 		require.NoError(t, err)

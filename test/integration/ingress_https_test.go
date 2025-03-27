@@ -131,9 +131,9 @@ func TestHTTPSIngress(t *testing.T) {
 
 	t.Log("configuring ingress tls spec")
 	ingress1.Spec.TLS = []netv1.IngressTLS{{SecretName: "secret1", Hosts: []string{"foo.example"}}}
-	ingress1.ObjectMeta.Name = "ingress1"
+	ingress1.Name = "ingress1"
 	ingress2.Spec.TLS = []netv1.IngressTLS{{SecretName: "secret2", Hosts: []string{"bar.example", "baz.example"}}}
-	ingress2.ObjectMeta.Name = "ingress2"
+	ingress2.Name = "ingress2"
 
 	t.Log("configuring secrets")
 	fooExampleTLSCert, fooExampleTLSKey := certificate.MustGenerateCertPEMFormat(
@@ -273,7 +273,7 @@ func TestHTTPSIngress(t *testing.T) {
 
 	ingress2, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, ingress2.Name, metav1.GetOptions{})
 	assert.NoError(t, err)
-	ingress2.ObjectMeta.Annotations["konghq.com/snis"] = "bar.example"
+	ingress2.Annotations["konghq.com/snis"] = "bar.example"
 	_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress2, metav1.UpdateOptions{})
 	assert.NoError(t, err)
 

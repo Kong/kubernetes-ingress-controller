@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/cmd/rootcmd/config"
-	mgrconfig "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 func TestCLIArgumentAndFeatureGatesParser(t *testing.T) {
@@ -30,8 +30,8 @@ func TestCLIArgumentAndFeatureGatesParser(t *testing.T) {
 				"--health-probe-bind-address=:4321",
 			},
 			expectedGates: map[string]bool{
-				mgrconfig.GatewayAlphaFeature: true,
-				mgrconfig.RewriteURIsFeature:  true,
+				managercfg.GatewayAlphaFeature: true,
+				managercfg.RewriteURIsFeature:  true,
 			},
 			expectedAddr: ":4321",
 		},
@@ -42,8 +42,8 @@ func TestCLIArgumentAndFeatureGatesParser(t *testing.T) {
 				"--health-probe-bind-address=:1234",
 			},
 			expectedGates: map[string]bool{
-				mgrconfig.GatewayAlphaFeature: false,
-				mgrconfig.RewriteURIsFeature:  true,
+				managercfg.GatewayAlphaFeature: false,
+				managercfg.RewriteURIsFeature:  true,
 			},
 			expectedAddr: ":1234",
 		},
@@ -81,7 +81,7 @@ func TestCLIArgumentAndFeatureGatesParser(t *testing.T) {
 			for key, expectedValue := range tt.expectedGates {
 				require.Equal(t, expectedValue, c.FeatureGates.Enabled(key), "feature gate not set according to configuration passed")
 			}
-			for key, value := range mgrconfig.GetFeatureGatesDefaults() {
+			for key, value := range managercfg.GetFeatureGatesDefaults() {
 				if ok := tt.expectedGates[key]; ok {
 					continue
 				}

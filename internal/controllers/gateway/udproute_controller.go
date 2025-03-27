@@ -127,7 +127,7 @@ func (r *UDPRouteReconciler) listUDPRoutesForGatewayClass(ctx context.Context, o
 
 	// map all Gateway objects
 	gatewayList := gatewayapi.GatewayList{}
-	if err := r.Client.List(ctx, &gatewayList); err != nil {
+	if err := r.List(ctx, &gatewayList); err != nil {
 		r.Log.Error(err, "Failed to list gateway objects from the cached client")
 		return nil
 	}
@@ -157,7 +157,7 @@ func (r *UDPRouteReconciler) listUDPRoutesForGatewayClass(ctx context.Context, o
 
 	// map all UDPRoute objects
 	udprouteList := gatewayapi.UDPRouteList{}
-	if err := r.Client.List(ctx, &udprouteList); err != nil {
+	if err := r.List(ctx, &udprouteList); err != nil {
 		r.Log.Error(err, "Failed to list udproute objects from the cached client")
 		return nil
 	}
@@ -224,7 +224,7 @@ func (r *UDPRouteReconciler) listUDPRoutesForGateway(ctx context.Context, obj cl
 
 	// map all UDPRoute objects
 	udprouteList := gatewayapi.UDPRouteList{}
-	if err := r.Client.List(ctx, &udprouteList); err != nil {
+	if err := r.List(ctx, &udprouteList); err != nil {
 		r.Log.Error(err, "Failed to list udproute objects from the cached client")
 		return nil
 	}

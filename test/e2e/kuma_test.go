@@ -92,10 +92,10 @@ func verifyKuma(ctx context.Context, t *testing.T, env environments.Environment)
 				return err
 			}
 
-			if service.ObjectMeta.Annotations == nil {
-				service.ObjectMeta.Annotations = map[string]string{}
+			if service.Annotations == nil {
+				service.Annotations = map[string]string{}
 			}
-			service.ObjectMeta.Annotations["ingress.kubernetes.io/service-upstream"] = "true"
+			service.Annotations["ingress.kubernetes.io/service-upstream"] = "true"
 			_, err = svcClient.Update(ctx, service, metav1.UpdateOptions{})
 			return err
 		},

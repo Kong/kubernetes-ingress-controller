@@ -14,7 +14,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 // -----------------------------------------------------------------------------
@@ -64,7 +64,7 @@ type FeatureFlags struct {
 }
 
 func NewFeatureFlags(
-	featureGates config.FeatureGates,
+	featureGates managercfg.FeatureGates,
 	routerFlavor dpconf.RouterFlavor,
 	updateStatusFlag bool,
 	enterpriseEdition bool,
@@ -74,11 +74,11 @@ func NewFeatureFlags(
 		ReportConfiguredKubernetesObjects:       updateStatusFlag,
 		ExpressionRoutes:                        dpconf.ShouldEnableExpressionRoutes(routerFlavor),
 		EnterpriseEdition:                       enterpriseEdition,
-		FillIDs:                                 featureGates.Enabled(config.FillIDsFeature),
-		RewriteURIs:                             featureGates.Enabled(config.RewriteURIsFeature),
-		KongServiceFacade:                       featureGates.Enabled(config.KongServiceFacadeFeature),
-		KongCustomEntity:                        featureGates.Enabled(config.KongCustomEntityFeature),
-		CombinedServicesFromDifferentHTTPRoutes: featureGates.Enabled(config.CombinedServicesFromDifferentHTTPRoutesFeature),
+		FillIDs:                                 featureGates.Enabled(managercfg.FillIDsFeature),
+		RewriteURIs:                             featureGates.Enabled(managercfg.RewriteURIsFeature),
+		KongServiceFacade:                       featureGates.Enabled(managercfg.KongServiceFacadeFeature),
+		KongCustomEntity:                        featureGates.Enabled(managercfg.KongCustomEntityFeature),
+		CombinedServicesFromDifferentHTTPRoutes: featureGates.Enabled(managercfg.CombinedServicesFromDifferentHTTPRoutesFeature),
 		SupportRedirectPlugin:                   supportRedirectPlugin,
 	}
 }

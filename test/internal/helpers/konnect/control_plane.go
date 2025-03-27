@@ -19,7 +19,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/sdk"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
@@ -103,10 +103,10 @@ func generateTestKonnectControlPlaneDescription(t *testing.T) string {
 func CreateKonnectAdminAPIClient(t *testing.T, cpID, cert, key string) *adminapi.KonnectClient {
 	t.Helper()
 
-	c, err := adminapi.NewKongClientForKonnectControlPlane(config.KonnectConfig{
+	c, err := adminapi.NewKongClientForKonnectControlPlane(managercfg.KonnectConfig{
 		ControlPlaneID: cpID,
 		Address:        konnectControlPlaneAdminAPIBaseURL(),
-		TLSClient: config.TLSClientConfig{
+		TLSClient: managercfg.TLSClientConfig{
 			Cert: cert,
 			Key:  key,
 		},

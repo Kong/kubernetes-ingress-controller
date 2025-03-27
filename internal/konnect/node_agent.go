@@ -337,7 +337,7 @@ func (a *NodeAgent) updateKICNode(ctx context.Context, existingNodes []*nodes.No
 func (a *NodeAgent) updateGatewayNodes(ctx context.Context, existingNodes []*nodes.NodeItem) error {
 	gatewayInstances, err := a.gatewayInstanceGetter.GetGatewayInstances(ctx)
 	if err != nil {
-		return fmt.Errorf("Failed to get controlled kong gateway pods: %w", err)
+		return fmt.Errorf("failed to get controlled kong gateway pods: %w", err)
 	}
 	gatewayInstanceMap := make(map[string]struct{})
 

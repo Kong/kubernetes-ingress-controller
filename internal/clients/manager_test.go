@@ -16,7 +16,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
@@ -497,7 +497,7 @@ func TestAdminAPIClientsManager_PeriodicReadinessReconciliation(t *testing.T) {
 	}
 
 	// Trigger the first readiness check.
-	readinessTicker.Add(config.DefaultDataPlanesReadinessReconciliationInterval)
+	readinessTicker.Add(managercfg.DefaultDataPlanesReadinessReconciliationInterval)
 	readinessCheckCallEventuallyMatches(readinessCheckCall{
 		AlreadyCreatedURLs: []string{testURL1},
 		PendingURLs:        []string{},
@@ -514,7 +514,7 @@ func TestAdminAPIClientsManager_PeriodicReadinessReconciliation(t *testing.T) {
 
 	// Trigger a next readiness check which will make testURL2 ready.
 	readinessChecker.LetChecksReturn(clients.ReadinessCheckResult{ClientsTurnedReady: intoTurnedReady(testURL2)})
-	readinessTicker.Add(config.DefaultDataPlanesReadinessReconciliationInterval)
+	readinessTicker.Add(managercfg.DefaultDataPlanesReadinessReconciliationInterval)
 	readinessCheckCallEventuallyMatches(readinessCheckCall{
 		AlreadyCreatedURLs: []string{testURL1},
 		PendingURLs:        []string{testURL2},

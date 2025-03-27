@@ -89,8 +89,8 @@ func (t *Translator) ingressRulesFromTLSRoute(result *ingressRules, tlsroute *ga
 		service.Routes = append(service.Routes, routes...)
 
 		// cache the service to avoid duplicates in further loop iterations
-		result.ServiceNameToServices[*service.Service.Name] = service
-		result.ServiceNameToParent[*service.Service.Name] = tlsroute
+		result.ServiceNameToServices[*service.Name] = service
+		result.ServiceNameToParent[*service.Name] = tlsroute
 	}
 
 	return nil

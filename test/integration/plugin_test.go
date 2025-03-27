@@ -119,7 +119,7 @@ func TestPluginEssentials(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = kongplugin.Name
+		ingress.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = kongplugin.Name
 		_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 		return err == nil
 	}, ingressWait, waitTick)
@@ -141,7 +141,7 @@ func TestPluginEssentials(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = kongclusterplugin.Name
+		ingress.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = kongclusterplugin.Name
 		_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 		return err == nil
 	}, ingressWait, waitTick)
@@ -286,7 +286,7 @@ func TestPluginConfigPatch(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = kongplugin.Name
+		ingress.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = kongplugin.Name
 		_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 		return err == nil
 	}, ingressWait, waitTick)
@@ -309,7 +309,7 @@ func TestPluginConfigPatch(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = kongclusterplugin.Name
+		ingress.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = kongclusterplugin.Name
 		_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 		return err == nil
 	}, ingressWait, waitTick)
@@ -413,7 +413,7 @@ func TestPluginOrdering(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = termplugin.Name
+		ingress.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = termplugin.Name
 		_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 		return err == nil
 	}, ingressWait, waitTick)
@@ -435,7 +435,7 @@ func TestPluginOrdering(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = strings.Join([]string{authplugin.Name, termplugin.Name}, ",")
+		ingress.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = strings.Join([]string{authplugin.Name, termplugin.Name}, ",")
 		_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 		return err == nil
 	}, ingressWait, waitTick)
@@ -616,7 +616,7 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = strings.Join([]string{kongplugin.Name, authplugin.Name}, ",")
+		ingress.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = strings.Join([]string{kongplugin.Name, authplugin.Name}, ",")
 		_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 		return err == nil
 	}, ingressWait, waitTick)

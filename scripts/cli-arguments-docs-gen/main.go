@@ -4,8 +4,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/cmd/rootcmd/config"
 	"github.com/spf13/pflag"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/cmd/rootcmd/config"
 )
 
 // This program generates markdown documentation for the KIC executable's flags.

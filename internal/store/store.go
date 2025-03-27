@@ -197,7 +197,7 @@ func (s Store) ListIngressesV1() []*netv1.Ingress {
 			continue
 		}
 		switch {
-		case ing.ObjectMeta.GetAnnotations()[annotations.IngressClassKey] != "":
+		case ing.GetAnnotations()[annotations.IngressClassKey] != "":
 			if !s.isValidIngressClass(&ing.ObjectMeta, annotations.IngressClassKey, s.ingressClassMatching) {
 				continue
 			}

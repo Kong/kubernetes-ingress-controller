@@ -26,7 +26,7 @@ func (DefaultContentToDBLessConfigConverter) Convert(content *file.Content) DBLe
 	}
 
 	// DBLess schema does not support decK's Info section.
-	dblessConfig.Content.Info = nil
+	dblessConfig.Info = nil
 
 	// DBLess schema does not support nulls in plugin configs.
 	cleanUpNullsInPluginConfigs(&dblessConfig.Content)
@@ -86,7 +86,7 @@ func cleanUpNullsInPluginConfigs(state *file.Content) {
 //   - ConsumerGroupConsumerRelationships
 func convertConsumerGroups(dblessConfig *DBLessConfig) {
 	// DBLess schema does not support Consumer.Groups field...
-	for i, c := range dblessConfig.Content.Consumers {
+	for i, c := range dblessConfig.Consumers {
 		// ... therefore we need to convert them to relationships...
 		for _, cg := range dblessConfig.Content.Consumers[i].Groups {
 			dblessConfig.ConsumerGroupConsumerRelationships = append(dblessConfig.ConsumerGroupConsumerRelationships, ConsumerGroupConsumerRelationship{
@@ -100,7 +100,7 @@ func convertConsumerGroups(dblessConfig *DBLessConfig) {
 	}
 	// DBLess schema does not support ConsumerGroups.Consumers and ConsumerGroups.Plugins fields so we need to remove
 	// them.
-	for i := range dblessConfig.Content.ConsumerGroups {
+	for i := range dblessConfig.ConsumerGroups {
 		dblessConfig.Content.ConsumerGroups[i].Consumers = nil
 		dblessConfig.Content.ConsumerGroups[i].Plugins = nil
 	}

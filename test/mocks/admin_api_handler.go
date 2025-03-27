@@ -211,7 +211,7 @@ func NewAdminAPIHandler(t *testing.T, opts ...AdminAPIHandlerOpt) *AdminAPIHandl
 			if h.config != nil {
 				_, _ = w.Write(convertReceivedJSONConfigIntoGetConfigResponse(t, h.config))
 			} else {
-				_, _ = w.Write([]byte(fmt.Sprintf(`{"version": "%s"}`, h.version)))
+				_, _ = fmt.Fprintf(w, `{"version": "%s"}`, h.version)
 			}
 
 		case http.MethodPost:

@@ -872,17 +872,17 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 			Reason:             string(gatewayapi.GatewayReasonProgrammed),
 		}
 		setGatewayCondition(gateway, programmedCondition)
-
+		info(log, gateway, "Gateway Programmed status updated")
 		err := r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
 		return handleUpdateError(err, r.Log, gateway)
 	}
 	if !isEqualListenersStatus(gateway.Status.Listeners, listenerStatuses) {
 		gateway.Status.Listeners = listenerStatuses
-
+		info(log, gateway, "Gateway listener status updated")
 		err := r.Status().Update(ctx, gateway)
 		return handleUpdateError(err, r.Log, gateway)
 	}
 
-	info(log, gateway, "Gateway status updated")
+	debug(log, gateway, "Gateway status not updated")
 	return ctrl.Result{}, nil
 }

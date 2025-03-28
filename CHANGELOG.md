@@ -122,6 +122,10 @@ Adding a new version? You'll need three changes:
   where KIC is permitted to access only the given workspace but cannot access
   `/status` endpoint.
   [#7233](https://github.com/Kong/kubernetes-ingress-controller/pull/7233)
+- Fixed an issue in translation to expression routes that match rules other than
+  path (hostname, headers, ...) disappear when the `HTTPRoute` rule contains a
+  `URLRewrite` filter with the `ReplaceMatchPrefix` path modifier.
+  [#7269](https://github.com/Kong/kubernetes-ingress-controller/pull/7269)
 
 ## [3.4.3]
 

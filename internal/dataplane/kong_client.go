@@ -340,7 +340,18 @@ func (c *KongClient) Listeners(ctx context.Context) ([]kong.ProxyListener, []kon
 	// between reading the client(s) and setting the last applied SHA via client's
 	// SetLastConfigSHA() method. It's not ideal but it should do for now.
 	c.lock.RLock()
-	for _, cl := range c.clientsProvider.GatewayClients() {
+	gwClients := c.clientsProvider.GatewayClients()
+	c.logger.V(logging.DebugLevel).Info("Getting listeners from clients", "clients", lo.Map(gwClients, func(cl *adminapi.Client, _ int) string {
+		return cl.BaseRootURL()
+	}))
+	// If there are no ready clients yet, we should return an error.
+	// REVIEW: define a certain error type to let the gateway controller to requeue the `Gateway` with custom strategy when this happen?
+	// The backoff strategy when `Reconciler Error` happens that requeues requests very fast in the beginning may not suitable for such case.
+	if len(gwClients) == 0 {
+		c.lock.RUnlock()
+		return nil, nil, errors.New("no ready gateway clients")
+	}
+	for _, cl := range gwClients {
 		errg.Go(func() error {
 			listeners, streamListeners, err := cl.AdminAPIClient().Listeners(ctx)
 			if err != nil {

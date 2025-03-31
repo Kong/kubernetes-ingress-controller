@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1743419732466,
+  "lastUpdate": 1743425138753,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -20304,6 +20304,78 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "15466354 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": true,
+          "id": "c1edeaa3aa755c2a402cf4d7ac0ef44c2763aa43",
+          "message": "Do not check Kong gateway status by /status endpoint if workspace is given (#7233) (#7283)\n\n* Do not check Kong gateway status by /status endpoint if workspace is given (#7233)\n\n(cherry picked from commit 3c892d72748882eee85a353f5365dc259266bf8b)\n\n* update unit tests",
+          "timestamp": "2025-03-31T20:40:53+08:00",
+          "tree_id": "3c641ab6f9705a0b40c8cbbb41c7f13c3112641b",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/c1edeaa3aa755c2a402cf4d7ac0ef44c2763aa43"
+        },
+        "date": 1743424973903,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 72951,
+            "unit": "ns/op\t   11114 B/op\t      12 allocs/op",
+            "extra": "17029 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 72951,
+            "unit": "ns/op",
+            "extra": "17029 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11114,
+            "unit": "B/op",
+            "extra": "17029 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17029 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert",
+            "value": 144.7,
+            "unit": "ns/op\t       0 B/op\t       0 allocs/op",
+            "extra": "8895271 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 144.7,
+            "unit": "ns/op",
+            "extra": "8895271 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "8895271 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "8895271 times\n4 procs"
           }
         ]
       }

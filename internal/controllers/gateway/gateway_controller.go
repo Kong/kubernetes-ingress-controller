@@ -585,17 +585,13 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 		debug(log, gateway, "Determining listener configurations from Kong data-plane")
 		kongListeners, err = r.determineListenersFromDataPlane(ctx, svc, kongListeners)
 		if err != nil {
-			errNoReadyClient := dataplane.NoReadyGatewayClientsError{}
-			if errors.As(err, &errNoReadyClient) {
+			if errNoReadyClients := (&dataplane.NoReadyGatewayClientsError{}); errors.As(err, &errNoReadyClients) {
 				// Requeue the request to reconcile the gateway again after `retryAfter` but not return the error to trigger a Reconcile Error
 				// when no gateway is available to fetch information of listeners.
-				// REVIEW: Should we implement some exponential backoff strategy here instead of a fixed retry delay?
-				retryAfter := time.Second
 				info(log, gateway,
 					"Cannot determine listeners because no available Kong gateway clients now, retrying...",
-					"retry_after", retryAfter.String(),
 				)
-				return ctrl.Result{Requeue: true, RequeueAfter: retryAfter}, nil
+				return ctrl.Result{Requeue: true}, nil
 			}
 			return ctrl.Result{}, err
 		}

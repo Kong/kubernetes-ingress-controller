@@ -21,7 +21,7 @@ func debug(log logr.Logger, obj client.Object, msg string, keysAndValues ...inte
 }
 
 // info is an alias for the longer log.V(util.InfoLevel).Info for convenience.
-func info(log logr.Logger, obj client.Object, msg string, keysAndValues ...interface{}) {
+func info(log logr.Logger, obj client.Object, msg string, keysAndValues ...interface{}) { //nolint:unparam
 	keysAndValues = append([]interface{}{
 		"namespace", obj.GetNamespace(),
 		"name", obj.GetName(),

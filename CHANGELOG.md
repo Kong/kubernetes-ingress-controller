@@ -122,9 +122,8 @@ Adding a new version? You'll need three changes:
   where KIC is permitted to access only the given workspace but cannot access
   `/status` endpoint.
   [#7233](https://github.com/Kong/kubernetes-ingress-controller/pull/7233)
-- Return error when no ready Kong admin API clients in fetching listeners in
-  the reconciliation of `Gateway`s to trigger a requeue when no Kong gateways
-  are available.
+- Report an error and requeue when there are no ready Kong admin API clients
+  during the reconciliation of `Gateway`s.
   [#7293](https://github.com/Kong/kubernetes-ingress-controller/pull/7293)
 
 ## [3.4.3]

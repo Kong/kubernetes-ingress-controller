@@ -125,6 +125,8 @@ Adding a new version? You'll need three changes:
 - Report an error and requeue when there are no ready Kong admin API clients
   during the reconciliation of `Gateway`s.
   [#7293](https://github.com/Kong/kubernetes-ingress-controller/pull/7293)
+- Corrected the resource status handling logic for the fallbackConfiguration feature.
+  [#7306](https://github.com/Kong/kubernetes-ingress-controller/pull/7306)
 
 ## [3.4.3]
 

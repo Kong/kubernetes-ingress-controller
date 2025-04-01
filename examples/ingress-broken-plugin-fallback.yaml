@@ -1,0 +1,95 @@
+# This configuration file presents fallback configuration (feature gate FallbackConfiguration=true),
+# it contains a plugin that is misconfigured and will not work. The whole route /for-auth-users won't
+# be configured. Only the route /ingress-testing will be configured.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo-1
+  labels:
+    app: echo-1
+spec:
+  selector:
+    matchLabels:
+      app: echo-1
+  template:
+    metadata:
+      labels:
+        app: echo-1
+    spec:
+      containers:
+      - name: echo-1
+        image: kong/go-echo:0.3.0
+        env:
+          - name: POD_NAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+        ports:
+        - containerPort: 80
+        resources:
+          limits:
+            memory: "64Mi"
+            cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: echo-1
+  name: echo-1
+spec:
+  ports:
+  - port: 80
+    protocol: TCP
+    targetPort: 1027
+  selector:
+    app: echo-1
+  type: ClusterIP
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: for-auth
+  annotations:
+    konghq.com/plugins: key-auth
+spec:
+  ingressClassName: kong
+  rules:
+    - http:
+        paths:
+          - path: /for-auth-users
+            pathType: Prefix
+            backend:
+              service:
+                name: echo-1
+                port:
+                  number: 80
+
+---
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: key-auth
+plugin: key-auth
+config:
+  # Should be key_names, not keys.
+  keys: ["key"]
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: working-ingress
+spec:
+  ingressClassName: kong
+  rules:
+    - http:
+        paths:
+          - path: /ingress-testing
+            pathType: Prefix
+            backend:
+              service:
+                name: echo-1
+                port:
+                  number: 80

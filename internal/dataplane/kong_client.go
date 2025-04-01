@@ -59,6 +59,14 @@ const (
 	FallbackKongConfigurationApplyFailedEventReason = "FallbackKongConfigurationApplyFailed"
 )
 
+// NoReadyGatewayClientsError is the type of the error returned when no available gateway clients are discovered.
+type NoReadyGatewayClientsError struct{}
+
+// Error method implements the error interface.
+func (e NoReadyGatewayClientsError) Error() string {
+	return "no ready gateway clients"
+}
+
 // -----------------------------------------------------------------------------
 // Dataplane Client - Kong - Public Types
 // -----------------------------------------------------------------------------
@@ -344,12 +352,10 @@ func (c *KongClient) Listeners(ctx context.Context) ([]kong.ProxyListener, []kon
 	c.logger.V(logging.DebugLevel).Info("Getting listeners from clients", "clients", lo.Map(gwClients, func(cl *adminapi.Client, _ int) string {
 		return cl.BaseRootURL()
 	}))
-	// If there are no ready clients yet, we should return an error.
-	// REVIEW: define a certain error type to let the gateway controller to requeue the `Gateway` with custom strategy when this happen?
-	// The backoff strategy when `Reconciler Error` happens that requeues requests very fast in the beginning may not suitable for such case.
+	// If there are no ready clients yet, we should return an error of certain type to imply it.
 	if len(gwClients) == 0 {
 		c.lock.RUnlock()
-		return nil, nil, errors.New("no ready gateway clients")
+		return nil, nil, NoReadyGatewayClientsError{}
 	}
 	for _, cl := range gwClients {
 		errg.Go(func() error {
@@ -715,7 +721,7 @@ func (c *KongClient) sendOutToGatewayClients(
 	gatewayClients := c.clientsProvider.GatewayClients()
 	if len(gatewayClients) == 0 {
 		c.logger.Error(
-			errors.New("no ready gateway clients"),
+			NoReadyGatewayClientsError{},
 			"Could not send configuration to gateways",
 		)
 		// Should not store the configuration in last valid config because the configuration is not validated on Kong gateway.

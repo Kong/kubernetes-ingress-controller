@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"reflect"
@@ -32,6 +33,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 )
@@ -583,6 +585,14 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 		debug(log, gateway, "Determining listener configurations from Kong data-plane")
 		kongListeners, err = r.determineListenersFromDataPlane(ctx, svc, kongListeners)
 		if err != nil {
+			if errNoReadyClients := (&dataplane.NoReadyGatewayClientsError{}); errors.As(err, &errNoReadyClients) {
+				// Requeue the request to reconcile the gateway again after `retryAfter` but not return the error to trigger a Reconcile Error
+				// when no gateway is available to fetch information of listeners.
+				info(log, gateway,
+					"Cannot determine listeners because no available Kong gateway clients now, retrying...",
+				)
+				return ctrl.Result{Requeue: true}, nil
+			}
 			return ctrl.Result{}, err
 		}
 		combinedAddresses = append(combinedAddresses, kongAddresses...)
@@ -872,17 +882,17 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 			Reason:             string(gatewayapi.GatewayReasonProgrammed),
 		}
 		setGatewayCondition(gateway, programmedCondition)
-
+		info(log, gateway, "Gateway Programmed status updated")
 		err := r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
 		return handleUpdateError(err, r.Log, gateway)
 	}
 	if !isEqualListenersStatus(gateway.Status.Listeners, listenerStatuses) {
 		gateway.Status.Listeners = listenerStatuses
-
+		info(log, gateway, "Gateway listener status updated")
 		err := r.Status().Update(ctx, gateway)
 		return handleUpdateError(err, r.Log, gateway)
 	}
 
-	info(log, gateway, "Gateway status updated")
+	debug(log, gateway, "Gateway status not updated")
 	return ctrl.Result{}, nil
 }

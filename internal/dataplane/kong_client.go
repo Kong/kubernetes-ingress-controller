@@ -670,6 +670,13 @@ func (c *KongClient) tryRecoveringWithFallbackConfiguration(
 	}
 	c.maybeUpdateKonnectKongState(fallbackParsingResult.KongState, isFallback)
 
+	// Report on configured Kubernetes objects if enabled for fallback configuration
+	if c.AreKubernetesObjectReportsEnabled() {
+		c.logger.V(logging.DebugLevel).Info("Triggering report for configured Kubernetes objects in fallback configuration",
+			"count", len(fallbackParsingResult.ConfiguredKubernetesObjects))
+		c.triggerKubernetesObjectReport(fallbackParsingResult.ConfiguredKubernetesObjects, fallbackParsingResult.TranslationFailures)
+	}
+
 	// Configuration was successfully recovered with the fallback configuration. Store the last valid configuration.
 	c.maybePreserveTheLastValidConfigCache(fallbackCache)
 	return nil

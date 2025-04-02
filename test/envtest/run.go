@@ -197,6 +197,12 @@ func WithCacheSyncTimeout(d time.Duration) func(cfg *managercfg.Config) {
 	}
 }
 
+func WithFeatureGate(name string, enabled bool) func(cfg *managercfg.Config) {
+	return func(cfg *managercfg.Config) {
+		cfg.FeatureGates[name] = enabled
+	}
+}
+
 // AdminAPIOptFns wraps a variadic list of mocks.AdminAPIHandlerOpt and returns
 // a slice containing all of them.
 // The purpose of this is func is to make the call sites a bit less verbose.

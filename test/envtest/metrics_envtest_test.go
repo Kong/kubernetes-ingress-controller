@@ -62,9 +62,7 @@ func TestMetricsAreServed(t *testing.T) {
 	addr := fmt.Sprintf("localhost:%d", helpers.GetFreePort(t))
 	_ = RunManager(t.Context(), t, envcfg,
 		AdminAPIOptFns(adminAPIOpts...),
-		func(cfg *managercfg.Config) {
-			cfg.FeatureGates[managercfg.FallbackConfigurationFeature] = true
-		},
+		WithFeatureGate(managercfg.FallbackConfigurationFeature, true),
 		WithMetricsAddr(addr),
 	)
 

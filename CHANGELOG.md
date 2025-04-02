@@ -127,6 +127,10 @@ Adding a new version? You'll need three changes:
   [#7293](https://github.com/Kong/kubernetes-ingress-controller/pull/7293)
 - Corrected the resource status handling logic for the fallbackConfiguration feature.
   [#7306](https://github.com/Kong/kubernetes-ingress-controller/pull/7306)
+- Fixed an issue in translation to expression routes that match rules other than
+  path (hostname, headers, ...) would disappear when the `HTTPRoute` rule contains a
+  `URLRewrite` filter with the `ReplaceMatchPrefix` path modifier.
+  [#7269](https://github.com/Kong/kubernetes-ingress-controller/pull/7269)
 
 ## [3.4.3]
 

@@ -1,7 +1,7 @@
 # renovate: datasource=github-tags depName=kubernetes/code-generator
 kube-code-generator: "0.32.3"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-tools
-controller-tools: "0.17.2"
+controller-tools: "0.17.3"
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize
 kustomize: "5.6.0"
 # renovate: datasource=github-releases depName=golangci/golangci-lint

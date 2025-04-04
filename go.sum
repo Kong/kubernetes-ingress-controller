@@ -226,8 +226,6 @@ github.com/kong/go-database-reconciler v1.22.0 h1:xkcGFqjk1QattePNXHI2PYtQ4qh6Ib
 github.com/kong/go-database-reconciler v1.22.0/go.mod h1:emf04E6FSd5y9OKCMB+kNQ0NCTauSaEeCUNRCUgymSY=
 github.com/kong/go-kong v0.65.0 h1:dZT+hiMhy7CQsrc9W5nHv3cFJGBGTrwlZhC5MLuf9H8=
 github.com/kong/go-kong v0.65.0/go.mod h1:sqdysTKrXIJ6mpxHwTwjgZhLW7jR1/puczTXHLUwJaE=
-github.com/kong/kubernetes-configuration v1.3.0 h1:N6Kl/AmRvDV6He35q2kvNiVCaUM7oL50xQnwI4t5lRM=
-github.com/kong/kubernetes-configuration v1.3.0/go.mod h1:NIFesd18MIy5pb7+6tk9lQeA28kHeG5ue4DAEsecTks=
 github.com/kong/kubernetes-configuration v1.3.1 h1:mA36ROsWLA1/1PDPYC0mbTMB3D8sLG6FbsXBoq2LNog=
 github.com/kong/kubernetes-configuration v1.3.1/go.mod h1:wakGUhvbgYjrE9n0y9lXvNFcP2JTDOIoIoxJTTWw4oQ=
 github.com/kong/kubernetes-telemetry v0.1.9 h1:XbDMZjZZclHO4oyJGW1mmZ6bzbTnANjcRAYsBg+jpno=
@@ -522,8 +520,7 @@ golang.org/x/tools v0.0.0-20191119224855-298f0cb1881e/go.mod h1:b+2E5dAYhXwXZwtn
 golang.org/x/tools v0.0.0-20200619180055-7c47624df98f/go.mod h1:EkVYQZoAsY45+roYkvgYkIh4xh/qjgUK9TdY2XT94GE=
 golang.org/x/tools v0.0.0-20201224043029-2b0845dc783e/go.mod h1:emZCQorbCU4vsT4fOWvOPXz4eW1wZW4PmDk9uLelYpA=
 golang.org/x/tools v0.0.0-20210106214847-113979e3529a/go.mod h1:emZCQorbCU4vsT4fOWvOPXz4eW1wZW4PmDk9uLelYpA=
-golang.org/x/tools v0.29.0 h1:Xx0h3TtM9rzQpQuR4dKLrdglAmCEN5Oi+P74JdhdzXE=
-golang.org/x/tools v0.29.0/go.mod h1:KMQVMRsVxU6nHCFXrBPhDB8XncLNLM0lIy/F14RP588=
+golang.org/x/tools v0.30.0 h1:BgcpHewrV5AUp2G9MebG4XPFI1E2W41zU1SaqVA9vJY=
 golang.org/x/tools v0.30.0/go.mod h1:c347cR/OJfw5TI+GfX7RUPNMdDRRbjvYTS0jPyvsVtY=
 golang.org/x/xerrors v0.0.0-20190717185122-a985d3407aa7/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=
 golang.org/x/xerrors v0.0.0-20191011141410-1b5146add898/go.mod h1:I/5z698sn9Ka8TeJc9MKroUUfqBBauWjQqLJ2OPfmY0=

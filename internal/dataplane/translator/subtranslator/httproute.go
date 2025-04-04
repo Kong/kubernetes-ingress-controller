@@ -1014,7 +1014,7 @@ func generatePluginsFromHTTPRouteFilters(
 			transformerPlugins = append(transformerPlugins, plugins...)
 			kongRouteModifiers = append(kongRouteModifiers, routeModifiers...)
 
-		case gatewayapi.HTTPRouteFilterRequestMirror:
+		case gatewayapi.HTTPRouteFilterRequestMirror, gatewayapi.HTTPRouteFilterCORS:
 			// not supported
 			return httpRouteFiltersOriginatedPlugins{}, fmt.Errorf("httpFilter %s unsupported", filter.Type)
 		}

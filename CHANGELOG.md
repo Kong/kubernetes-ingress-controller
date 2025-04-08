@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [2.12.8](#2128)
  - [2.12.7](#2127)
  - [2.12.6](#2126)
  - [2.12.5](#2125)
@@ -81,6 +82,18 @@ Adding a new version? You'll need three changes:
  - [0.1.0](#010)
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
+
+## [2.12.8]
+
+> Release date: 2025-04-08
+
+### Fixed
+
+- Skip checking whether Kong gateway is ready by `/status` admin API endpoint
+  when KIC is configured to use a specific workspace. This fixes the scenario
+  where KIC is permitted to access only the given workspace but cannot access
+  `/status` endpoint.
+  [#7233](https://github.com/Kong/kubernetes-ingress-controller/pull/7233)
 
 ## [2.12.7]
 
@@ -2905,6 +2918,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[2.12.8]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.7..v2.12.8
 [2.12.7]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.6..v2.12.7
 [2.12.6]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.5..v2.12.6
 [2.12.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.4..v2.12.5

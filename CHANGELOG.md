@@ -33,6 +33,7 @@ Adding a new version? You'll need three changes:
  - [3.0.2](#302)
  - [3.0.1](#301)
  - [3.0.0](#300)
+ - [2.12.8](#2128)
  - [2.12.7](#2127)
  - [2.12.6](#2126)
  - [2.12.5](#2125)
@@ -1316,13 +1317,25 @@ Please use [3.4.1] or later instead.
 [KongIngress to KongUpstreamPolicy migration guide]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/migrate/kongingress/
 [Migrate Credential Type Labels]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/migrate/credential-kongcredtype-label/
 
+## [2.12.8]
+
+> Release date: 2025-04-08
+
+### Fixed
+
+- Skip checking whether Kong gateway is ready by `/status` admin API endpoint
+  when KIC is configured to use a specific workspace. This fixes the scenario
+  where KIC is permitted to access only the given workspace but cannot access
+  `/status` endpoint.
+  [#7233](https://github.com/Kong/kubernetes-ingress-controller/pull/7233)
+
 ## [2.12.7]
 
 > Release date: 2024-11-25
 
 ### Fixed
 
-- Bump go-kong to v0.56.0 to fix [#6703](https://github.com/Kong/kubernetes-ingress-controller/issues/6703) 
+- Bump go-kong to v0.56.0 to fix [#6703](https://github.com/Kong/kubernetes-ingress-controller/issues/6703)
   This way, the OTEL plugin can work properly when the Gateway is upgraded from 3.6 to 3.7.
   Also upgraded the Go version to v1.22.
   [#6657](https://github.com/Kong/kubernetes-ingress-controller/pull/6657)
@@ -1337,8 +1350,8 @@ Please use [3.4.1] or later instead.
   there are existing `Programmed` condition.
   [#6395](https://github.com/Kong/kubernetes-ingress-controller/pull/6395)
 - Reconcile `Secret`s with `kongCredType` in data implying that the secrets are
-  used as Kong credentials.	  used as Kong credentials.
-  [#6400](https://github.com/Kong/kubernetes-ingress-controller/pull/6400)	  [#6400](https://github.com/Kong/kubernetes-ingress-controller/pull/6400)
+  used as Kong credentials.
+  [#6400](https://github.com/Kong/kubernetes-ingress-controller/pull/6400)
 
 ## [2.12.5]
 
@@ -4165,6 +4178,7 @@ Please read the changelog and test in your environment.
 [3.0.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.0.1...v3.0.2
 [3.0.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.0...v3.0.0
+[2.12.8]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.7..v2.12.8
 [2.12.7]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.6..v2.12.7
 [2.12.6]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.5..v2.12.6
 [2.12.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.4...v2.12.5

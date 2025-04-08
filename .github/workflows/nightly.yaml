@@ -43,11 +43,6 @@ jobs:
           key: ${{ runner.os }}-buildx-${{ github.sha }}
           restore-keys: |
             ${{ runner.os }}-buildx-
-      - name: Login to DockerHub
-        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
-        with:
-          username: ${{ secrets.DOCKER_USERNAME }}
-          password: ${{ secrets.DOCKER_TOKEN }}
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5.7.0
@@ -70,6 +65,11 @@ jobs:
             REPO_INFO=https://github.com/${{ github.repository }}.git
             GOPATH=${{ env.GOPATH}}
             GOCACHE=${{ env.GOCACHE}}
+      - name: Login to DockerHub
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
+        with:
+          username: ${{ secrets.DOCKER_USERNAME_NIGHTLY }}
+          password: ${{ secrets.DOCKER_TOKEN_NIGHTLY }}
       - name: Build and push distroless image to DockerHub
         id: docker_build
         uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v6.15.0

@@ -1,8 +1,9 @@
-name: 'FOSSA'
+name: FOSSA
 
 on:
   schedule:
     - cron: '30 2 * * *'
+  workflow_dispatch: {}
 
 permissions:
   contents: read
@@ -10,11 +11,10 @@ permissions:
 jobs:
   fossa-scan:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
-    environment: "FOSSA"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: fossas/fossa-action@c0a7d013f84c8ee5e910593186598625513cc1e4 # v1.6.0
         with:
-          api-key: ${{secrets.fossaApiKey}}
+          api-key: ${{ secrets.FOSSA_API_KEY }}
           branch: main

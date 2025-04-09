@@ -30,7 +30,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/nodes"
-	"github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/roles"
 	rg "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/runtimegroups"
 	rgc "github.com/kong/kubernetes-ingress-controller/v2/internal/konnect/runtimegroupsconfig"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
@@ -199,11 +198,6 @@ func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
 		}),
 	)
 	require.NoError(t, err)
-	rolesClient := roles.NewClient(
-		helpers.RetryableHTTPClient(helpers.DefaultHTTPClient()),
-		konnectRolesBaseURL,
-		konnectAccessToken,
-	)
 
 	var rgID uuid.UUID
 	createRgErr := retry.Do(func() error {
@@ -241,23 +235,6 @@ func createTestRuntimeGroup(ctx context.Context, t *testing.T) string {
 			retry.Attempts(5), retry.Delay(time.Second),
 		)
 		assert.NoErrorf(t, err, "failed to cleanup a runtime group: %q", rgID)
-
-		// We have to manually delete roles created for the runtime group because Konnect doesn't do it automatically.
-		// If we don't do it, we will eventually hit a problem with Konnect APIs answering our requests with 504s
-		// because of a performance issue when there's too many roles for the account
-		// (see https://konghq.atlassian.net/browse/TPS-1319).
-		//
-		// We can drop this once the automated cleanup is implemented on Konnect side:
-		// https://konghq.atlassian.net/browse/TPS-1453.
-		rgRoles, err := rolesClient.ListRuntimeGroupsRoles(ctx)
-		require.NoErrorf(t, err, "failed to list runtime group roles for cleanup: %q", rgID)
-		for _, role := range rgRoles {
-			if role.EntityID == rgID.String() { // Delete only roles created for the runtime group.
-				t.Logf("deleting test Konnect Runtime Group role: %q", role.ID)
-				err := rolesClient.DeleteRole(ctx, role.ID)
-				assert.NoErrorf(t, err, "failed to cleanup a runtime group role: %q", role.ID)
-			}
-		}
 	})
 
 	t.Logf("created test Konnect Runtime Group: %q", rgID.String())

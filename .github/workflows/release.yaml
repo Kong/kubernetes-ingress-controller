@@ -79,12 +79,17 @@ jobs:
           echo "" >> $GITHUB_ENV
           echo 'type=raw,value=${{ steps.semver_parser.outputs.major }}.${{ steps.semver_parser.outputs.minor }}' >> $GITHUB_ENV
           echo 'EOF' >> $GITHUB_ENV
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@49b3bc8e6bdd4a60e6116a5414239cba5943d3cf # v3.2.0
+      # Setup Golang to use go pkg cache which is utilized in Dockerfile's cache mount.
+      - name: Setup golang
+        uses: actions/setup-go@0aaccfd150d50ccaeb58ebd88d36e91967a5f35b # v5.4.0
+        with:
+          go-version-file: go.mod
+      - run: echo "GOPATH=$(go env GOPATH)" >> $GITHUB_ENV
+      - run: echo "GOCACHE=$(go env GOCACHE)" >> $GITHUB_ENV
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@6524bf65af31da8d45b59e8c27de4bd072b392f5 # v3.8.0
+        uses: docker/setup-buildx-action@b5ca514318bd6ebac0fb2aedd5d36ec1b5c232a2 # v3.10.0
       - name: Cache Docker layers
-        uses: actions/cache@f4b3439a656ba812b8cb417d2d49f9c810103092 # v3
+        uses: actions/cache@5a3ec84eff668545956fd18022155c47e93e2684 # v4.2.3
         with:
           path: /tmp/.buildx-cache
           key: ${{ runner.os }}-buildx-${{ github.sha }}
@@ -92,7 +97,7 @@ jobs:
             ${{ runner.os }}-buildx-
       - name: Docker meta
         id: meta
-        uses: docker/metadata-action@96383f45573cb7f253c731d3b3ab81c87ef81934 # v5.0.0
+        uses: docker/metadata-action@902fa8ec7d6ecbf8d84d538b9b233a880e428804 # v5.7.0
         with:
           images: kong/kubernetes-ingress-controller
           flavor: |
@@ -100,7 +105,7 @@ jobs:
           tags: ${{ env.TAGS_STANDARD }}${{ env.TAGS_SUPPLEMENTAL }}
       - name: Build binary
         id: docker_build_binary
-        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5.4.0
+        uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v6.15.0
         with:
           push: false
           file: Dockerfile
@@ -112,14 +117,16 @@ jobs:
             TAG=${{ steps.meta.outputs.version }}
             COMMIT=${{ github.sha }}
             REPO_INFO=https://github.com/${{ github.repository }}.git
+            GOPATH=${{ env.GOPATH}}
+            GOCACHE=${{ env.GOCACHE}}
       - name: Login to DockerHub
-        uses: docker/login-action@9780b0c442fbb1117ed29e0efdff1e18412f7567 # v3.3.0
+        uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_TOKEN }}
       - name: Build and push distroless image to DockerHub
         id: docker_build
-        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5.4.0
+        uses: docker/build-push-action@471d1dc4e07e5cdedd4c2171150001c434f0b7a4 # v6.15.0
         with:
           push: true
           file: Dockerfile
@@ -131,6 +138,8 @@ jobs:
             TAG=${{ steps.meta.outputs.version }}
             COMMIT=${{ github.sha }}
             REPO_INFO=https://github.com/${{ github.repository }}.git
+            GOPATH=${{ env.GOPATH}}
+            GOCACHE=${{ env.GOCACHE}}
 
   test-e2e:
     needs: [verify-manifest-tag, build-push-images]

@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1744201174885,
+  "lastUpdate": 1744272127727,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -16776,6 +16776,78 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "15430434 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "patryk.malek@konghq.com",
+            "name": "Patryk Małek",
+            "username": "pmalek"
+          },
+          "committer": {
+            "email": "patryk.malek@konghq.com",
+            "name": "Patryk Małek",
+            "username": "pmalek"
+          },
+          "distinct": true,
+          "id": "e40f75187a93fc00bc01287c0acd2adc3c3d341e",
+          "message": "chore(ci): fix token permissions in release workflow 2.12.x",
+          "timestamp": "2025-04-10T09:57:12+02:00",
+          "tree_id": "4120550dc90739aaa969447dd697fb40fbc34476",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/e40f75187a93fc00bc01287c0acd2adc3c3d341e"
+        },
+        "date": 1744271961740,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 69949,
+            "unit": "ns/op\t   11111 B/op\t      12 allocs/op",
+            "extra": "16996 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 69949,
+            "unit": "ns/op",
+            "extra": "16996 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11111,
+            "unit": "B/op",
+            "extra": "16996 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16996 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert",
+            "value": 78.19,
+            "unit": "ns/op\t       0 B/op\t       0 allocs/op",
+            "extra": "13590074 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 78.19,
+            "unit": "ns/op",
+            "extra": "13590074 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "13590074 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "13590074 times\n4 procs"
           }
         ]
       }

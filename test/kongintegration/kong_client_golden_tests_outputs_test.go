@@ -24,7 +24,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/kongintegration/containers"
@@ -66,7 +66,7 @@ func TestKongClientGoldenTestsOutputs(t *testing.T) {
 
 		kongC := containers.NewKong(ctx, t, containers.KongWithRouterFlavor("expressions"))
 
-		kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), config.AdminAPIClientConfig{}, "")
+		kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), managercfg.AdminAPIClientConfig{}, "")
 		require.NoError(t, err)
 
 		for _, goldenTestOutputPath := range expressionRoutesOutputsPaths {
@@ -80,7 +80,7 @@ func TestKongClientGoldenTestsOutputs(t *testing.T) {
 		t.Parallel()
 
 		kongC := containers.NewKong(ctx, t, containers.KongWithRouterFlavor("traditional"))
-		kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), config.AdminAPIClientConfig{}, "")
+		kongClient, err := adminapi.NewKongAPIClient(kongC.AdminURL(ctx, t), managercfg.AdminAPIClientConfig{}, "")
 		require.NoError(t, err)
 
 		for _, goldenTestOutputPath := range defaultOutputsPaths {

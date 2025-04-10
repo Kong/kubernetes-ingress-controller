@@ -404,7 +404,7 @@ func (r *KongV1Alpha1KongLicenseReconciler) ensureControllerStatusConditions(
 	reason string, message string,
 ) error {
 	// Get the latest status of target KongLicense.
-	if err := r.Client.Get(ctx, k8stypes.NamespacedName{Name: license.Name}, license); err != nil {
+	if err := r.Get(ctx, k8stypes.NamespacedName{Name: license.Name}, license); err != nil {
 		return fmt.Errorf("failed to get latest version of KongLicense %s: %w", license.Name, err)
 	}
 

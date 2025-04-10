@@ -59,6 +59,14 @@ const (
 	FallbackKongConfigurationApplyFailedEventReason = "FallbackKongConfigurationApplyFailed"
 )
 
+// NoReadyGatewayClientsError is the type of the error returned when no available gateway clients are discovered.
+type NoReadyGatewayClientsError struct{}
+
+// Error method implements the error interface.
+func (e NoReadyGatewayClientsError) Error() string {
+	return "no ready gateway clients"
+}
+
 // -----------------------------------------------------------------------------
 // Dataplane Client - Kong - Public Types
 // -----------------------------------------------------------------------------
@@ -340,7 +348,16 @@ func (c *KongClient) Listeners(ctx context.Context) ([]kong.ProxyListener, []kon
 	// between reading the client(s) and setting the last applied SHA via client's
 	// SetLastConfigSHA() method. It's not ideal but it should do for now.
 	c.lock.RLock()
-	for _, cl := range c.clientsProvider.GatewayClients() {
+	gwClients := c.clientsProvider.GatewayClients()
+	c.logger.V(logging.DebugLevel).Info("Getting listeners from clients", "clients", lo.Map(gwClients, func(cl *adminapi.Client, _ int) string {
+		return cl.BaseRootURL()
+	}))
+	// If there are no ready clients yet, we should return an error of certain type to imply it.
+	if len(gwClients) == 0 {
+		c.lock.RUnlock()
+		return nil, nil, NoReadyGatewayClientsError{}
+	}
+	for _, cl := range gwClients {
 		errg.Go(func() error {
 			listeners, streamListeners, err := cl.AdminAPIClient().Listeners(ctx)
 			if err != nil {
@@ -653,6 +670,13 @@ func (c *KongClient) tryRecoveringWithFallbackConfiguration(
 	}
 	c.maybeUpdateKonnectKongState(fallbackParsingResult.KongState, isFallback)
 
+	// Report on configured Kubernetes objects if enabled for fallback configuration
+	if c.AreKubernetesObjectReportsEnabled() {
+		c.logger.V(logging.DebugLevel).Info("Triggering report for configured Kubernetes objects in fallback configuration",
+			"count", len(fallbackParsingResult.ConfiguredKubernetesObjects))
+		c.triggerKubernetesObjectReport(fallbackParsingResult.ConfiguredKubernetesObjects, fallbackParsingResult.TranslationFailures)
+	}
+
 	// Configuration was successfully recovered with the fallback configuration. Store the last valid configuration.
 	c.maybePreserveTheLastValidConfigCache(fallbackCache)
 	return nil
@@ -704,7 +728,7 @@ func (c *KongClient) sendOutToGatewayClients(
 	gatewayClients := c.clientsProvider.GatewayClients()
 	if len(gatewayClients) == 0 {
 		c.logger.Error(
-			errors.New("no ready gateway clients"),
+			NoReadyGatewayClientsError{},
 			"Could not send configuration to gateways",
 		)
 		// Should not store the configuration in last valid config because the configuration is not validated on Kong gateway.

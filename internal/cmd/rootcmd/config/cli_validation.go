@@ -9,7 +9,7 @@ import (
 	"github.com/samber/mo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	cfgtypes "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 // https://github.com/kubernetes-sigs/gateway-api/blob/547122f7f55ac0464685552898c560658fb40073/apis/v1beta1/shared_types.go#L448-L463
@@ -47,10 +47,10 @@ func namespacedNameFromFlagValue(flagValue string) (OptionalNamespacedName, erro
 	}), nil
 }
 
-func metricsAccessFilterFromFlagValue(flagValue string) (cfgtypes.MetricsAccessFilter, error) {
+func metricsAccessFilterFromFlagValue(flagValue string) (managercfg.MetricsAccessFilter, error) {
 	switch flagValue {
-	case string(cfgtypes.MetricsAccessFilterOff), string(cfgtypes.MetricsAccessFilterRBAC):
-		return cfgtypes.MetricsAccessFilter(flagValue), nil
+	case string(managercfg.MetricsAccessFilterOff), string(managercfg.MetricsAccessFilterRBAC):
+		return managercfg.MetricsAccessFilter(flagValue), nil
 	default:
 		return "", fmt.Errorf("unsupported metrics filter %s", flagValue)
 	}

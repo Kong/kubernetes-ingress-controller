@@ -214,14 +214,14 @@ func GetPermittedForReferenceGrantFrom(
 					"requested-from-group", from.Group,
 					"requested-from-kind", from.Kind,
 				)
-				allowed[Namespace(grant.ObjectMeta.Namespace)] = append(allowed[Namespace(grant.ObjectMeta.Namespace)], grant.Spec.To...)
+				allowed[Namespace(grant.Namespace)] = append(allowed[Namespace(grant.Namespace)], grant.Spec.To...)
 				for _, to := range grant.Spec.To {
 					name := ""
 					if to.Name != nil {
 						name = string(*to.Name)
 					}
 					scoped.V(logging.TraceLevel).Info("added ReferenceGrantTo to namespace allowed list",
-						"namespace", grant.ObjectMeta.Namespace,
+						"namespace", grant.Namespace,
 						"to-group", to.Group,
 						"to-kind", to.Kind,
 						"to-name", name,

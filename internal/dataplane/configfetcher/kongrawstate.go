@@ -266,8 +266,8 @@ func sanitizeKongRoute(route kong.Route) kong.Route {
 }
 
 func sanitizeUpstream(upstream kongstate.Upstream) kongstate.Upstream {
-	upstream.Upstream.CreatedAt = nil
-	upstream.Upstream.ID = nil
+	upstream.CreatedAt = nil
+	upstream.ID = nil
 	for i := range upstream.Targets {
 		upstream.Targets[i].CreatedAt = nil
 		upstream.Targets[i].ID = nil

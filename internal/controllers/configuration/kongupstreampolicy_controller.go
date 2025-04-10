@@ -340,7 +340,7 @@ func (r *KongUpstreamPolicyReconciler) getUpstreamPoliciesForIngressServices(ctx
 				}
 				service corev1.Service
 			)
-			if err := r.Client.Get(ctx, nn, &service); err != nil {
+			if err := r.Get(ctx, nn, &service); err != nil {
 				if !apierrors.IsNotFound(err) {
 					r.Log.Error(err, "Failed to retrieve Service in watch predicates",
 						"Service", nn,
@@ -382,17 +382,17 @@ func (r *KongUpstreamPolicyReconciler) getUpstreamPoliciesForHTTPRouteServices(c
 			}
 
 			namespace := httpRoute.Namespace
-			if br.BackendRef.Namespace != nil {
-				namespace = string(*br.BackendRef.Namespace)
+			if br.Namespace != nil {
+				namespace = string(*br.Namespace)
 			}
 			service := &corev1.Service{}
-			if err := r.Client.Get(ctx, k8stypes.NamespacedName{
+			if err := r.Get(ctx, k8stypes.NamespacedName{
 				Namespace: namespace,
-				Name:      string(br.BackendRef.Name),
+				Name:      string(br.Name),
 			}, service); err != nil {
 				if !apierrors.IsNotFound(err) {
 					r.Log.Error(err, "Failed to retrieve Service in watch predicates",
-						"Service", fmt.Sprintf("%s/%s", namespace, string(br.BackendRef.Name)),
+						"Service", fmt.Sprintf("%s/%s", namespace, string(br.Name)),
 					)
 				}
 				continue

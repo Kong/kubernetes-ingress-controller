@@ -170,7 +170,7 @@ func DeleteReferencesByReferrer(indexers CacheIndexers, dataplaneClient controll
 	// delete the referent in object cache if it is a secret and it is not referenced anymore.
 	for _, referent := range referents {
 		gvk := referent.GetObjectKind().GroupVersionKind()
-		if !(gvk.Group == corev1.GroupName && gvk.Version == VersionV1 && gvk.Kind == KindSecret) {
+		if gvk.Group != corev1.GroupName || gvk.Version != VersionV1 || gvk.Kind != KindSecret {
 			continue
 		}
 		err := indexers.DeleteObjectIfNotReferred(referent, dataplaneClient)

@@ -63,7 +63,7 @@ func (t *Translator) ingressRulesFromGRPCRoute(result *ingressRules, grpcroute *
 		service.Routes = append(service.Routes, subtranslator.GenerateKongRoutesFromGRPCRouteRule(grpcroute, ruleNumber, t.storer)...)
 
 		// cache the service to avoid duplicates in further loop iterations
-		result.ServiceNameToServices[*service.Service.Name] = service
+		result.ServiceNameToServices[*service.Name] = service
 	}
 
 	return nil

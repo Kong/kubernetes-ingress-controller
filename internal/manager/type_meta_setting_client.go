@@ -30,7 +30,7 @@ func (c TypeMetaSettingClient) Get(
 	if err := c.Client.Get(ctx, key, obj, opts...); err != nil {
 		return err
 	}
-	if err := util.PopulateTypeMeta(obj, c.Client.Scheme()); err != nil {
+	if err := util.PopulateTypeMeta(obj, c.Scheme()); err != nil {
 		return fmt.Errorf("failed to populate type meta: %w", err)
 	}
 	return nil

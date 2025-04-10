@@ -106,7 +106,7 @@ func TestResourceFailuresCollector(t *testing.T) {
 
 func assertDebugLogs(t *testing.T, logs *observer.ObservedLogs) {
 	for i := range logs.All() {
-		assert.Equalf(t, zapcore.DebugLevel, logs.All()[i].Entry.Level, "%d-nth log entry expected to have DebugLevel", i)
+		assert.Equalf(t, zapcore.DebugLevel, logs.All()[i].Level, "%d-nth log entry expected to have DebugLevel", i)
 	}
 }
 

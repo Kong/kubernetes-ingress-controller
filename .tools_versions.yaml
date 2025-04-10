@@ -1,13 +1,13 @@
 # renovate: datasource=github-tags depName=kubernetes/code-generator
 kube-code-generator: "0.32.3"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-tools
-controller-tools: "0.17.2"
+controller-tools: "0.17.3"
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize
 kustomize: "5.6.0"
 # renovate: datasource=github-releases depName=golangci/golangci-lint
-golangci-lint: "1.64.8"
+golangci-lint: "2.0.2"
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
-skaffold: "2.14.2"
+skaffold: "2.15.0"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
 setup-envtest: "0.20.4"
 # renovate: datasource=github-releases depName=elastic/crd-ref-docs

@@ -98,7 +98,7 @@ func TestApplyExpressionToL4KongRoute(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			wrapped := kongstate.Route{Route: tc.route}
 			ApplyExpressionToL4KongRoute(&wrapped)
-			require.Contains(t, *wrapped.Route.Expression, tc.subExpr)
+			require.Contains(t, *wrapped.Expression, tc.subExpr)
 		})
 	}
 }

@@ -12,13 +12,13 @@ import (
 	"github.com/kong/go-kong/kong"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/tracing"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
-func NewKongClientForKonnectControlPlane(c config.KonnectConfig) (*KonnectClient, error) {
+func NewKongClientForKonnectControlPlane(c managercfg.KonnectConfig) (*KonnectClient, error) {
 	client, err := NewKongAPIClient(
 		fmt.Sprintf("%s/%s/%s", c.Address, "kic/api/control-planes", c.ControlPlaneID),
-		config.AdminAPIClientConfig{
+		managercfg.AdminAPIClientConfig{
 			TLSClient: c.TLSClient,
 		},
 		"",
@@ -81,12 +81,12 @@ func KonnectHTTPDoer() kong.Doer {
 
 // KonnectClientFactory is a factory to create KonnectClient instances.
 type KonnectClientFactory struct {
-	konnectConfig config.KonnectConfig
+	konnectConfig managercfg.KonnectConfig
 	logger        logr.Logger
 }
 
 // NewKonnectClientFactory creates a new KonnectClientFactory instance.
-func NewKonnectClientFactory(konnectConfig config.KonnectConfig, logger logr.Logger) *KonnectClientFactory {
+func NewKonnectClientFactory(konnectConfig managercfg.KonnectConfig, logger logr.Logger) *KonnectClientFactory {
 	return &KonnectClientFactory{
 		konnectConfig: konnectConfig,
 		logger:        logger,

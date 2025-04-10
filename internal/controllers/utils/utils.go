@@ -18,7 +18,7 @@ const defaultIngressClassAnnotation = "ingressclass.kubernetes.io/is-default-cla
 // IsDefaultIngressClass returns whether an IngressClass is the default IngressClass.
 func IsDefaultIngressClass(obj client.Object) bool {
 	if ingressClass, ok := obj.(*netv1.IngressClass); ok {
-		return ingressClass.ObjectMeta.Annotations[defaultIngressClassAnnotation] == "true"
+		return ingressClass.Annotations[defaultIngressClassAnnotation] == "true"
 	}
 	return false
 }

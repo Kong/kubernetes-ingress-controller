@@ -17,7 +17,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/useragent"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
 	tlsutil "github.com/kong/kubernetes-ingress-controller/v3/internal/util/tls"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 // Client interacts with the Konnect license API.
@@ -31,7 +31,7 @@ type Client struct {
 var KICLicenseAPIPathPattern = "%s/kic/api/control-planes/%s/v1/licenses"
 
 // NewClient creates a License API Konnect client.
-func NewClient(cfg config.KonnectConfig) (*Client, error) {
+func NewClient(cfg managercfg.KonnectConfig) (*Client, error) {
 	tlsConfig := tls.Config{
 		MinVersion: tls.VersionTLS12,
 	}

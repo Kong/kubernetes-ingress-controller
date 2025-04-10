@@ -449,7 +449,7 @@ func TestRewriteURIAnnotation(t *testing.T) {
 
 	t.Run("Ingress rule with rewrite annotation disabled", func(t *testing.T) {
 		emptyRewriteURIIngress := someIngress("empty_annotation_svc", "")
-		delete(emptyRewriteURIIngress.ObjectMeta.Annotations, annotations.AnnotationPrefix+annotations.RewriteURIKey)
+		delete(emptyRewriteURIIngress.Annotations, annotations.AnnotationPrefix+annotations.RewriteURIKey)
 
 		s, err := store.NewFakeStore(store.FakeObjects{
 			IngressesV1: []*netv1.Ingress{

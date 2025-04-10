@@ -5,12 +5,12 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/metadata"
 )
 
 // GetKubeconfig returns a Kubernetes REST config object based on the configuration.
-func GetKubeconfig(c config.Config) (*rest.Config, error) {
+func GetKubeconfig(c managercfg.Config) (*rest.Config, error) {
 	config, err := clientcmd.BuildConfigFromFlags(c.APIServerHost, c.KubeconfigPath)
 	if err != nil {
 		return nil, err
@@ -40,7 +40,7 @@ func GetKubeconfig(c config.Config) (*rest.Config, error) {
 }
 
 // GetKubeClient returns a Kubernetes client based on the configuration.
-func GetKubeClient(c config.Config) (client.Client, error) {
+func GetKubeClient(c managercfg.Config) (client.Client, error) {
 	conf, err := GetKubeconfig(c)
 	if err != nil {
 		return nil, err

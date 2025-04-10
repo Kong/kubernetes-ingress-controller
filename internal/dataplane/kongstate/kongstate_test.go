@@ -1219,7 +1219,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			if len(state.Consumers) > 0 && len(tc.expectedKongStateConsumers) > 0 {
 				expectedConsumer := tc.expectedKongStateConsumers[0]
 				kongStateConsumer := state.Consumers[0]
-				assert.Equal(t, expectedConsumer.Consumer.Username, kongStateConsumer.Consumer.Username, "should have expected username")
+				assert.Equal(t, expectedConsumer.Username, kongStateConsumer.Username, "should have expected username")
 				// compare credentials.
 				// Since the credentials include references of parent objects (secrets and consumers), we only compare their fields.
 				assert.Len(t, kongStateConsumer.KeyAuths, len(expectedConsumer.KeyAuths))

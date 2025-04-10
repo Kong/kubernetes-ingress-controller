@@ -15,7 +15,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 var (
@@ -33,7 +33,7 @@ type Server struct {
 	certWatcher mo.Option[*certwatcher.CertWatcher]
 }
 
-func MakeTLSServer(config config.AdmissionServerConfig, handler http.Handler) (*Server, error) {
+func MakeTLSServer(config managercfg.AdmissionServerConfig, handler http.Handler) (*Server, error) {
 	const defaultHTTPReadHeaderTimeout = 10 * time.Second
 
 	s := &Server{}
@@ -75,7 +75,7 @@ func (s *Server) Start(ctx context.Context) error {
 	return s.s.Shutdown(ctx)
 }
 
-func (s *Server) setupTLSConfig(sc config.AdmissionServerConfig) (*tls.Config, error) {
+func (s *Server) setupTLSConfig(sc managercfg.AdmissionServerConfig) (*tls.Config, error) {
 	var watcher *certwatcher.CertWatcher
 	var cert, key []byte
 	switch {

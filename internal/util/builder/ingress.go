@@ -52,7 +52,7 @@ func (b *IngressBuilder) WithRules(rules ...netv1.IngressRule) *IngressBuilder {
 }
 
 func (b *IngressBuilder) WithNamespace(namespace string) *IngressBuilder {
-	b.ingress.ObjectMeta.Namespace = namespace
+	b.ingress.Namespace = namespace
 	return b
 }
 

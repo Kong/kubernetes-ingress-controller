@@ -283,9 +283,9 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 	require.Eventually(t, func() bool {
 		ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Get(ctx, "httpbin", metav1.GetOptions{})
 		require.NoError(t, err)
-		anns := ingress.ObjectMeta.GetAnnotations()
+		anns := ingress.GetAnnotations()
 		anns["konghq.com/plugins"] = rateLimiterPlugin.Name
-		ingress.ObjectMeta.SetAnnotations(anns)
+		ingress.SetAnnotations(anns)
 		_, err = env.Cluster().Client().NetworkingV1().Ingresses(namespace.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 		return err == nil
 	}, time.Minute, time.Second)

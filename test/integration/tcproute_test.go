@@ -209,7 +209,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Logf("testing specific name references")
-	serviceName := gatewayapi.ObjectName(service2.ObjectMeta.Name)
+	serviceName := gatewayapi.ObjectName(service2.Name)
 	grant.Spec.To[1] = gatewayapi.ReferenceGrantTo{
 		Kind:  gatewayapi.Kind("Service"),
 		Group: gatewayapi.Group(""),

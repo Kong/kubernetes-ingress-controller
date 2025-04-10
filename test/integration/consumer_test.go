@@ -92,7 +92,7 @@ func TestConsumerCredential(t *testing.T) {
 		if err != nil {
 			return false
 		}
-		ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = kongplugin.Name
+		ingress.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = kongplugin.Name
 		_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
 		return err == nil
 	}, ingressWait, waitTick)

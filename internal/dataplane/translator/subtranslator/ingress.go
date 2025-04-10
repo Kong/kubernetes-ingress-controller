@@ -22,7 +22,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 // -----------------------------------------------------------------------------
@@ -192,7 +192,7 @@ func (i *ingressTranslationIndex) getIngressPathBackend(namespace string, httpIn
 			return ingressTranslationMetaBackend{}, fmt.Errorf("unknown resource type %s", gk)
 		}
 		if !i.featureFlags.KongServiceFacade {
-			return ingressTranslationMetaBackend{}, fmt.Errorf("KongServiceFacade is not enabled, please set the %q feature gate to 'true' to enable it", config.KongServiceFacadeFeature)
+			return ingressTranslationMetaBackend{}, fmt.Errorf("KongServiceFacade is not enabled, please set the %q feature gate to 'true' to enable it", managercfg.KongServiceFacadeFeature)
 		}
 
 		serviceFacade, err := i.storer.GetKongServiceFacade(namespace, resource.Name)
@@ -432,7 +432,7 @@ func (m *ingressTranslationMeta) translateIntoKongRoute() *kongstate.Route {
 	}
 
 	if m.ingressHost != "" {
-		route.Route.Hosts = append(route.Route.Hosts, kong.String(m.ingressHost))
+		route.Hosts = append(route.Hosts, kong.String(m.ingressHost))
 	}
 
 	for _, httpIngressPath := range m.paths {
@@ -534,7 +534,7 @@ func MaybePrependRegexPrefix(path, controllerPrefix string, applyLegacyHeuristic
 func MaybePrependRegexPrefixForIngressV1Fn(ingress *netv1.Ingress, applyLegacyHeuristic bool) func(path string) *string {
 	// If the ingress has a regex prefix annotation, use that, otherwise use the controller default.
 	regexPrefix := ControllerPathRegexPrefix
-	if prefix, ok := ingress.ObjectMeta.Annotations[annotations.AnnotationPrefix+annotations.RegexPrefixKey]; ok {
+	if prefix, ok := ingress.Annotations[annotations.AnnotationPrefix+annotations.RegexPrefixKey]; ok {
 		regexPrefix = prefix
 	}
 

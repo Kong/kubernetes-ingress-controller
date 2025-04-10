@@ -9,12 +9,12 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
 func TestClientFactory_CreateAdminAPIClientAttachesPodReference(t *testing.T) {
-	factory := adminapi.NewClientFactoryForWorkspace(logr.Discard(), "workspace", config.AdminAPIClientConfig{}, "")
+	factory := adminapi.NewClientFactoryForWorkspace(logr.Discard(), "workspace", managercfg.AdminAPIClientConfig{}, "")
 
 	adminAPIHandler := mocks.NewAdminAPIHandler(t)
 	adminAPIServer := httptest.NewServer(adminAPIHandler)

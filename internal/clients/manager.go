@@ -14,7 +14,7 @@ import (
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 // ClientFactory is responsible for creating Admin API clients.
@@ -114,7 +114,7 @@ func NewAdminAPIClientsManager(
 	c := &AdminAPIClientsManager{
 		readyGatewayClients:             readyClients,
 		pendingGatewayClients:           make(map[string]adminapi.DiscoveredAdminAPI),
-		readinessReconciliationInterval: config.DefaultDataPlanesReadinessReconciliationInterval,
+		readinessReconciliationInterval: managercfg.DefaultDataPlanesReadinessReconciliationInterval,
 		readinessChecker:                readinessChecker,
 		readinessReconciliationTicker:   clock.NewTicker(),
 		discoveredAdminAPIsNotifyChan:   make(chan []adminapi.DiscoveredAdminAPI),

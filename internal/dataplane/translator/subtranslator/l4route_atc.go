@@ -12,7 +12,7 @@ import (
 func ApplyExpressionToL4KongRoute(r *kongstate.Route) {
 	matchers := []atc.Matcher{}
 
-	sniMatcher := sniMatcherFromSNIs(lo.Map(r.Route.SNIs, func(item *string, _ int) string { return *item }))
+	sniMatcher := sniMatcherFromSNIs(lo.Map(r.SNIs, func(item *string, _ int) string { return *item }))
 	matchers = append(matchers, sniMatcher)
 
 	// TODO(rodman10): replace with helper function.

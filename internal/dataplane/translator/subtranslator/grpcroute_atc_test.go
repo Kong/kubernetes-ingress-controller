@@ -1252,7 +1252,7 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 		t.Run(strconv.Itoa(i)+"-"+tc.name, func(t *testing.T) {
 			r := KongExpressionRouteFromSplitGRPCRouteMatchWithPriority(tc.splitGRPCMatchWithPriority)
 			grpcRoute := tc.splitGRPCMatchWithPriority.Match.Source
-			tc.expectedRoute.Route.Tags = util.GenerateTagsForObject(grpcRoute)
+			tc.expectedRoute.Tags = util.GenerateTagsForObject(grpcRoute)
 			require.Equal(t, tc.expectedRoute.Route, r.Route)
 			require.True(t, r.ExpressionRoutes)
 			require.Equal(t, grpcRoute.Namespace, r.Ingress.Namespace)

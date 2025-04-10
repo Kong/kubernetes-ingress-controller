@@ -30,13 +30,13 @@ func (s Services) Swap(i, j int) {
 
 func (s Services) Less(i, j int) bool {
 	a := ""
-	if s[i].Service.Name != nil {
-		a = *s[i].Service.Name
+	if s[i].Name != nil {
+		a = *s[i].Name
 	}
 
 	b := ""
-	if s[j].Service.Name != nil {
-		b = *s[j].Service.Name
+	if s[j].Name != nil {
+		b = *s[j].Name
 	}
 
 	return strings.Compare(a, b) == -1

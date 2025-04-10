@@ -135,7 +135,7 @@ func TestMergeCerts(t *testing.T) {
 			mergedCerts, idToMergedID := mergeCerts(logr.Discard(), tc.certs)
 			// sort certs by their IDs to make a stable order of the result merged certs.
 			sort.SliceStable(mergedCerts, func(i, j int) bool {
-				return *mergedCerts[i].Certificate.ID < *mergedCerts[j].Certificate.ID
+				return *mergedCerts[i].ID < *mergedCerts[j].ID
 			})
 			require.Equal(t, tc.mergedCerts, mergedCerts)
 			require.Equal(t, tc.idToMergedID, idToMergedID)

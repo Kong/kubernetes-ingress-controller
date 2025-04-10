@@ -2,6 +2,7 @@ package gateway
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"reflect"
@@ -32,6 +33,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	ctrlref "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/reference"
 	ctrlutils "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/utils"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 )
@@ -175,7 +177,7 @@ func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bo
 	}
 
 	gatewayClass := &gatewayapi.GatewayClass{}
-	if err := r.Client.Get(context.Background(), client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, gatewayClass); err != nil {
+	if err := r.Get(context.Background(), client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, gatewayClass); err != nil {
 		r.Log.Error(err, "Could not retrieve gatewayclass", "gatewayclass", gateway.Spec.GatewayClassName)
 		return false
 	}
@@ -205,7 +207,7 @@ func (r *GatewayReconciler) listGatewaysForGatewayClass(ctx context.Context, gat
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
 	if gatewayToReconcile, ok := r.GatewayNN.Get(); ok {
 		gw := gatewayapi.Gateway{}
-		if err := r.Client.Get(ctx, gatewayToReconcile, &gw); err != nil {
+		if err := r.Get(ctx, gatewayToReconcile, &gw); err != nil {
 			r.Log.Error(err, "Failed to get gateways for gatewayclass in watch",
 				"gatewayclass", gatewayClass.GetName(), "gateway", gatewayToReconcile.String(),
 			)
@@ -216,7 +218,7 @@ func (r *GatewayReconciler) listGatewaysForGatewayClass(ctx context.Context, gat
 	}
 
 	gateways := &gatewayapi.GatewayList{}
-	if err := r.Client.List(ctx, gateways); err != nil {
+	if err := r.List(ctx, gateways); err != nil {
 		r.Log.Error(err, "Failed to list gateways for gatewayclass in watch", "gatewayclass", gatewayClass.GetName())
 		return nil
 	}
@@ -241,7 +243,7 @@ func (r *GatewayReconciler) listReferenceGrantsForGateway(ctx context.Context, o
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
 	if gatewayToReconcileNN, ok := r.GatewayNN.Get(); ok {
 		gw := gatewayapi.Gateway{}
-		if err := r.Client.Get(ctx, gatewayToReconcileNN, &gw); err != nil {
+		if err := r.Get(ctx, gatewayToReconcileNN, &gw); err != nil {
 			r.Log.Error(err, "Failed to get gateway for referencegrant in watch",
 				"referencegrant", client.ObjectKeyFromObject(grant), "gateway", gatewayToReconcileNN.String(),
 			)
@@ -249,7 +251,7 @@ func (r *GatewayReconciler) listReferenceGrantsForGateway(ctx context.Context, o
 		}
 		gateways = gatewayapi.GatewayList{Items: []gatewayapi.Gateway{gw}}
 	} else {
-		if err := r.Client.List(ctx, &gateways); err != nil {
+		if err := r.List(ctx, &gateways); err != nil {
 			r.Log.Error(err, "Failed to list gateways in watch", "referencegrant", grant.Name)
 			return nil
 		}
@@ -283,7 +285,7 @@ func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc clie
 	// https://github.com/Kong/kubernetes-ingress-controller/issues/5322
 	if gatewayToReconcileNN, ok := r.GatewayNN.Get(); ok {
 		gw := gatewayapi.Gateway{}
-		if err := r.Client.Get(ctx, gatewayToReconcileNN, &gw); err != nil {
+		if err := r.Get(ctx, gatewayToReconcileNN, &gw); err != nil {
 			r.Log.Error(err, "Failed to get gateway for service in watch",
 				"service", client.ObjectKeyFromObject(svc), "gateway", gatewayToReconcileNN.String(),
 			)
@@ -291,7 +293,7 @@ func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc clie
 		}
 		gateways = gatewayapi.GatewayList{Items: []gatewayapi.Gateway{gw}}
 	} else {
-		if err := r.Client.List(ctx, &gateways); err != nil {
+		if err := r.List(ctx, &gateways); err != nil {
 			r.Log.Error(err, "Failed to list gateways for service in watch", "service", svc.GetName())
 			return nil
 		}
@@ -299,7 +301,7 @@ func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc clie
 
 	for _, gateway := range gateways.Items {
 		gatewayClass := &gatewayapi.GatewayClass{}
-		if err := r.Client.Get(ctx, k8stypes.NamespacedName{Name: string(gateway.Spec.GatewayClassName)}, gatewayClass); err != nil {
+		if err := r.Get(ctx, k8stypes.NamespacedName{Name: string(gateway.Spec.GatewayClassName)}, gatewayClass); err != nil {
 			r.Log.Error(err, "Failed to retrieve gateway class in watch predicates", "gatewayclass", gateway.Spec.GatewayClassName)
 			continue
 		}
@@ -410,7 +412,7 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 	// reduces reconciliation operations that would occur on old information.
 	debug(log, gateway, "Verifying gatewayclass")
 	gwc := &gatewayapi.GatewayClass{}
-	if err := r.Client.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, gwc); err != nil {
+	if err := r.Get(ctx, client.ObjectKey{Name: string(gateway.Spec.GatewayClassName)}, gwc); err != nil {
 		debug(log, gateway, "Could not retrieve gatewayclass for gateway", "gatewayclass", string(gateway.Spec.GatewayClassName))
 		// delete reference relationships where the gateway is the referrer, as we will not process the gateway.
 		err := ctrlref.DeleteReferencesByReferrer(r.ReferenceIndexers, r.DataplaneClient, gateway)
@@ -583,6 +585,14 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 		debug(log, gateway, "Determining listener configurations from Kong data-plane")
 		kongListeners, err = r.determineListenersFromDataPlane(ctx, svc, kongListeners)
 		if err != nil {
+			if errNoReadyClients := (&dataplane.NoReadyGatewayClientsError{}); errors.As(err, &errNoReadyClients) {
+				// Requeue the request to reconcile the gateway again after `retryAfter` but not return the error to trigger a Reconcile Error
+				// when no gateway is available to fetch information of listeners.
+				info(log, gateway,
+					"Cannot determine listeners because no available Kong gateway clients now, retrying...",
+				)
+				return ctrl.Result{Requeue: true}, nil
+			}
 			return ctrl.Result{}, err
 		}
 		combinedAddresses = append(combinedAddresses, kongAddresses...)
@@ -612,7 +622,7 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// TLS secrets they are granted for
 	referenceGrantList := &gatewayapi.ReferenceGrantList{}
 	if r.enableReferenceGrant {
-		if err := r.Client.List(ctx, referenceGrantList); err != nil {
+		if err := r.List(ctx, referenceGrantList); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
@@ -691,7 +701,7 @@ func (r *GatewayReconciler) determineServiceForGateway(ctx context.Context, ref 
 		r.Log.V(logging.DebugLevel).Info("Service not configured, discarding it", "ref", ref)
 		return nil, nil
 	}
-	if err := r.Client.Get(ctx, name, svc); err != nil {
+	if err := r.Get(ctx, name, svc); err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil, fmt.Errorf("publish service %q couldn't be found: %w", name, err)
 		}
@@ -872,17 +882,17 @@ func (r *GatewayReconciler) updateAddressesAndListenersStatus(
 			Reason:             string(gatewayapi.GatewayReasonProgrammed),
 		}
 		setGatewayCondition(gateway, programmedCondition)
-
+		info(log, gateway, "Gateway Programmed status updated")
 		err := r.Status().Update(ctx, pruneGatewayStatusConds(gateway))
 		return handleUpdateError(err, r.Log, gateway)
 	}
 	if !isEqualListenersStatus(gateway.Status.Listeners, listenerStatuses) {
 		gateway.Status.Listeners = listenerStatuses
-
+		info(log, gateway, "Gateway listener status updated")
 		err := r.Status().Update(ctx, gateway)
 		return handleUpdateError(err, r.Log, gateway)
 	}
 
-	info(log, gateway, "Gateway status updated")
+	debug(log, gateway, "Gateway status not updated")
 	return ctrl.Result{}, nil
 }

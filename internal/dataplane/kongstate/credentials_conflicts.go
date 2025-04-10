@@ -38,15 +38,15 @@ func (d *CredentialConflictsDetector) RegisterForConflictDetection(
 	}
 	switch c := cred.(type) {
 	case *KeyAuth:
-		d.keyAuthsByKey.add(*c.KeyAuth.Key, credWithParent)
+		d.keyAuthsByKey.add(*c.Key, credWithParent)
 	case *BasicAuth:
-		d.basicAuthsByUsername.add(*c.BasicAuth.Username, credWithParent)
+		d.basicAuthsByUsername.add(*c.Username, credWithParent)
 	case *HMACAuth:
-		d.hmacAuthsByUsername.add(*c.HMACAuth.Username, credWithParent)
+		d.hmacAuthsByUsername.add(*c.Username, credWithParent)
 	case *Oauth2Credential:
-		d.oauth2CredentialsByClientID.add(*c.Oauth2Credential.ClientID, credWithParent)
+		d.oauth2CredentialsByClientID.add(*c.ClientID, credWithParent)
 	case *JWTAuth:
-		d.jwtAuthsByByKey.add(*c.JWTAuth.Key, credWithParent)
+		d.jwtAuthsByByKey.add(*c.Key, credWithParent)
 	case *ACLGroup:
 		// ACLs do not have any unique field to index on.
 	case *MTLSAuth:

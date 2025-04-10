@@ -56,7 +56,7 @@ jobs:
           fi
 
       - name: GPG sign the commits
-        uses: crazy-max/ghaction-import-gpg@cb9bde2e2525e640591a934b1fd28eef1dcaf5e5
+        uses: crazy-max/ghaction-import-gpg@e89d40939c28e39f97cf32126055eeae86ba74ec
         with:
           workdir: docs.konghq.com
           gpg_private_key: ${{ secrets.K8S_TEAM_BOT_GPG_PRIVATE_KEY }}

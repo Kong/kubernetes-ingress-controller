@@ -25,7 +25,7 @@ func (r *BackendTLSPolicyReconciler) getBackendTLSPoliciesByHTTPRoute(ctx contex
 	for _, rule := range httpRoute.Spec.Rules {
 		for _, backend := range rule.BackendRefs {
 			// no need to check group and kind nilness, as they have a default value in case not specified
-			if !((*backend.Group == "" || *backend.Group == "core") && *backend.Kind == "Service") {
+			if *backend.Kind != "Service" || (*backend.Group != "" && *backend.Group != "core") {
 				continue
 			}
 
@@ -59,7 +59,7 @@ func (r *BackendTLSPolicyReconciler) getBackendTLSPolicyAncestors(ctx context.Co
 		}
 
 		httpRoutes := gatewayapi.HTTPRouteList{}
-		if err := r.Client.List(ctx, &httpRoutes,
+		if err := r.List(ctx, &httpRoutes,
 			client.MatchingFields{httpRouteBackendRefIndexKey: policy.Namespace + "/" + string(targetRef.Name)},
 		); err != nil {
 			return nil, err

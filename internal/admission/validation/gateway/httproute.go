@@ -212,6 +212,7 @@ func validateWithKongGateway(
 	}
 	for _, service := range translationResult.ServiceNameToKongstateService {
 		for _, route := range service.Routes {
+			route.Override(logr.Discard())
 			ok, msg, err := routesValidator.Validate(ctx, &route.Route)
 			if err != nil {
 				return false, fmt.Sprintf("Unable to validate HTTPRoute schema: %s", err.Error())

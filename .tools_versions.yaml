@@ -21,7 +21,7 @@ gotestsum: "1.12.1"
 # renovate: datasource=github-releases depName=dominikh/go-tools
 staticcheck: "2025.1.1"
 # renovate: datasource=github-releases depName=go-delve/delve
-delve: "1.24.1"
+delve: "1.24.2"
 # renovate: datasource=github-releases depName=rhysd/actionlint
 actionlint: "1.7.7"
 # renovate: datasource=github-releases depName=koalaman/shellcheck

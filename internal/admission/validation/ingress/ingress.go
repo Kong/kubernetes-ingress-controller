@@ -39,7 +39,7 @@ func ValidateIngress(
 		return false, fmt.Sprintf("Ingress has invalid Kong annotations: %s", err), nil
 	}
 
-	for _, kg := range ingressToKongRoutesForValidation(translatorFeatures, ingress, failuresCollector, storer) {
+	for _, kg := range ingressToKongRoutesForValidation(translatorFeatures, ingress, failuresCollector, logger, storer) {
 		// Validate by using feature of Kong Gateway.
 		ok, msg, err := routesValidator.Validate(ctx, &kg)
 		if err != nil {
@@ -65,6 +65,7 @@ func ingressToKongRoutesForValidation(
 	translatorFeatures translator.FeatureFlags,
 	ingress *netv1.Ingress,
 	failuresCollector subtranslator.FailuresCollector,
+	logger logr.Logger,
 	storer store.Storer,
 ) []kong.Route {
 	kongServices := subtranslator.TranslateIngresses(
@@ -82,6 +83,7 @@ func ingressToKongRoutesForValidation(
 	var kongRoutes []kong.Route
 	for _, svc := range kongServices {
 		for _, route := range svc.Routes {
+			route.Override(logger)
 			kongRoutes = append(kongRoutes, route.Route)
 		}
 	}

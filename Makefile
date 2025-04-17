@@ -29,10 +29,10 @@ LDFLAGS_COMMON ?= -extldflags=-Wl,-ld_classic
 endif
 
 LDFLAGS_METADATA ?= \
-	-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.Release=$(TAG) \
-	-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.Commit=$(COMMIT) \
-	-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.Repo=$(REPO_INFO) \
-	-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/internal/manager/metadata.ProjectURL=$(REPO_URL)
+	-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/pkg/metadata.Release=$(TAG) \
+	-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/pkg/metadata.Commit=$(COMMIT) \
+	-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/pkg/metadata.Repo=$(REPO_INFO) \
+	-X $(REPO_URL)/$(GO_MOD_MAJOR_VERSION)/pkg/metadata.ProjectURL=$(REPO_URL)
 
 # ------------------------------------------------------------------------------
 # Configuration - Tooling

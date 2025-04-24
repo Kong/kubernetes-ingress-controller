@@ -8,6 +8,9 @@ concurrency:
   cancel-in-progress: true
 
 on:
+  merge_group:
+    branches:
+      - 'main'
   pull_request:
     branches:
       - '**'

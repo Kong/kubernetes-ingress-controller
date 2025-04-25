@@ -13,7 +13,7 @@ var (
 	GroupVersion    = gatewayv1.GroupVersion
 )
 
-// This file contains aliases for types and consts from the Gateway API.  Its purpose is to allow easy migration from
+// This file contains aliases for types and consts from the Gateway API. Its purpose is to allow easy migration from
 // one version of the Gateway API to another with minimal changes to the codebase.
 
 type (
@@ -25,7 +25,6 @@ type (
 	CommonRouteSpec                           = gatewayv1.CommonRouteSpec
 	Duration                                  = gatewayv1.Duration
 	Gateway                                   = gatewayv1.Gateway
-	GatewayAddress                            = gatewayv1.GatewayAddress
 	GatewayClass                              = gatewayv1.GatewayClass
 	GatewayClassList                          = gatewayv1.GatewayClassList
 	GatewayClassSpec                          = gatewayv1.GatewayClassSpec
@@ -143,6 +142,7 @@ const (
 	HTTPRouteFilterExtensionRef           = gatewayv1.HTTPRouteFilterExtensionRef
 	HTTPRouteFilterRequestHeaderModifier  = gatewayv1.HTTPRouteFilterRequestHeaderModifier
 	HTTPRouteFilterRequestMirror          = gatewayv1.HTTPRouteFilterRequestMirror
+	HTTPRouteFilterCORS                   = gatewayv1.HTTPRouteFilterCORS
 	HTTPRouteFilterRequestRedirect        = gatewayv1.HTTPRouteFilterRequestRedirect
 	HTTPRouteFilterResponseHeaderModifier = gatewayv1.HTTPRouteFilterResponseHeaderModifier
 	HTTPRouteFilterURLRewrite             = gatewayv1.HTTPRouteFilterURLRewrite

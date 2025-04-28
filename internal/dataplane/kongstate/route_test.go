@@ -220,7 +220,7 @@ func TestOverrideRoute(t *testing.T) {
 func TestNilRouteOverrideDoesntPanic(t *testing.T) {
 	require.NotPanics(t, func() {
 		var nilRoute *Route
-		nilRoute.override(zapr.NewLogger(zap.NewNop()))
+		nilRoute.Override(zapr.NewLogger(zap.NewNop()))
 	})
 }
 
@@ -305,7 +305,7 @@ func TestOverrideExpressionRoute(t *testing.T) {
 
 	for i, tc := range testCases {
 		t.Run(strconv.Itoa(i)+"-"+tc.name, func(t *testing.T) {
-			tc.inRoute.override(zapr.NewLogger(zap.NewNop()))
+			tc.inRoute.Override(zapr.NewLogger(zap.NewNop()))
 			assert.Equal(t, tc.outRoute, tc.inRoute, "should be the same as expected after overriding")
 		})
 	}

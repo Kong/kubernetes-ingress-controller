@@ -42,7 +42,7 @@ require (
 	github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5
 	github.com/prometheus/client_golang v1.22.0
 	github.com/prometheus/common v0.63.0
-	github.com/samber/lo v1.49.1
+	github.com/samber/lo v1.50.0
 	github.com/samber/mo v1.13.0
 	github.com/sethvargo/go-password v0.3.1
 	github.com/spf13/cobra v1.9.1

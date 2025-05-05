@@ -26,17 +26,12 @@ permissions:
   contents: read
 
 jobs:
-  check-permission:
-    uses: ./.github/workflows/_permission_check.yaml
-    secrets: inherit
-
   # NOTE: this job checks if we're up to date with base branch. This is useful
   # because merging a PR which branch was up to date with the base branch does
   # not require running tests again as the commit is the same.
   up-to-date:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     runs-on: ubuntu-latest
-    needs: check-permission
     outputs:
       status: ${{ steps.up-to-date.outputs.status }}
     # NOTE: we only want to check if the head is up to date with the base branch

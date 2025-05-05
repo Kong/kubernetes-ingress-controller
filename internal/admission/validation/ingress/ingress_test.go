@@ -6,6 +6,7 @@ import (
 
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
@@ -40,6 +41,43 @@ func TestValidateIngress(t *testing.T) {
 			valid:         false,
 			validationMsg: "Ingress has invalid Kong annotations: invalid konghq.com/protocols value: ohno",
 		},
+		{
+			msg: "invalid protocol combination: mutally exclusive protocols",
+			ingress: &netv1.Ingress{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.ProtocolsKey: "http, tcp",
+					},
+				},
+				Spec: netv1.IngressSpec{
+					Rules: []netv1.IngressRule{
+						{
+							Host: "example.com",
+							IngressRuleValue: netv1.IngressRuleValue{
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{
+										{
+											Path:     "/",
+											PathType: lo.ToPtr(netv1.PathTypePrefix),
+											Backend: netv1.IngressBackend{
+												Service: &netv1.IngressServiceBackend{
+													Name: "httpbin",
+													Port: netv1.ServiceBackendPort{Number: int32(80)},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			valid:         false,
+			validationMsg: "Ingress failed schema validation: Invalid protocols: http and tcp are mutally exclusive",
+		},
 	} {
 		t.Run(tt.msg, func(t *testing.T) {
 			logger := zapr.NewLogger(zap.NewNop())
@@ -66,6 +104,10 @@ func TestValidateIngress(t *testing.T) {
 
 type mockRoutesValidator struct{}
 
-func (mockRoutesValidator) Validate(_ context.Context, _ *kong.Route) (bool, string, error) {
+func (mockRoutesValidator) Validate(_ context.Context, r *kong.Route) (bool, string, error) {
+	protocols := lo.FromSlicePtr(r.Protocols)
+	if lo.Contains(protocols, "http") && lo.Contains(protocols, "tcp") {
+		return false, "Invalid protocols: http and tcp are mutally exclusive", nil
+	}
 	return true, "", nil
 }

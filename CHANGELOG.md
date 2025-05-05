@@ -104,6 +104,14 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## Unreleased
+
+### Fixed
+
+- In validation webhooks for `Ingress`es and `HTTPRoute`s, override the translated
+  Kong route by annotations before sending to Kong gateways.
+  [#7346](https://github.com/Kong/kubernetes-ingress-controller/pull/7346)
+
 ## [3.4.4]
 
 > Release date: 2025-04-08

@@ -30,14 +30,14 @@ jobs:
 
       - name: collect test coverage artifacts
         id: download-coverage
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: coverage-*
           path: coverage
           merge-multiple: true
 
       - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@0565863a31f2c772f9f0395002a31e3f06189574 # v5.4.0
+        uses: codecov/codecov-action@ad3126e916f78f00edff4ed0317cf185271ccc2d # v5.4.2
         with:
           name: combined-coverage
           token: ${{ secrets.CODECOV_TOKEN }}
@@ -55,7 +55,7 @@ jobs:
 
       - name: download tests report
         id: download-coverage
-        uses: actions/download-artifact@95815c38cf2ff2164869cbab79da8d1f422bc89e # v4.2.1
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           pattern: tests-report-*
           path: report

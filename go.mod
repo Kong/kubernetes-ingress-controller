@@ -53,7 +53,7 @@ require (
 	github.com/tonglil/buflogr v1.1.1
 	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.27.0
-	google.golang.org/api v0.229.0
+	google.golang.org/api v0.232.0
 	k8s.io/api v0.33.0
 	k8s.io/apiextensions-apiserver v0.33.0
 	k8s.io/apimachinery v0.33.0
@@ -91,7 +91,7 @@ require (
 )
 
 require (
-	cloud.google.com/go/auth v0.16.0 // indirect
+	cloud.google.com/go/auth v0.16.1 // indirect
 	cloud.google.com/go/auth/oauth2adapt v0.2.8 // indirect
 	cloud.google.com/go/compute/metadata v0.6.0 // indirect
 	dario.cat/mergo v1.0.1
@@ -220,7 +220,7 @@ require (
 	golang.org/x/exp v0.0.0-20240719175910-8a7402abbf56 // indirect
 	golang.org/x/mod v0.24.0
 	golang.org/x/net v0.39.0 // indirect
-	golang.org/x/oauth2 v0.29.0 // indirect
+	golang.org/x/oauth2 v0.30.0 // indirect
 	golang.org/x/sync v0.14.0
 	golang.org/x/sys v0.32.0 // indirect
 	golang.org/x/term v0.31.0 // indirect
@@ -229,7 +229,7 @@ require (
 	golang.org/x/tools v0.30.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
 	google.golang.org/genproto/googleapis/api v0.0.0-20250414145226-207652e42e2e // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20250414145226-207652e42e2e // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20250428153025-10db94c68c34 // indirect
 	google.golang.org/grpc v1.72.0
 	google.golang.org/protobuf v1.36.6 // indirect
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect

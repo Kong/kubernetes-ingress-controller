@@ -58,11 +58,12 @@ func PerformUpdate(
 		return oldSHA, fmt.Errorf("failed to generate SHA for target content: %w", err)
 	}
 
-	// Disable the optimization in DB mode by checking if the configuration is same as the last applied configuration if:
+	// Disable checking whether the actual SHA is as generated when:
 	// - reverse sync is enabled
-	// - or the update is performed by a fallback process because in DBmode, when applying fails, some entities are applied successfully, then the Kong gateway may be in a "partial success" state.
-	if config.InMemory ||
-		(!config.EnableReverseSync && !isFallback) {
+	// - or running in DB mode and in fallback mode
+	//
+	// We do this because in db mode, when applying fails, some entities are applied successfully, then the Kong gateway may be in a "partial success" state.
+	if !config.EnableReverseSync && (config.InMemory || !isFallback) {
 		configurationChanged, err := configChangeDetector.HasConfigurationChanged(ctx, oldSHA, newSHA, targetContent, client.AdminAPIClient())
 		if err != nil {
 			return nil, fmt.Errorf("failed to detect configuration change: %w", err)

@@ -22,6 +22,8 @@ github.com/Kong/gojsondiff v1.3.2 h1:qIOVq2mUXt+NXy8Be5gRUee9TP3Ve0MbQSafg9bXKZE
 github.com/Kong/gojsondiff v1.3.2/go.mod h1:DiIxtU59q4alK7ecP+7k56C5UjgOviJ5gQVR2esEhYw=
 github.com/Kong/sdk-konnect-go v0.2.22 h1:7Jm+LdqqDaypg30DIVeg9QiNS9Eg80dmsDw8Fz2v96U=
 github.com/Kong/sdk-konnect-go v0.2.22/go.mod h1:xsmTIkBbmVyUh1nRFjQMOhxYIPDl+sMfmRmPuZHtwLE=
+github.com/Kong/sdk-konnect-go v0.2.28 h1:zQWeWYU4vkEZ7M+Lqp5wVwelRyYK3dt4Gz16atDU1KU=
+github.com/Kong/sdk-konnect-go v0.2.28/go.mod h1:xsmTIkBbmVyUh1nRFjQMOhxYIPDl+sMfmRmPuZHtwLE=
 github.com/MakeNowJust/heredoc v1.0.0 h1:cXCdzVdstXyiTqTvfqk9SDHpKNjxuom+DOlyEeQ4pzQ=
 github.com/MakeNowJust/heredoc v1.0.0/go.mod h1:mG5amYoWBHf8vpLOuehzbGGw0EHxpZZ6lCpQ4fNJ8LE=
 github.com/Masterminds/goutils v1.1.1 h1:5nUrii3FMTL5diU80unEVvNevw1nH4+ZV4DSLVJLSYI=
@@ -226,6 +228,8 @@ github.com/kong/go-kong v0.65.1 h1:CM+8NlF+VbJckTxP2hGmSPKhA1GMliitXjQ7vJiPkaE=
 github.com/kong/go-kong v0.65.1/go.mod h1:sqdysTKrXIJ6mpxHwTwjgZhLW7jR1/puczTXHLUwJaE=
 github.com/kong/kubernetes-configuration v1.3.1 h1:mA36ROsWLA1/1PDPYC0mbTMB3D8sLG6FbsXBoq2LNog=
 github.com/kong/kubernetes-configuration v1.3.1/go.mod h1:wakGUhvbgYjrE9n0y9lXvNFcP2JTDOIoIoxJTTWw4oQ=
+github.com/kong/kubernetes-configuration v1.4.0 h1:4uzZ23mXt4zg+PyQLwNBLY/xj5HaqzlEwwf8EfvK36M=
+github.com/kong/kubernetes-configuration v1.4.0/go.mod h1:mk3PTaKhpDgIRpjo0f+pOfDZ93vSYlgXORUjM7nTYSU=
 github.com/kong/kubernetes-telemetry v0.1.9 h1:XbDMZjZZclHO4oyJGW1mmZ6bzbTnANjcRAYsBg+jpno=
 github.com/kong/kubernetes-telemetry v0.1.9/go.mod h1:lBSbaQdJkoMMO0d+cJWopoJiJ+QHFBttbhCp5VRibJ8=
 github.com/kong/kubernetes-testing-framework v0.47.2 h1:+2Z9anTpbV/hwNeN+NFQz53BMU+g3QJydkweBp3tULo=

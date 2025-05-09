@@ -696,6 +696,14 @@ func (ks *KongState) FillIDs(logger logr.Logger, workspace string) {
 			ks.Vaults[valutIndex] = vault
 		}
 	}
+
+	for pluginIndex, plugin := range ks.Plugins {
+		if err := plugin.FillID(workspace); err != nil {
+			logger.Error(err, "failed to fill ID for plugin", "plugin_name", plugin.Name)
+		} else {
+			ks.Plugins[pluginIndex] = plugin
+		}
+	}
 }
 
 // maybeLogKongIngressDeprecationError iterates over services and logs a deprecation error if a service

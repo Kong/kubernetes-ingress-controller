@@ -696,7 +696,8 @@ func (ks *KongState) FillIDs(logger logr.Logger, workspace string) {
 			ks.Vaults[valutIndex] = vault
 		}
 	}
-
+	// REVIEW: `FillID` is still behind a feature flag that is enabled by default.
+	// Should we enforce filling IDs of plugins no matter whether the feature is enabled (or force filling ID in DB mode)?
 	for pluginIndex, plugin := range ks.Plugins {
 		if err := plugin.FillID(workspace); err != nil {
 			logger.Error(err, "failed to fill ID for plugin", "plugin_name", plugin.Name)

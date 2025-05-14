@@ -1,6 +1,7 @@
 _format_version: "3.0"
 plugins:
-- name: basic-auth
+- id: a340e1ec-76fc-53fe-bd7a-e446543585b8
+  name: basic-auth
   service: default.svc-facade-beta.svc.facade
   tags:
   - k8s-name:auth-beta
@@ -8,7 +9,8 @@ plugins:
   - k8s-kind:KongPlugin
   - k8s-group:configuration.konghq.com
   - k8s-version:v1
-- name: basic-auth
+- id: 10d9d56e-2bbf-5f7b-b63e-46b0e7b9d6f1
+  name: basic-auth
   service: default.svc-facade-alpha.svc.facade
   tags:
   - k8s-name:auth-alpha

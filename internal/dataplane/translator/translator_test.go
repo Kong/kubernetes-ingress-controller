@@ -3537,6 +3537,7 @@ func TestPluginAnnotations(t *testing.T) {
 					},
 				},
 			},
+			ID: kong.String("62ba0da2-4e21-5964-87ff-41853771c125"),
 		})
 	})
 	t.Run("KongPlugin takes precedence over KongPlugin", func(t *testing.T) {

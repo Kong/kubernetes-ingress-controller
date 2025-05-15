@@ -7,6 +7,7 @@ degraphql_routes:
 plugins:
 - config:
     graphql_server_path: /v1/graphql
+  id: 930be9b8-4872-5184-90f6-836547507ba1
   name: degraphql
   route: default.i1.s1..80
   tags:

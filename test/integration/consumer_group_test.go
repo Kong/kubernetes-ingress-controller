@@ -200,7 +200,7 @@ func TestConsumerGroup(t *testing.T) {
 			return
 		}
 		defer resp.Body.Close()
-		if !assert.Equal(c, resp.StatusCode, http.StatusOK) {
+		if !assert.Equal(c, http.StatusOK, resp.StatusCode) {
 			return
 		}
 		hv := resp.Header.Get(addedHeader.K)

@@ -114,6 +114,9 @@ Adding a new version? You'll need three changes:
 - Fill IDs of translated Kong plugins to prevent errors in `go-database-reconciler`
   when a plugin's attached entities is changed.
   [#7410](https://github.com/Kong/kubernetes-ingress-controller/pull/7410)
+- Do not skip updating when the SHA of the current configuration is the same as
+  the SHA of the last valid configuration in applying fallback configuration.
+  [#7380](https://github.com/Kong/kubernetes-ingress-controller/pull/7380)
 
 ## [3.4.4]
 

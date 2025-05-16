@@ -81,7 +81,11 @@ func TestManager_NoLeakedGoroutinesAfterContextCancellation(t *testing.T) {
 	// Not using t.Parallel() because goleak.VerifyNone(t) does not work with parallel tests.
 	t.Cleanup(func() {
 		t.Logf("Checking for goroutine leaks")
-		goleak.VerifyNone(t)
+		// Ignore leaks in controller-runtime/manager before the issue fixed:
+		// https://github.com/kubernetes-sigs/controller-runtime/issues/3218
+		ignoreManagerReconcile := goleak.IgnoreTopFunction("sigs.k8s.io/controller-runtime/pkg/manager.(*runnableGroup).reconcile.func1")
+		ignoreManagerEnagageProcedure := goleak.IgnoreAnyFunction("sigs.k8s.io/controller-runtime/pkg/manager.(*controllerManager).engageStopProcedure.func3.(*runnableGroup).StopAndWait.3.2")
+		goleak.VerifyNone(t, ignoreManagerReconcile, ignoreManagerEnagageProcedure)
 	})
 
 	scheme := Scheme(t, WithKong)

@@ -44,7 +44,7 @@ jobs:
           echo "TEST_KONG_IMAGE=kong/kong-gateway" >> $GITHUB_ENV
           echo "TEST_KONG_TAG=$(yq -ojson -r '.kongintegration.kong-ee' < .github/test_dependencies.yaml )" >> $GITHUB_ENV
 
-      - uses: jdx/mise-action@7a111ead46986ccad89a74ad013ba2a7c08c9e67 # v2.2.1
+      - uses: jdx/mise-action@c94f0bf9e520b150e34c017db785461f7e71c5fb # v2.2.2
         with:
           install: false
 

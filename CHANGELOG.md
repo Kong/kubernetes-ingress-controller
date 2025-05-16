@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.4.5](#345)
  - [3.4.4](#344)
  - [3.4.3](#343)
  - [3.4.2](#342)
@@ -104,13 +105,21 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## Unreleased
+## [3.4.5]
+
+> Release date: 2025-05-15
 
 ### Fixed
 
 - In validation webhooks for `Ingress`es and `HTTPRoute`s, override the translated
   Kong route by annotations before sending to Kong gateways.
   [#7346](https://github.com/Kong/kubernetes-ingress-controller/pull/7346)
+- Fill IDs of translated Kong plugins to prevent errors in `go-database-reconciler`
+  when a plugin's attached entities is changed.
+  [#7410](https://github.com/Kong/kubernetes-ingress-controller/pull/7410)
+- Do not skip updating when the SHA of the current configuration is the same as
+  the SHA of the last valid configuration in applying fallback configuration.
+  [#7380](https://github.com/Kong/kubernetes-ingress-controller/pull/7380)
 
 ## [3.4.4]
 
@@ -4051,6 +4060,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.4.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.4...v3.4.5
 [3.4.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.3...v3.4.4
 [3.4.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.2...v3.4.3
 [3.4.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.1...v3.4.2

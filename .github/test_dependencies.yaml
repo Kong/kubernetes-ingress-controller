@@ -3,14 +3,16 @@ e2e:
     # renovate: datasource=docker depName=kindest/node versioning=docker
     - 'v1.33.0'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
+    - 'v1.32.4'
+    # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
     - 'v1.31.6'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.30.10'
+    - 'v1.30.13'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
     - 'v1.29.14'
   gke:
     # renovate: datasource=custom.gke-rapid depName=gke versioning=semver
-    - '1.32.4'
+    - '1.33.0'
 
   # For Istio, we define combinations of Kind and Istio versions that will be
   # used directly in the test matrix `include` section.
@@ -18,7 +20,7 @@ e2e:
     - # renovate: datasource=docker depName=kindest/node versioning=docker
       kind: 'v1.33.0'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
-      istio: '1.25.0'
+      istio: '1.26.0'
     - # renovate: datasource=docker depName=kindest/node@only-patch versioning=docker
       kind: 'v1.30.8'
       # renovate: datasource=docker depName=istio/istioctl@only-patch versioning=docker

@@ -92,6 +92,10 @@ func (s *UpdateStrategyDBMode) Update(ctx context.Context, targetContent Content
 		return mo.None[int](), deckerrors.ConfigConflictError{Err: err}
 	}
 
+	if err := s.refillPluginIDs(cs, ts); err != nil {
+		return mo.None[int](), err
+	}
+
 	syncer, err := diff.NewSyncer(diff.SyncerOpts{
 		CurrentState:        cs,
 		TargetState:         ts,
@@ -266,4 +270,52 @@ func (s *UpdateStrategyDBMode) targetState(
 	}
 
 	return state.Get(rawState)
+}
+
+// refillPluginIDs keeps the plugin ID in the target state if there are already the same plugin
+// (identified by plugin name and attached service, route, consumer, consumer group) in the current state.
+// This prevents conflicts during the upgrade where the existing plugins have different IDs with the ID generated in building kong state.
+func (s *UpdateStrategyDBMode) refillPluginIDs(currentState *state.KongState, targetState *state.KongState) error {
+	plugins, err := currentState.Plugins.GetAll()
+	if err != nil {
+		return fmt.Errorf("failed getting plugins in current state for %s: %w", s.client.BaseRootURL(), err)
+	}
+	for _, existingPlugin := range plugins {
+		var serviceID, routeID, consumerID, consumerGroupID string
+		if existingPlugin.Service != nil && existingPlugin.Service.ID != nil {
+			serviceID = *existingPlugin.Service.ID
+		}
+		if existingPlugin.Route != nil && existingPlugin.Route.ID != nil {
+			routeID = *existingPlugin.Route.ID
+		}
+		if existingPlugin.Consumer != nil && existingPlugin.Consumer.ID != nil {
+			consumerID = *existingPlugin.Consumer.ID
+		}
+		if existingPlugin.ConsumerGroup != nil && existingPlugin.ConsumerGroup.ID != nil {
+			consumerGroupID = *existingPlugin.ConsumerGroup.ID
+		}
+		targetPlugin, err := targetState.Plugins.GetByProp(*existingPlugin.Name, serviceID, routeID, consumerID, consumerGroupID)
+		if err != nil {
+			if !errors.Is(err, state.ErrNotFound) {
+				s.logger.Error(err, "failed to get plugin with given fields in the target state")
+			}
+			continue
+		}
+		if existingPlugin.ID != nil && targetPlugin.ID != nil && *targetPlugin.ID != *existingPlugin.ID {
+			s.logger.V(logging.DebugLevel).Info("Keeping ID of existing plugin",
+				"plugin_name", *existingPlugin.Name, "new_plugin_id", *targetPlugin.ID, "old_plugin_id", *existingPlugin.ID,
+				"service", serviceID, "route", routeID, "consumer", consumerID, "consumer_group", consumerGroupID,
+			)
+			err = targetState.Plugins.Delete(*targetPlugin.ID)
+			if err != nil {
+				continue
+			}
+			targetPlugin.ID = existingPlugin.ID
+			err = targetState.Plugins.Add(*targetPlugin)
+			if err != nil {
+				continue
+			}
+		}
+	}
+	return nil
 }

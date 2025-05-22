@@ -105,6 +105,16 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+ ## Unreleased
+
+ ### Fixed
+
+ - Keep the plugin's ID unchanged if there is already the same plugin exists
+   when working with DB backed Kong gateways. "Same" plugin is identified by the
+   combination of plugin name, and ID of attached service, route, consumer and
+   consumer group. This prevents the conflicts in upgrading KIC.
+   [#7446](https://github.com/Kong/kubernetes-ingress-controller/pull/7446)
+
 ## [3.4.5]
 
 > Release date: 2025-05-15

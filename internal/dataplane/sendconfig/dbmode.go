@@ -305,16 +305,27 @@ func (s *UpdateStrategyDBMode) refillPluginIDs(currentState *state.KongState, ta
 			continue
 		}
 		if existingPlugin.ID != nil && targetPlugin.ID != nil && *targetPlugin.ID != *existingPlugin.ID {
+			s.logger.V(logging.DebugLevel).Info("Keeping ID of existing plugin",
+				"plugin_name", *existingPlugin.Name, "new_plugin_id", *targetPlugin.ID, "old_plugin_id", *existingPlugin.ID,
+				"service", serviceID, "route", routeID, "consumer", consumerID, "consumer_group", consumerGroupID,
+			)
 			// The memdb to store the target state uses `id` to identify the plugin.
 			// So we need to delete the plugin with the new ID first then insert the same plugin with the same ID as the existing plugin.
 			err = targetState.Plugins.Delete(*targetPlugin.ID)
 			if err != nil {
+				// Ignore the error if the error is ErrNotFound indicating that the plugin with the ID does not exist.
+				// Otherwise, return the error and fail the update process.
+				if !errors.Is(err, state.ErrNotFound) {
+					s.logger.Error(err, "failed to get plugin with given ID in the target state", "id", *targetPlugin.ID)
+					return err
+				}
 				continue
 			}
 			targetPlugin.ID = existingPlugin.ID
 			err = targetState.Plugins.Add(*targetPlugin)
 			if err != nil {
-				continue
+				// return error and fail the update process if we failed to add the plugin with the old ID back.
+				return err
 			}
 		}
 	}

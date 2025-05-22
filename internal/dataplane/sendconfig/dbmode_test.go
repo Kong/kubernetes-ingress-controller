@@ -277,6 +277,8 @@ func TestRefillPluginIDs(t *testing.T) {
 }
 
 func mustNewKongStateFromRawState(t *testing.T, rawState *deckutils.KongRawState) *state.KongState {
+	t.Helper()
+
 	kongState, err := state.Get(rawState)
 	require.NoError(t, err, "failed to build Kong state from raw state")
 	return kongState

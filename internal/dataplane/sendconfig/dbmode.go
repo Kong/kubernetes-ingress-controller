@@ -280,6 +280,7 @@ func (s *UpdateStrategyDBMode) refillPluginIDs(currentState *state.KongState, ta
 	if err != nil {
 		return fmt.Errorf("failed getting plugins in current state for %s: %w", s.client.BaseRootURL(), err)
 	}
+	// For each existing plugin in the DB, we look for the same plugin in the target state and re-fill the ID.
 	for _, existingPlugin := range plugins {
 		var serviceID, routeID, consumerID, consumerGroupID string
 		if existingPlugin.Service != nil && existingPlugin.Service.ID != nil {
@@ -294,6 +295,8 @@ func (s *UpdateStrategyDBMode) refillPluginIDs(currentState *state.KongState, ta
 		if existingPlugin.ConsumerGroup != nil && existingPlugin.ConsumerGroup.ID != nil {
 			consumerGroupID = *existingPlugin.ConsumerGroup.ID
 		}
+		// If the same plugin is in the target state and we have filled a different ID with the existing plugin,
+		// we re-fill the ID of the plugin in the target state to keep the ID the same as the existing plugin.
 		targetPlugin, err := targetState.Plugins.GetByProp(*existingPlugin.Name, serviceID, routeID, consumerID, consumerGroupID)
 		if err != nil {
 			if !errors.Is(err, state.ErrNotFound) {
@@ -302,10 +305,8 @@ func (s *UpdateStrategyDBMode) refillPluginIDs(currentState *state.KongState, ta
 			continue
 		}
 		if existingPlugin.ID != nil && targetPlugin.ID != nil && *targetPlugin.ID != *existingPlugin.ID {
-			s.logger.V(logging.DebugLevel).Info("Keeping ID of existing plugin",
-				"plugin_name", *existingPlugin.Name, "new_plugin_id", *targetPlugin.ID, "old_plugin_id", *existingPlugin.ID,
-				"service", serviceID, "route", routeID, "consumer", consumerID, "consumer_group", consumerGroupID,
-			)
+			// The memdb to store the target state uses `id` to identify the plugin.
+			// So we need to delete the plugin with the new ID first then insert the same plugin with the same ID as the existing plugin.
 			err = targetState.Plugins.Delete(*targetPlugin.ID)
 			if err != nil {
 				continue

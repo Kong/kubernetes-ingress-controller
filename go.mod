@@ -1,8 +1,6 @@
 module github.com/kong/kubernetes-ingress-controller/v3
 
-go 1.24.0
-
-toolchain go1.24.1
+go 1.24.3
 
 //
 //  Error parsing file: /home/runner/work/kubernetes-ingress-controller/kubernetes-ingress-controller/go.mod.
@@ -31,7 +29,7 @@ require (
 	github.com/google/pprof v0.0.0-20241210010833-40e02aabc2ad
 	github.com/google/uuid v1.6.0
 	github.com/jpillora/backoff v1.0.0
-	github.com/kong/go-database-reconciler v1.22.7
+	github.com/kong/go-database-reconciler v1.23.0
 	github.com/kong/go-kong v0.66.1
 	github.com/kong/kubernetes-configuration v1.3.1
 	github.com/kong/kubernetes-telemetry v0.1.9

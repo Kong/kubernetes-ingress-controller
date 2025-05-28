@@ -36,6 +36,8 @@ type Client struct {
 	lastConfigSHA     []byte
 	// podRef (optional) describes the Pod that the Client communicates with.
 	podRef *k8stypes.NamespacedName
+	// statusClient (optional) is used for status checks instead of the admin API client
+	statusClient *StatusClient
 }
 
 // NewClient creates an Admin API client that is to be used with a regular Admin API exposed by Kong Gateways.
@@ -110,7 +112,11 @@ func (c *Client) NodeID(ctx context.Context) (string, error) {
 }
 
 // IsReady returns nil if the Admin API is ready to serve requests.
+// If a status client is attached, it will be used for the readiness check instead of the admin API.
 func (c *Client) IsReady(ctx context.Context) error {
+	if c.statusClient != nil {
+		return c.statusClient.IsReady(ctx)
+	}
 	_, err := c.adminAPIClient.Status(ctx)
 	return err
 }
@@ -206,11 +212,17 @@ func (c *Client) PodReference() (k8stypes.NamespacedName, bool) {
 	return k8stypes.NamespacedName{}, false
 }
 
+// AttachStatusClient allows attaching a status client to the admin API client for status checks.
+func (c *Client) AttachStatusClient(statusClient *StatusClient) {
+	c.statusClient = statusClient
+}
+
 type ClientFactory struct {
-	logger     logr.Logger
-	workspace  string
-	opts       managercfg.AdminAPIClientConfig
-	adminToken string
+	logger              logr.Logger
+	workspace           string
+	opts                managercfg.AdminAPIClientConfig
+	adminToken          string
+	statusAPIsDiscoverer *Discoverer
 }
 
 func NewClientFactoryForWorkspace(
@@ -224,6 +236,22 @@ func NewClientFactoryForWorkspace(
 		workspace:  workspace,
 		opts:       clientOpts,
 		adminToken: adminToken,
+	}
+}
+
+func NewClientFactoryForWorkspaceWithStatusDiscoverer(
+	logger logr.Logger,
+	workspace string,
+	clientOpts managercfg.AdminAPIClientConfig,
+	adminToken string,
+	statusAPIsDiscoverer *Discoverer,
+) ClientFactory {
+	return ClientFactory{
+		logger:               logger,
+		workspace:            workspace,
+		opts:                 clientOpts,
+		adminToken:           adminToken,
+		statusAPIsDiscoverer: statusAPIsDiscoverer,
 	}
 }
 
@@ -241,5 +269,38 @@ func (cf ClientFactory) CreateAdminAPIClient(ctx context.Context, discoveredAdmi
 	}
 
 	cl.AttachPodReference(discoveredAdminAPI.PodRef)
+
+	// If we have a status APIs discoverer, try to find and attach a status client
+	if cf.statusAPIsDiscoverer != nil {
+		if statusClient := cf.tryCreateStatusClient(ctx, discoveredAdminAPI.PodRef); statusClient != nil {
+			cl.AttachStatusClient(statusClient)
+			cf.logger.V(logging.DebugLevel).Info(
+				"Attached status client to admin API client",
+				"adminAddress", discoveredAdminAPI.Address,
+				"statusAddress", statusClient.BaseRootURL(),
+			)
+		}
+	}
+
 	return cl, nil
+}
+
+// tryCreateStatusClient attempts to create a status client for the same pod as the admin API client.
+func (cf ClientFactory) tryCreateStatusClient(ctx context.Context, podRef k8stypes.NamespacedName) *StatusClient {
+	// Try to discover status APIs for the same service that the admin API belongs to
+	// We'll use the pod reference to find the corresponding status endpoint
+	
+	// This is a simplified implementation that assumes the status API is on the same pod
+	// but on a different port (8100 instead of 8444)
+	
+	// In a real implementation, you would use proper service discovery here
+	// For now, we'll return nil to keep the existing behavior
+	// The status client creation would need to be implemented based on your specific requirements
+	
+	cf.logger.V(logging.DebugLevel).Info(
+		"Status client creation not yet implemented",
+		"podRef", podRef,
+	)
+	
+	return nil
 }

@@ -626,6 +626,90 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 			},
 			want: sets.New[DiscoveredAdminAPI](),
 		},
+		{
+			name: "status port discovery",
+			endpointSlice: discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-endpointslice",
+					Namespace: namespaceName,
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "v1",
+							Kind:       "Service",
+							Name:       "kong-status",
+						},
+					},
+				},
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						Addresses: []string{"10.0.0.1"},
+						Conditions: discoveryv1.EndpointConditions{
+							Ready:       lo.ToPtr(true),
+							Terminating: lo.ToPtr(false),
+						},
+						TargetRef: testPodReference(namespaceName, "pod-1"),
+					},
+				},
+				Ports: builder.NewEndpointPort(8100).WithName("status").IntoSlice(),
+			},
+			portNames: sets.New("status"),
+			want: sets.New(
+				DiscoveredAdminAPI{
+					Address:       "https://10.0.0.1:8100",
+					TLSServerName: "pod.kong-status.ns.svc",
+					PodRef: k8stypes.NamespacedName{
+						Name: "pod-1", Namespace: namespaceName,
+					},
+				},
+			),
+		},
+		{
+			name: "mixed admin and status ports",
+			endpointSlice: discoveryv1.EndpointSlice{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-endpointslice",
+					Namespace: namespaceName,
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "v1",
+							Kind:       "Service",
+							Name:       "kong-gateway",
+						},
+					},
+				},
+				Endpoints: []discoveryv1.Endpoint{
+					{
+						Addresses: []string{"10.0.0.1"},
+						Conditions: discoveryv1.EndpointConditions{
+							Ready:       lo.ToPtr(true),
+							Terminating: lo.ToPtr(false),
+						},
+						TargetRef: testPodReference(namespaceName, "pod-1"),
+					},
+				},
+				Ports: []discoveryv1.EndpointPort{
+					builder.NewEndpointPort(8444).WithName("admin").Build(),
+					builder.NewEndpointPort(8100).WithName("status").Build(),
+				},
+			},
+			portNames: sets.New("admin", "status"),
+			want: sets.New(
+				DiscoveredAdminAPI{
+					Address:       "https://10.0.0.1:8444",
+					TLSServerName: "pod.kong-gateway.ns.svc",
+					PodRef: k8stypes.NamespacedName{
+						Name: "pod-1", Namespace: namespaceName,
+					},
+				},
+				DiscoveredAdminAPI{
+					Address:       "https://10.0.0.1:8100",
+					TLSServerName: "pod.kong-gateway.ns.svc",
+					PodRef: k8stypes.NamespacedName{
+						Name: "pod-1", Namespace: namespaceName,
+					},
+				},
+			),
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

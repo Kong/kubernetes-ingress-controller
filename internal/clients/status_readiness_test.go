@@ -9,7 +9,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
-	"github.com/stretchr/testify/require"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
@@ -123,6 +122,7 @@ func TestDefaultStatusReadinessChecker_CheckStatusReadiness(t *testing.T) {
 				func() AlreadyCreatedStatusClient {
 					client := &mockStatusClient{}
 					client.On("IsReady", mock.Anything).Return(nil)
+					client.On("BaseRootURL").Return("https://10.0.0.1:8100")
 					return client
 				}(),
 			},

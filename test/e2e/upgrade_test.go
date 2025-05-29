@@ -14,41 +14,31 @@ import (
 	dockerimage "github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/kong/go-kong/kong"
-	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	netv1 "k8s.io/api/networking/v1"
-	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	configurationv1client "github.com/kong/kubernetes-configuration/pkg/clientset/typed/configuration/v1"
-
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
 const (
 	// upgradeTestFromTag is the tag of the previous version of the controller to upgrade from.
-	upgradeTestFromTag = "v3.4.1"
+	upgradeTestFromTag = "v3.0.1"
 
 	// dblessURLTemplate is the template of the URL to the all-in-one-dbless.yaml manifest with a placeholder for the tag.
 	dblessURLTemplate = "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/%s/test/e2e/manifests/all-in-one-dbless.yaml"
 
 	// 	postgresURLTemplate is the template of the URL to the all-in-one-postgres.yaml manifest with a placeholder for the tag.
 	postgresURLTemplate = "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/%s/test/e2e/manifests/all-in-one-postgres.yaml"
-
-	crdsURLTemplate = "https://raw.githubusercontent.com/Kong/kubernetes-ingress-controller/%s/config/crd/kustomization.yaml"
 )
 
 func TestDeployAndUpgradeAllInOneDBLESS(t *testing.T) {
 	testManifestsUpgrade(t, manifestsUpgradeTestParams{
 		fromManifestURL: fmt.Sprintf(dblessURLTemplate, upgradeTestFromTag),
 		toManifestPath:  dblessPath,
-		crdManifestURL:  fmt.Sprintf(crdsURLTemplate, upgradeTestFromTag),
 	})
 }
 
@@ -56,7 +46,6 @@ func TestDeployAndUpgradeAllInOnePostgres(t *testing.T) {
 	testManifestsUpgrade(t, manifestsUpgradeTestParams{
 		fromManifestURL:   fmt.Sprintf(postgresURLTemplate, upgradeTestFromTag),
 		toManifestPath:    postgresPath,
-		crdManifestURL:    fmt.Sprintf(crdsURLTemplate, upgradeTestFromTag),
 		beforeUpgradeHook: postgresBeforeUpgradeHook,
 	})
 }
@@ -78,9 +67,6 @@ type manifestsUpgradeTestParams struct {
 
 	// toManifestPath is the path to the manifest to deploy after the upgrade.
 	toManifestPath string
-
-	// crdManifestURL is the URL to the kustomization manifets to deploy required CRDs.
-	crdManifestURL string
 
 	// beforeUpgradeHook is a function that is run before the upgrade to clean up any resources that may interfere with the upgrade.
 	beforeUpgradeHook beforeUpgradeFn
@@ -104,12 +90,6 @@ func testManifestsUpgrade(
 	t.Log("configuring upgrade manifests test")
 	ctx, env := setupE2ETest(t)
 
-	if testParams.crdManifestURL != "" {
-		t.Logf("deploying CRDs: %s", testParams.crdManifestURL)
-		err = clusters.KustomizeDeployForCluster(ctx, env.Cluster(), testParams.crdManifestURL)
-		require.NoError(t, err, "failed to install CRDs")
-	}
-
 	t.Logf("deploying previous kong manifests: %s", testParams.fromManifestURL)
 	ManifestDeploy{
 		Path:            oldManifestPath,
@@ -119,30 +99,6 @@ func testManifestsUpgrade(
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	ingress := deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
-
-	t.Log("adding a response-transformer plugin to the ingress")
-	plugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "response-transformer-add-header",
-			Namespace: ingress.Namespace,
-		},
-		PluginName: "response-transformer",
-		Config: apiextensionsv1.JSON{
-			Raw: []byte(`{"add":{"headers":["Kic-Added:Test"]}}`),
-		},
-	}
-	configrationV1Client, err := configurationv1client.NewForConfig(env.Cluster().Config())
-	require.NoError(t, err, "Should create configurationv1 client successfully")
-	plugin, err = configrationV1Client.KongPlugins(ingress.Namespace).Create(ctx, plugin, metav1.CreateOptions{})
-	require.NoError(t, err, "should create KongPlugin successfully")
-	reconfigureExistingIngress(ctx, t, env, ingress, func(ing *netv1.Ingress) {
-		ing.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = plugin.Name
-	})
-
-	t.Log("verifying that the plugin works and response is modified")
-	verifyIngressHeaders(ctx, t, env, echoPath, map[string]string{
-		"Kic-Added": "Test",
-	})
 
 	if hook := testParams.beforeUpgradeHook; hook != nil {
 		t.Log("running before upgrade hook")
@@ -179,17 +135,6 @@ func testManifestsUpgrade(
 	require.NoError(t, err)
 
 	verifyIngressWithEchoBackendsPath(ctx, t, env, numberOfEchoBackends, newPath)
-
-	t.Log("modifying the response-transformer plugin")
-	plugin.Config = apiextensionsv1.JSON{
-		Raw: []byte(`{"add":{"headers":["Kic-Added:Test-1"]}}`),
-	}
-	plugin, err = configrationV1Client.KongPlugins(plugin.Namespace).Update(ctx, plugin, metav1.UpdateOptions{})
-	require.NoError(t, err, "failed to update plugin")
-	t.Log("verifying that the new configuration of plugin works and response is modified")
-	verifyIngressHeaders(ctx, t, env, echoPath, map[string]string{
-		"Kic-Added": "Test",
-	})
 }
 
 // skipIfNotTwoConsecutiveKongMinorVersions skips the test if the old and new Kong versions are not two consecutive

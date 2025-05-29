@@ -4,15 +4,12 @@ package isolated
 
 import (
 	"context"
-	"fmt"
 	"net/http"
-	"slices"
 	"testing"
-	"time"
 
-	"github.com/avast/retry-go/v4"
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	kongaddon "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -26,16 +23,11 @@ import (
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
-	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
-	testconsts "github.com/kong/kubernetes-ingress-controller/v3/test/consts"
-	testhelpers "github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/integration/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testlabels"
-	testutils "github.com/kong/kubernetes-ingress-controller/v3/test/util"
 )
 
 var (
@@ -145,119 +137,56 @@ func TestUpgradeKICWithExistingPlugins(t *testing.T) {
 				)
 				return ctx
 			}).
-		Assess("Upgrade KIC and verify it restarts successfully", func(ctx context.Context, t *testing.T, c *envconf.Config) context.Context {
+		Assess("Upgrade KIC and verify it restarts successfully", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cluster := GetClusterFromCtx(ctx)
-			runControllerManager := true
-			kongBuilder, err := helpers.GenerateKongBuilderWithController()
-			if !assert.NoError(t, err) {
-				return ctx
+			namespace := GetNamespaceForT(ctx, t)
+
+			if testenv.KongEnterpriseEnabled() {
+				t.Logf("cleaning up existing secrets for enterprise")
+				secretClient := cluster.Client().CoreV1().Secrets(namespace)
+				_, getErr := secretClient.Get(ctx, kongaddon.DefaultEnterpriseLicenseSecretName, metav1.GetOptions{})
+				if getErr == nil {
+					delErr := secretClient.Delete(ctx, kongaddon.DefaultEnterpriseLicenseSecretName, metav1.DeleteOptions{})
+					assert.NoError(t, delErr, "failed to delete existing secret for Kong enterprise license")
+				}
+				_, getErr = secretClient.Get(ctx, kongaddon.DefaultEnterpriseAdminPasswordSecretName, metav1.GetOptions{})
+				if getErr == nil {
+					delErr := secretClient.Delete(ctx, kongaddon.DefaultEnterpriseAdminPasswordSecretName, metav1.DeleteOptions{})
+					assert.NoError(t, delErr, "failed to delete existing secret for Kong enterprise admin password")
+				}
+				_, getErr = secretClient.Get(ctx, kongaddon.DefaultAdminGUISessionConfSecretName, metav1.GetOptions{})
+				if getErr == nil {
+					delErr := secretClient.Delete(ctx, kongaddon.DefaultAdminGUISessionConfSecretName, metav1.DeleteOptions{})
+					assert.NoError(t, delErr, "failed to delete existing secret for Kong enterprise admin GUI session conifg")
+				}
 			}
+
+			runControllerManager := true
 			if newKICImageRepo != "" && newKICImageTag != "" {
 				runControllerManager = false
 				t.Logf("Upgrading KIC to %s:%s", newKICImageRepo, newKICImageTag)
-				kongBuilder.WithControllerImage(newKICImageRepo, newKICImageTag)
-			}
-
-			if testenv.KongImage() != "" && testenv.KongTag() != "" {
-				fmt.Printf("INFO: custom kong image specified via env: %s:%s\n", testenv.KongImage(), testenv.KongTag())
-			}
-			namespace := GetNamespaceForT(ctx, t)
-
-			kongBuilder.WithHelmChartVersion(testenv.KongHelmChartVersion())
-			kongBuilder.WithNamespace(namespace)
-			kongBuilder.WithName(NameFromT(t))
-			kongBuilder.WithAdditionalValue("readinessProbe.initialDelaySeconds", "1")
-
-			if runControllerManager {
+			} else {
 				t.Log("Run controller manager from code base, disabling KIC in Kong addon")
-				kongBuilder.WithControllerDisabled()
 			}
 
-			kongAddon := kongBuilder.Build()
-			t.Logf("deploying kong addon to cluster %s in namespace %s", cluster.Name(), namespace)
-			if !assert.NoError(t, cluster.DeployAddon(ctx, kongAddon)) {
-				return ctx
-			}
+			ctx = deployKongAddon(ctx, t, deployKongAddonCfg{
+				// Do NOT deploy KIC when we run controller manager locally.
+				deployControllerInKongAddon: !runControllerManager,
+				controllerImageRepository:   newKICImageRepo,
+				controllerImageTag:          newKICImageTag,
+				kongProxyEnvVars:            map[string]string{},
+			})
 
-			t.Log("Waiting for Kong addon to be ready")
-			if !assert.Eventually(t, func() bool {
-				_, ok, err := kongAddon.Ready(ctx, cluster)
-				if err != nil {
-					t.Logf("error checking if kong addon is ready: %v", err)
-					return false
-				}
-
-				return ok
-			}, time.Minute*3, 100*time.Millisecond, "failed waiting for kong addon to become ready") {
-				return ctx
-			}
-
+			kongAddon := GetFromCtxForT[*kongaddon.Addon](ctx, t)
 			if runControllerManager {
-				logger, logOutput, err := testutils.SetupLoggers("trace", "text")
-				if !assert.NoError(t, err, "failed to setup loggers") {
-					return ctx
-				}
-				if logOutput != "" {
-					t.Logf("writing manager logs to %s", logOutput)
-				}
-
-				featureGates := testconsts.DefaultFeatureGates
-
-				t.Logf("feature gates enabled: %s", featureGates)
-
-				t.Logf("starting the controller manager")
-				cert, key := certificate.GetKongSystemSelfSignedCerts()
-				metricsPort := testhelpers.GetFreePort(t)
-				healthProbePort := testhelpers.GetFreePort(t)
-				ingressClass := "kong"
-				extraControllerArgs := []string{}
-				if testenv.DBMode() != testenv.DBModeOff {
-					extraControllerArgs = append(extraControllerArgs,
-						fmt.Sprintf("--kong-admin-token=%s", testconsts.KongTestPassword),
-						fmt.Sprintf("--kong-workspace=%s", testconsts.KongTestWorkspace),
-					)
-				}
-
-				standardControllerArgs := []string{
-					fmt.Sprintf("--health-probe-bind-address=localhost:%d", healthProbePort),
-					fmt.Sprintf("--metrics-bind-address=localhost:%d", metricsPort),
-					fmt.Sprintf("--ingress-class=%s", ingressClass),
-					fmt.Sprintf("--admission-webhook-cert=%s", cert),
-					fmt.Sprintf("--admission-webhook-key=%s", key),
-					fmt.Sprintf("--admission-webhook-listen=0.0.0.0:%d", testutils.AdmissionWebhookListenPort),
-					"--anonymous-reports=false",
-					"--log-level=trace",
-					"--dump-config=true",
-					"--dump-sensitive-config=true",
-					fmt.Sprintf("--feature-gates=%s", featureGates),
-					// Use fixed election namespace `kong` because RBAC roles for leader election are in the namespace,
-					// so we create resources for leader election in the namespace to make sure that KIC can operate these resources.
-					fmt.Sprintf("--election-namespace=%s", testconsts.ControllerNamespace),
-					fmt.Sprintf("--watch-namespace=%s", kongAddon.Namespace()),
-				}
-				allControllerArgs := slices.Concat(standardControllerArgs, extraControllerArgs)
-
-				gracefulShutdownWithoutTimeoutOpt := func(c *managercfg.Config) {
-					// Set the GracefulShutdownTimeout to -1 to keep graceful shutdown enabled but disable the timeout.
-					// This prevents the errors:
-					// failed waiting for all runnables to end within grace period of 30s: context deadline exceeded
-					c.GracefulShutdownTimeout = lo.ToPtr(time.Duration(-1))
-				}
-
-				cancel, err := testutils.DeployControllerManagerForCluster(ctx, logger, cluster, kongAddon, allControllerArgs, gracefulShutdownWithoutTimeoutOpt)
-				t.Cleanup(func() { cancel() })
-				if !assert.NoError(t, err, "failed deploying controller manager") {
-					return ctx
-				}
-
-				// TODO refactor. Perhaps there's a better way than just storing the cancel func in context.
-				ctx = SetInCtxForT(ctx, t, cancel)
+				startControllerManager(ctx, t, featureSetupCfg{
+					ingressClassName: "kong",
+				}, kongAddon, nil)
 			}
 
 			return ctx
-
 		}).
-		Assess("Verify that the old configuration remains unchanged", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+		Assess("Verify that the old configuration remains unchanged", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			proxyURL := GetHTTPURLFromCtx(ctx)
 			assert.NotNil(t, proxyURL)
 
@@ -279,7 +208,7 @@ func TestUpgradeKICWithExistingPlugins(t *testing.T) {
 			)
 			return ctx
 		}).
-		Assess("Update the plugin and verify that the new configuration works", func(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
+		Assess("Update the plugin and verify that the new configuration works", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			kongClient := GetFromCtxForT[*clientset.Clientset](ctx, t)
 			assert.NotNil(t, kongClient)
 			cluster := GetClusterFromCtx(ctx)
@@ -292,7 +221,7 @@ func TestUpgradeKICWithExistingPlugins(t *testing.T) {
 			plugin.Config = apiextensionsv1.JSON{
 				Raw: []byte(`{"add":{"headers":["Kic-Added:Another-Test"]}}`),
 			}
-			plugin, err = kongClient.ConfigurationV1().KongPlugins(namespace).Update(ctx, plugin, metav1.UpdateOptions{})
+			_, err = kongClient.ConfigurationV1().KongPlugins(namespace).Update(ctx, plugin, metav1.UpdateOptions{})
 			assert.NoErrorf(t, err, "failed to update plugin %s/%s", namespace, pluginName)
 
 			service, err := cluster.Client().CoreV1().Services(namespace).Get(ctx, serviceName, metav1.GetOptions{})
@@ -307,7 +236,8 @@ func TestUpgradeKICWithExistingPlugins(t *testing.T) {
 			)
 			newIngress.Name = serviceName + "-new"
 			newIngress.Spec.IngressClassName = lo.ToPtr("kong")
-			cluster.Client().NetworkingV1().Ingresses(namespace).Create(ctx, newIngress, metav1.CreateOptions{})
+			_, err = cluster.Client().NetworkingV1().Ingresses(namespace).Create(ctx, newIngress, metav1.CreateOptions{})
+			assert.NoError(t, err)
 
 			proxyURL := GetHTTPURLFromCtx(ctx)
 			assert.NotNil(t, proxyURL)
@@ -340,8 +270,7 @@ func TestUpgradeKICWithExistingPlugins(t *testing.T) {
 
 func setUpKongAndKIC(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 	cluster := GetClusterFromCtx(ctx)
-	runID := GetRunIDFromCtx(ctx)
-
+	ctx = setUpNamespaceAndCleaner(ctx, t, cfg)
 	// TODO: configure ingress class in the helm installation.
 	ingressClass := "kong"
 	t.Logf("deploying the controller's IngressClass %q", ingressClass)
@@ -350,116 +279,15 @@ func setUpKongAndKIC(ctx context.Context, t *testing.T, cfg *envconf.Config) con
 	}
 	ctx = setInCtx(ctx, _ingressClass{}, ingressClass)
 
-	ctx, err := CreateNSForTest(ctx, cfg, t, runID)
-	if !assert.NoError(t, err) {
-		return ctx
-	}
 	// TODO: extract setting up Kong addon to a standalone setup function.
-	t.Logf("setting up test environment")
-	kongBuilder, err := helpers.GenerateKongBuilderWithController()
-	if !assert.NoError(t, err) {
-		return ctx
-	}
-	kongBuilder.WithControllerImage(oldKICImageRepo, oldKICImageTag)
-	if testenv.KongImage() != "" && testenv.KongTag() != "" {
-		fmt.Printf("INFO: custom kong image specified via env: %s:%s\n", testenv.KongImage(), testenv.KongTag())
-	}
-
-	namespace := GetNamespaceForT(ctx, t)
-
-	kongBuilder.WithHelmChartVersion(testenv.KongHelmChartVersion())
-	kongBuilder.WithNamespace(namespace)
-	kongBuilder.WithName(NameFromT(t))
-	kongBuilder.WithAdditionalValue("readinessProbe.initialDelaySeconds", "1")
-
-	kongAddon := kongBuilder.Build()
-	t.Logf("deploying kong addon to cluster %s in namespace %s", cluster.Name(), namespace)
-	if !assert.NoError(t, cluster.DeployAddon(ctx, kongAddon)) {
-		return ctx
-	}
-	ctx = SetInCtxForT(ctx, t, kongAddon)
-
-	cleaner := clusters.NewCleaner(cluster)
-	t.Cleanup(func() {
-		helpers.DumpDiagnosticsIfFailed(ctx, t, cluster)
-		t.Logf("Start cleanup for test %s", t.Name())
-		if err := cleaner.Cleanup(context.Background()); err != nil { //nolint:contextcheck
-			fmt.Printf("ERROR: failed cleaning up the cluster: %v\n", err)
-		}
+	ctx = deployKongAddon(ctx, t, deployKongAddonCfg{
+		deployControllerInKongAddon: true,
+		controllerImageRepository:   oldKICImageRepo,
+		controllerImageTag:          oldKICImageTag,
+		kongProxyEnvVars:            map[string]string{},
 	})
-	ctx = SetInCtxForT(ctx, t, cleaner)
 
-	t.Log("Waiting for Kong addon to be ready")
-	if !assert.Eventually(t, func() bool {
-		_, ok, err := kongAddon.Ready(ctx, cluster)
-		if err != nil {
-			t.Logf("error checking if kong addon is ready: %v", err)
-			return false
-		}
-
-		return ok
-	}, time.Minute*3, 100*time.Millisecond, "failed waiting for kong addon to become ready") {
-		return ctx
-	}
-
-	t.Logf("collecting urls from the kong proxy deployment in namespace: %s", namespace)
-	proxyAdminURL, err := kongAddon.ProxyAdminURL(ctx, cluster)
-	if !assert.NoError(t, err) {
-		return ctx
-	}
-	ctx = SetAdminURLInCtx(ctx, proxyAdminURL)
-
-	proxyUDPURL, err := kongAddon.ProxyUDPURL(ctx, cluster)
-	if !assert.NoError(t, err) {
-		return ctx
-	}
-	ctx = SetUDPURLInCtx(ctx, proxyUDPURL)
-
-	proxyTCPURL, err := kongAddon.ProxyTCPURL(ctx, cluster)
-	if !assert.NoError(t, err) {
-		return ctx
-	}
-	ctx = SetTCPURLInCtx(ctx, proxyTCPURL)
-
-	proxyTLSURL, err := kongAddon.ProxyTLSURL(ctx, cluster)
-	if !assert.NoError(t, err) {
-		return ctx
-	}
-	ctx = SetTLSURLInCtx(ctx, proxyTLSURL)
-
-	proxyHTTPURL, err := kongAddon.ProxyHTTPURL(ctx, cluster)
-	if !assert.NoError(t, err) {
-		return ctx
-	}
-	t.Log("proxy HTTP URL:", proxyHTTPURL.String())
-	ctx = SetHTTPURLInCtx(ctx, proxyHTTPURL)
-
-	proxyHTTPSURL, err := kongAddon.ProxyHTTPSURL(ctx, cluster)
-	if !assert.NoError(t, err) {
-		return ctx
-	}
-	ctx = SetHTTPSURLInCtx(ctx, proxyHTTPSURL)
-
-	if !assert.NoError(t, retry.Do(
-		func() error {
-			version, err := helpers.GetKongVersion(ctx, proxyAdminURL, testconsts.KongTestPassword)
-			if err != nil {
-				return err
-			}
-			t.Logf("using Kong instance (version: %s) reachable at %s\n", version, proxyAdminURL)
-			return nil
-		},
-		retry.OnRetry(
-			func(n uint, err error) {
-				t.Logf("WARNING: try to get Kong Gateway version attempt %d/10 - error: %s\n", n+1, err)
-			},
-		),
-		retry.LastErrorOnly(true),
-		retry.Attempts(10),
-	), "failed getting Kong's version") {
-		return ctx
-	}
-
+	// Set a dummy cancel function in ctx for cleanup.
 	ctx = SetInCtxForT(ctx, t, func() {})
 	return ctx
 }

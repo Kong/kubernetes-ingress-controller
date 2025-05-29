@@ -516,37 +516,6 @@ func verifyIngressWithEchoBackendsPath(
 	)
 }
 
-func verifyIngressHeaders(
-	ctx context.Context,
-	t *testing.T,
-	env environments.Environment,
-	path string,
-	checkHeaders map[string]string,
-) {
-	t.Helper()
-
-	t.Log("finding the service URL (through Kong proxy service ip)")
-	echoURL := fmt.Sprintf("http://%s%s", getKongProxyIP(ctx, t, env), path)
-
-	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		resp, err := helpers.DefaultHTTPClient().Get(echoURL)
-		if !assert.NoError(c, err) {
-			return
-		}
-		defer resp.Body.Close()
-
-		if !assert.Equal(c, http.StatusOK, resp.StatusCode) {
-			return
-		}
-		for k, v := range checkHeaders {
-			if !assert.Equalf(c, resp.Header.Get(k), v,
-				"header %s: expected %s, actual %s", k, v, resp.Header.Get(k)) {
-				return
-			}
-		}
-	}, ingressWait, 10*time.Millisecond)
-}
-
 // verifyIngressWithEchoBackendsInAdminAPI ensures all expected Kong Admin API resources
 // are created for the Ingress deployed with deployIngressWithEchoBackends helper function.
 func verifyIngressWithEchoBackendsInAdminAPI(

@@ -16,7 +16,7 @@ go 1.24.3
 //
 
 require (
-	cloud.google.com/go/container v1.42.4
+	cloud.google.com/go/container v1.43.0
 	github.com/Kong/sdk-konnect-go v0.2.22
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/avast/retry-go/v4 v4.6.1
@@ -226,7 +226,7 @@ require (
 	golang.org/x/time v0.11.0 // indirect
 	golang.org/x/tools v0.30.0 // indirect
 	gomodules.xyz/jsonpatch/v2 v2.4.0 // indirect
-	google.golang.org/genproto/googleapis/api v0.0.0-20250505200425-f936aa4a68b2 // indirect
+	google.golang.org/genproto/googleapis/api v0.0.0-20250512202823-5a2f75b736a9 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20250512202823-5a2f75b736a9 // indirect
 	google.golang.org/grpc v1.72.1
 	google.golang.org/protobuf v1.36.6 // indirect

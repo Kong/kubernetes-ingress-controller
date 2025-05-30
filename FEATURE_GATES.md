@@ -75,6 +75,7 @@ Features that reach GA and over time become stable will be removed from this tab
 | KongCustomEntity                        | `false` | Alpha | 3.2.0  | 3.3.0 |
 | KongCustomEntity                        | `true`  | Beta  | 3.3.0  | 3.4.0 |
 | CombinedServicesFromDifferentHTTPRoutes | `false` | Alpha | 3.4.0  | TBD   |
+| StickySessionsTerminatingEndpoints      | `false` | Alpha | TBD    | TBD   |
 
 **NOTE**: The `Gateway` feature gate refers to [Gateway
  API](https://github.com/kubernetes-sigs/gateway-api) APIs which are in

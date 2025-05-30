@@ -78,7 +78,7 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 				serviceMap[serviceName] = service
 
 				// get the new targets for this backend service
-				newTargets := getServiceEndpoints(t.logger, t.storer, k8sService, port, t.clusterDomain)
+				newTargets := getServiceEndpoints(t.logger, t.storer, k8sService, port, t.clusterDomain, t.featureFlags.StickySessionsTerminatingEndpoints)
 
 				if len(newTargets) == 0 {
 					t.logger.V(logging.InfoLevel).Info("No targets could be found for kubernetes service",
@@ -197,6 +197,7 @@ func getServiceEndpoints(
 	svc *corev1.Service,
 	servicePort *corev1.ServicePort,
 	clusterDomain string,
+	enableStickySessionsTerminatingEndpoints bool,
 ) []kongstate.Target {
 	logger = logger.WithValues(
 		"service_name", svc.Name,
@@ -221,7 +222,7 @@ func getServiceEndpoints(
 	// Check all protocols for associated endpoints.
 	endpoints := []util.Endpoint{}
 	for protocol := range protocols {
-		newEndpoints := getEndpoints(logger, svc, servicePort, protocol, s.GetEndpointSlicesForService, isSvcUpstream, clusterDomain)
+		newEndpoints := getEndpoints(logger, svc, servicePort, protocol, s.GetEndpointSlicesForService, isSvcUpstream, clusterDomain, enableStickySessionsTerminatingEndpoints)
 		endpoints = append(endpoints, newEndpoints...)
 	}
 	if len(endpoints) == 0 {
@@ -260,6 +261,7 @@ func getEndpoints(
 	getEndpointSlices func(string, string) ([]*discoveryv1.EndpointSlice, error),
 	isSvcUpstream bool,
 	clusterDomain string,
+	enableStickySessionsTerminatingEndpoints bool,
 ) []util.Endpoint {
 	if service == nil || port == nil {
 		return []util.Endpoint{}
@@ -321,23 +323,26 @@ func getEndpoints(
 				// In most cases consumers should interpret this unknown state as ready.
 				// Field Ready has the same semantic as Endpoints from CoreV1 in Addresses.
 				// https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/#conditions
-				
-				// Skip endpoints that are not ready, unless they are terminating.
-				// Terminating endpoints should be included with weight 0 to support sticky sessions.
+
 				isTerminating := endpoint.Conditions.Terminating != nil && *endpoint.Conditions.Terminating
 				isReady := endpoint.Conditions.Ready == nil || *endpoint.Conditions.Ready
-				
-				if !isReady && !isTerminating {
-					continue
+
+				// Skip endpoints that are not ready
+				if !isReady {
+					// Only include terminating endpoints if the feature gate is enabled
+					if !isTerminating || !enableStickySessionsTerminatingEndpoints {
+						continue
+					}
 				}
-				
+
 				// One address per endpoint is rather expected (allowing multiple is due to historical reasons)
 				// read more https://github.com/kubernetes/kubernetes/issues/106267#issuecomment-978770401.
 				// These are all assumed to be fungible and clients may choose to only use the first element.
 				upstreamServer := util.Endpoint{
-					Address:      endpoint.Addresses[0],
-					Port:         upstreamPort,
-					Terminating:  isTerminating,
+					Address: endpoint.Addresses[0],
+					Port:    upstreamPort,
+					// Only mark as terminating if the feature gate is enabled
+					Terminating: isTerminating && enableStickySessionsTerminatingEndpoints,
 				}
 				if _, exists := uniqueUpstream[upstreamServer]; !exists {
 					upstreamServers = append(upstreamServers, upstreamServer)
@@ -397,13 +402,13 @@ func targetsForEndpoints(endpoints []util.Endpoint) []kongstate.Target {
 				Target: kong.String(addr + ":" + endpoint.Port),
 			},
 		}
-		
+
 		// Set weight to 0 for terminating endpoints to support sticky sessions.
 		// This allows existing sessions to continue while preventing new traffic.
 		if endpoint.Terminating {
 			target.Weight = lo.ToPtr(0)
 		}
-		
+
 		targets = append(targets, target)
 	}
 	return targets

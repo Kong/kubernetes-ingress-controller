@@ -4166,7 +4166,7 @@ func TestGetEndpoints(t *testing.T) {
 			if testCase.clusterDomain != "" {
 				clusterDomain = testCase.clusterDomain
 			}
-			result := getEndpoints(zapr.NewLogger(zap.NewNop()), testCase.svc, testCase.port, testCase.proto, testCase.fn, testCase.isServiceUpstream, clusterDomain)
+			result := getEndpoints(zapr.NewLogger(zap.NewNop()), testCase.svc, testCase.port, testCase.proto, testCase.fn, testCase.isServiceUpstream, clusterDomain, false)
 			require.Equal(t, testCase.result, result)
 		})
 	}

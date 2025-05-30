@@ -74,8 +74,8 @@ jobs:
         TEST_KONG_IMAGE: ${{ env.kong-gateway-enterprise-registry }}
         TEST_KONG_TAG: ${{ env.kong-gateway-enterprise-tag }}
         TEST_KONG_EFFECTIVE_VERSION: ${{ env.kong-gateway-enterprise-effective-version }}
-        TEST_KONG_PULL_USERNAME: ${{ secrets.GHA_DOCKERHUB_PULL_USER }}
-        TEST_KONG_PULL_PASSWORD: ${{ secrets.GHA_KONG_ORG_DOCKERHUB_PUBLIC_TOKEN }}
+        TEST_KONG_PULL_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+        TEST_KONG_PULL_PASSWORD: ${{ secrets.DOCKERHUB_NIGHTLY_PULL_TOKEN }}
 
 
     - name: collect test coverage
@@ -118,8 +118,8 @@ jobs:
         TEST_KONG_IMAGE: ${{ env.kong-gateway-enterprise-registry }}
         TEST_KONG_TAG: ${{ env.kong-gateway-enterprise-tag }}
         TEST_KONG_EFFECTIVE_VERSION: ${{ env.kong-gateway-enterprise-effective-version }}
-        TEST_KONG_PULL_USERNAME: ${{ secrets.GHA_DOCKERHUB_PULL_USER }}
-        TEST_KONG_PULL_PASSWORD: ${{ secrets.GHA_KONG_ORG_DOCKERHUB_PUBLIC_TOKEN }}
+        TEST_KONG_PULL_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+        TEST_KONG_PULL_PASSWORD: ${{ secrets.DOCKERHUB_NIGHTLY_PULL_TOKEN }}
 
     - name: collect test coverage
       uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

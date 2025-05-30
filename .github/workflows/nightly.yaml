@@ -68,8 +68,8 @@ jobs:
       - name: Login to DockerHub
         uses: docker/login-action@74a5d142397b4f367a81961eba4e8cd7edddf772 # v3.4.0
         with:
-          username: ${{ secrets.DOCKER_USERNAME_NIGHTLY }}
-          password: ${{ secrets.DOCKER_TOKEN_NIGHTLY }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_NIGHTLY_PUSH_TOKEN }}
       - name: Build and push distroless image to DockerHub
         id: docker_build
         uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0

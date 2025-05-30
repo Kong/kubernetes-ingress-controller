@@ -151,7 +151,6 @@ func TestMain(m *testing.M) {
 
 type featureSetupCfg struct {
 	controllerManagerOpts         []helpers.ControllerManagerOpt
-	ingressClassName              string
 	controllerManagerFeatureGates map[string]string
 	kongProxyEnvVars              map[string]string
 }
@@ -190,15 +189,12 @@ func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.
 		})
 
 		kongAddon := GetFromCtxForT[*kong.Addon](ctx, t)
-		extraControllerArgs := []string{}
-		if testenv.KongEnterpriseEnabled() && testenv.DBMode() != testenv.DBModeOff {
-			extraControllerArgs = append(extraControllerArgs,
-				fmt.Sprintf("--kong-admin-token=%s", consts.KongTestPassword),
-				fmt.Sprintf("--kong-workspace=%s", consts.KongTestWorkspace),
-			)
-		}
 
-		return startControllerManager(ctx, t, setupCfg, kongAddon, extraControllerArgs)
+		startControllManagerConfig := startControllerManagerConfig{
+			controllerManagerFeatureGates: setupCfg.controllerManagerFeatureGates,
+			controllerManagerOpts:         setupCfg.controllerManagerOpts,
+		}
+		return startControllerManager(ctx, t, startControllManagerConfig, kongAddon)
 	}
 }
 
@@ -291,9 +287,10 @@ func deployKongAddon(
 
 	kongAddon := kongBuilder.Build()
 	t.Logf("deploying kong addon to cluster %s in namespace %s", cluster.Name(), namespace)
-	if !assert.NoError(t, cluster.DeployAddon(ctx, kongAddon)) {
+	if !assert.NoError(t, cluster.DeployAddon(ctx, kongAddon), "failed to deploy Kong addon") {
 		return ctx
 	}
+
 	ctx = SetInCtxForT(ctx, t, kongAddon)
 
 	if !assert.Eventually(t, func() bool {
@@ -378,11 +375,17 @@ func deployKongAddon(
 	return ctx
 }
 
+type startControllerManagerConfig struct {
+	controllerManagerFeatureGates map[string]string
+	ingressClassName              string
+	controllerManagerOpts         []helpers.ControllerManagerOpt
+}
+
 // startControllerManager runs a controller manager from code base and connecting to the given kong addon.
 func startControllerManager(
 	ctx context.Context, t *testing.T,
-	setupCfg featureSetupCfg,
-	kongAddon *kong.Addon, extraControllerArgs []string,
+	setupCfg startControllerManagerConfig,
+	kongAddon *kong.Addon,
 ) context.Context {
 	// Logger needs to be configured before anything else happens.
 	// This is because the controller manager has a timeout for
@@ -417,7 +420,7 @@ func startControllerManager(
 		ingressClass = envconf.RandomName("ingressclass", 16)
 	}
 
-	standardControllerArgs := []string{
+	allControllerArgs := []string{
 		fmt.Sprintf("--health-probe-bind-address=localhost:%d", healthProbePort),
 		fmt.Sprintf("--metrics-bind-address=localhost:%d", metricsPort),
 		fmt.Sprintf("--ingress-class=%s", ingressClass),
@@ -434,7 +437,17 @@ func startControllerManager(
 		fmt.Sprintf("--election-namespace=%s", consts.ControllerNamespace),
 		fmt.Sprintf("--watch-namespace=%s", kongAddon.Namespace()),
 	}
-	allControllerArgs := slices.Concat(standardControllerArgs, extraControllerArgs)
+
+	// Add admin token and workspace args to controller args when running against Kong Enterprise with DB backed.
+	var extraControllerArgs []string
+	if testenv.KongEnterpriseEnabled() && testenv.DBMode() != testenv.DBModeOff {
+		extraControllerArgs = []string{
+			fmt.Sprintf("--kong-admin-token=%s", consts.KongTestPassword),
+			fmt.Sprintf("--kong-workspace=%s", consts.KongTestWorkspace),
+		}
+	}
+	allControllerArgs = slices.Concat(allControllerArgs, extraControllerArgs)
+
 	for _, opt := range setupCfg.controllerManagerOpts {
 		allControllerArgs = opt(allControllerArgs)
 	}

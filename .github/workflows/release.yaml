@@ -114,7 +114,7 @@ jobs:
           tags: ${{ env.TAGS_STANDARD }}${{ env.TAGS_SUPPLEMENTAL }}
       - name: Build binary
         id: docker_build_binary
-        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6.16.0
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
           push: false
           file: Dockerfile
@@ -135,7 +135,7 @@ jobs:
           password: ${{ secrets.DOCKER_TOKEN }}
       - name: Build and push distroless image to DockerHub
         id: docker_build
-        uses: docker/build-push-action@14487ce63c7a62a4a324b0bfb37086795e31c6c1 # v6.16.0
+        uses: docker/build-push-action@263435318d21b8e681c14492fe198d362a7d2c83 # v6.18.0
         with:
           push: true
           file: Dockerfile

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 	"sync"
 	"testing"
 	"time"
@@ -277,12 +278,37 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	t.Parallel()
 
 	const manifestFilePath = "manifests/all-in-one-dbless.yaml"
+	const lcManifestPath = "manifests/limacharlie-daemonset.yaml"
 
 	t.Logf("configuring %s manifest test", manifestFilePath)
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
 	deployments := ManifestDeploy{Path: manifestFilePath}.Run(ctx, t, env)
+
+	// deploy limacharlie daemonset.
+	if lcInstallationKey := os.Getenv("LIMACHARLIE_INSTALLATION_KEY"); lcInstallationKey != "" {
+		t.Log("Creating secret for limacharlie installation key")
+		secret := &corev1.Secret{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "limacharlie-secret",
+				Namespace: "kong",
+			},
+			StringData: map[string]string{
+				"installation-key": lcInstallationKey,
+			},
+		}
+		_, err := env.Cluster().Client().CoreV1().Secrets("kong").Create(ctx, secret, metav1.CreateOptions{})
+		require.NoError(t, err)
+
+		t.Logf("deploying %s manifest to the cluster", lcManifestPath)
+		manifest := getTestManifest(t, lcManifestPath, true)
+		kubeconfigFilename := getTemporaryKubeconfig(t, env)
+		cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFilename, "apply", "-f", "-")
+		cmd.Stdin = manifest
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, string(out))
+	}
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	ingress := deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)

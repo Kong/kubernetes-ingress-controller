@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: lc-sensor
+  namespace: kong
+  labels:
+    app: lc-monitoring
+spec:
+  minReadySeconds: 30
+  updateStrategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: lc-monitoring
+  template:
+    metadata:
+      namespace: lc-monitoring
+      labels:
+        app: lc-monitoring
+    spec:
+      hostNetwork: true
+      hostPID: true
+      containers:
+        - name: lc-sensor
+          image: refractionpoint/limacharlie_sensor:latest
+          imagePullPolicy: IfNotPresent
+          securityContext:
+            allowPrivilegeEscalation: true
+            privileged: true
+            capabilities:
+              add: ['CAP_SYS_ADMIN']
+          resources:
+            requests:
+              memory: 128M
+              cpu: 0.01
+            limits:
+              memory: 256M
+              cpu: 0.9
+          volumeMounts:
+            - mountPath: /rootfs
+              name: all-host
+            - mountPath: /netns
+              name: all-host-ns
+            - mountPath: /sys/kernel/debug
+              name: all-host-krnl
+            - mountPath: /sys/kernel/btf
+              name: btf
+            - mountPath: /lib/modules
+              name: libmodules
+          env:
+            - name: HOST_FS
+              value: /rootfs
+            - name: NET_NS
+              value: /netns
+            - name: LC_INSTALLATION_KEY
+              valueFrom:
+                secretRef:
+                  name: limacharlie-secret
+                  key: installation-key
+      volumes:
+        - name: all-host
+          hostPath:
+            path: /
+        - name: all-host-ns
+          hostPath:
+            path: /var/run/docker/netns
+        - name: all-host-krnl
+          hostPath:
+            path: /sys/kernel/debug
+        - name: btf
+          hostPath:
+            path: /sys/kernel/btf
+        - name: libmodules
+          hostPath:
+            path: /lib/modules

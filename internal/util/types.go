@@ -28,6 +28,8 @@ type Endpoint struct {
 	Address string `json:"address"`
 	// Port number of the TCP port
 	Port string `json:"port"`
+	// Terminating indicates if the endpoint is in terminating state
+	Terminating bool `json:"terminating,omitempty"`
 }
 
 // TypeMeta is stripped after unmarshaling into Go struct due to the issue described in

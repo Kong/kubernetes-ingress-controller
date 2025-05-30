@@ -4,8 +4,11 @@ package isolated
 
 import (
 	"context"
+	"fmt"
 	"net/http"
+	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
@@ -13,6 +16,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -31,17 +35,23 @@ import (
 )
 
 var (
-	// TODO: support specifying images by env.
-	oldKICImageRepo = "kong/kubernetes-ingress-controller"
-	oldKICImageTag  = "3.4.4"
-	newKICImageRepo = "kong/kubernetes-ingress-controller"
-	newKICImageTag  = ""
+	oldKICImageRepo = testenv.ControllerImageUpgradeFrom()
+	oldKICImageTag  = testenv.ControllerTagUpgradeFrom()
+	newKICImageRepo = testenv.ControllerImage()
+	newKICImageTag  = testenv.ControllerImageTag()
+)
+
+const (
+	defaultOldKICImageRepo = "kong/kubernetes-ingress-controller"
+	defaultOldKICImageTag  = "3.4.4"
 )
 
 func TestUpgradeKICWithExistingPlugins(t *testing.T) {
-	const serviceName = "http-echo"
-	const pluginName = "response-transformer-add-header"
-	const echoPath = "/echo"
+	const (
+		serviceName = "http-echo"
+		pluginName  = "response-transformer-add-header"
+		echoPath    = "/echo"
+	)
 	testUUID := uuid.New()
 
 	f := features.New("essentials").
@@ -119,7 +129,7 @@ func TestUpgradeKICWithExistingPlugins(t *testing.T) {
 				proxyURL := GetHTTPURLFromCtx(ctx)
 				assert.NotNil(t, proxyURL)
 
-				t.Logf("sendind HTTP GET request to %s%s to verify that ingress and plugin are configured",
+				t.Logf("sending HTTP GET request to %s%s to verify that ingress and plugin are configured",
 					proxyURL.Host, echoPath)
 				helpers.EventuallyGETPath(
 					t, proxyURL,
@@ -137,10 +147,10 @@ func TestUpgradeKICWithExistingPlugins(t *testing.T) {
 				)
 				return ctx
 			}).
-		Assess("Upgrade KIC and verify it restarts successfully", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+		Assess("Upgrade KIC and verify it restarts successfully and configuration works", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			cluster := GetClusterFromCtx(ctx)
 			namespace := GetNamespaceForT(ctx, t)
-
+			// Remove the secrets for deploying Kong enterprise to avoid failures when KTF kong addon tries to create them.
 			if testenv.KongEnterpriseEnabled() {
 				t.Logf("cleaning up existing secrets for enterprise")
 				secretClient := cluster.Client().CoreV1().Secrets(namespace)
@@ -177,20 +187,55 @@ func TestUpgradeKICWithExistingPlugins(t *testing.T) {
 				kongProxyEnvVars:            map[string]string{},
 			})
 
-			kongAddon := GetFromCtxForT[*kongaddon.Addon](ctx, t)
 			if runControllerManager {
-				startControllerManager(ctx, t, featureSetupCfg{
-					ingressClassName: "kong",
-				}, kongAddon, nil)
+				t.Log("Waiting for the pod with Kong gateway only to be up")
+				assert.Eventually(t, func() bool {
+					podList, err := cluster.Client().CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+						LabelSelector: "app=ingress-controller-kong",
+					})
+					require.NoError(t, err)
+					for _, pod := range podList.Items {
+						if pod.Status.Phase == corev1.PodRunning &&
+							lo.ContainsBy(pod.Spec.Containers, func(c corev1.Container) bool {
+								return c.Name == "proxy"
+							}) && !lo.ContainsBy(pod.Spec.Containers, func(c corev1.Container) bool {
+							return c.Name == "ingress-controller"
+						}) {
+							return true
+						}
+					}
+					return false
+				}, consts.StatusWait, time.Second)
+
+				kongAddon := GetFromCtxForT[*kongaddon.Addon](ctx, t)
+				if runControllerManager {
+					startControllerManager(ctx, t, startControllerManagerConfig{
+						ingressClassName: "kong",
+					}, kongAddon)
+				}
+			} else {
+				t.Logf("Waiting for the pod with KIC %s:%s to be up", newKICImageRepo, newKICImageTag)
+				assert.Eventually(t, func() bool {
+					podList, err := cluster.Client().CoreV1().Pods(namespace).List(ctx, metav1.ListOptions{
+						LabelSelector: "app=ingress-controller-kong",
+					})
+					require.NoError(t, err)
+					for _, pod := range podList.Items {
+						if pod.Status.Phase == corev1.PodRunning &&
+							lo.ContainsBy(pod.Spec.Containers, func(c corev1.Container) bool {
+								return c.Name == "ingress-controller" && c.Image == fmt.Sprintf("%s:%s", newKICImageRepo, newKICImageTag)
+							}) {
+							return true
+						}
+					}
+					return false
+				}, consts.StatusWait, time.Second)
 			}
 
-			return ctx
-		}).
-		Assess("Verify that the old configuration remains unchanged", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			proxyURL := GetHTTPURLFromCtx(ctx)
 			assert.NotNil(t, proxyURL)
 
-			t.Logf("sendind HTTP GET request to %s%s to verify that ingress and plugin are configured",
+			t.Logf("sendind HTTP GET request to %s%s to verify that aold configuration of ingress and plugin still works",
 				proxyURL.Host, echoPath)
 			helpers.EventuallyGETPath(
 				t, proxyURL,
@@ -206,14 +251,9 @@ func TestUpgradeKICWithExistingPlugins(t *testing.T) {
 					return "header 'Kic-Added' should be added and has expected value", resp.Header.Get("Kic-Added") == "Test"
 				},
 			)
-			return ctx
-		}).
-		Assess("Update the plugin and verify that the new configuration works", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
+
 			kongClient := GetFromCtxForT[*clientset.Clientset](ctx, t)
 			assert.NotNil(t, kongClient)
-			cluster := GetClusterFromCtx(ctx)
-
-			namespace := GetNamespaceForT(ctx, t)
 
 			plugin, err := kongClient.ConfigurationV1().KongPlugins(namespace).Get(ctx, pluginName, metav1.GetOptions{})
 			assert.NoErrorf(t, err, "failed to get plugin %s/%s", namespace, pluginName)
@@ -224,45 +264,27 @@ func TestUpgradeKICWithExistingPlugins(t *testing.T) {
 			_, err = kongClient.ConfigurationV1().KongPlugins(namespace).Update(ctx, plugin, metav1.UpdateOptions{})
 			assert.NoErrorf(t, err, "failed to update plugin %s/%s", namespace, pluginName)
 
-			service, err := cluster.Client().CoreV1().Services(namespace).Get(ctx, serviceName, metav1.GetOptions{})
-			assert.NoErrorf(t, err, "failed to get service %s/%S", namespace, serviceName)
+			t.Logf("sending HTTP GET request to %s%s to verify that new configuration of plugin works",
+				proxyURL.Host, echoPath)
+			getURL := fmt.Sprintf("%s/%s",
+				strings.TrimSuffix(proxyURL.String(), "/"), strings.TrimPrefix(echoPath, "/"))
+			assert.Eventually(
+				t, func() bool {
+					resp, err := http.Get(getURL)
+					require.NoError(t, err)
 
-			newEchoPath := "/echo-new"
-			newIngress := generators.NewIngressForService(
-				newEchoPath,
-				map[string]string{
-					"konghq.com/plugins": pluginName,
-				}, service,
-			)
-			newIngress.Name = serviceName + "-new"
-			newIngress.Spec.IngressClassName = lo.ToPtr("kong")
-			_, err = cluster.Client().NetworkingV1().Ingresses(namespace).Create(ctx, newIngress, metav1.CreateOptions{})
-			assert.NoError(t, err)
-
-			proxyURL := GetHTTPURLFromCtx(ctx)
-			assert.NotNil(t, proxyURL)
-
-			t.Logf("sendind HTTP GET request to %s%s to verify that ingress and plugin are configured",
-				proxyURL.Host, newEchoPath)
-			helpers.EventuallyGETPath(
-				t, proxyURL,
-				proxyURL.Host,
-				newEchoPath,
-				nil,
-				http.StatusOK,
-				testUUID.String(),
-				nil,
-				consts.IngressWait,
-				consts.WaitTick,
-				func(resp *http.Response, _ string) (key string, ok bool) {
-					t.Logf("header Kic-Added: %s", resp.Header.Get("Kic-Added"))
-					return "header 'Kic-Added' should be added and has expected value", resp.Header.Get("Kic-Added") == "Another-Test"
+					defer resp.Body.Close()
+					if resp.StatusCode != http.StatusOK {
+						return false
+					}
+					headerValue := resp.Header.Get("Kic-Added")
+					return headerValue == "Another-Test"
 				},
+				consts.IngressWait, consts.WaitTick,
 			)
 
 			return ctx
-		},
-		).
+		}).
 		Teardown(featureTeardown())
 
 	tenv.Test(t, f.Feature())
@@ -279,7 +301,12 @@ func setUpKongAndKIC(ctx context.Context, t *testing.T, cfg *envconf.Config) con
 	}
 	ctx = setInCtx(ctx, _ingressClass{}, ingressClass)
 
-	// TODO: extract setting up Kong addon to a standalone setup function.
+	if oldKICImageRepo == "" || oldKICImageTag == "" {
+		t.Logf("old KIC image not specified, using default image: %s:%s", defaultOldKICImageRepo, defaultOldKICImageTag)
+		oldKICImageRepo = defaultOldKICImageRepo
+		oldKICImageTag = defaultOldKICImageTag
+	}
+
 	ctx = deployKongAddon(ctx, t, deployKongAddonCfg{
 		deployControllerInKongAddon: true,
 		controllerImageRepository:   oldKICImageRepo,

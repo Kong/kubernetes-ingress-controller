@@ -89,6 +89,8 @@ func (c *CLIConfig) bindFlagSet() {
 		`Kong Admin API Service namespaced name in "namespace/name" format, to use for Kong Gateway service discovery.`)
 	flagSet.StringSliceVar(&c.KongAdminSvcPortNames, "kong-admin-svc-port-names", []string{"admin-tls", "kong-admin-tls"},
 		"Name(s) of ports on Kong Admin API service in comma-separated format (or specify this flag multiple times) to take into account when doing gateway discovery.")
+	flagSet.StringSliceVar(&c.KongStatusSvcPortNames, "kong-status-svc-port-names", []string{"status"},
+		"Name(s) of ports on Kong Status API service in comma-separated format (or specify this flag multiple times) to use for status checks.")
 	flagSet.DurationVar(&c.GatewayDiscoveryReadinessCheckInterval, "gateway-discovery-readiness-check-interval", managercfg.DefaultDataPlanesReadinessReconciliationInterval,
 		"Interval of readiness checks on gateway admin API clients for discovery.")
 	flagSet.DurationVar(&c.GatewayDiscoveryReadinessCheckTimeout, "gateway-discovery-readiness-check-timeout", managercfg.DefaultDataPlanesReadinessCheckTimeout,

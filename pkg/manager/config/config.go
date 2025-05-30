@@ -51,6 +51,7 @@ type Config struct {
 	GatewayDiscoveryReadinessCheckInterval time.Duration
 	GatewayDiscoveryReadinessCheckTimeout  time.Duration
 	KongAdminSvcPortNames                  []string
+	KongStatusSvcPortNames                 []string
 	ProxySyncSeconds                       float32
 	InitCacheSyncDuration                  time.Duration
 	ProxyTimeoutSeconds                    float32

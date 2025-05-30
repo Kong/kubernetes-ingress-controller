@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-	"slices"
 	"strings"
 	"sync"
 	"testing"
@@ -194,6 +193,20 @@ func featureSetup(opts ...featureSetupOpt) func(ctx context.Context, t *testing.
 			controllerManagerFeatureGates: setupCfg.controllerManagerFeatureGates,
 			controllerManagerOpts:         setupCfg.controllerManagerOpts,
 		}
+		// Add admin token and workspace args to controller args when running against Kong Enterprise with DB backed.
+		var extraControllerArgs []string
+		if testenv.KongEnterpriseEnabled() && testenv.DBMode() != testenv.DBModeOff {
+			extraControllerArgs = []string{
+				fmt.Sprintf("--kong-admin-token=%s", consts.KongTestPassword),
+				fmt.Sprintf("--kong-workspace=%s", consts.KongTestWorkspace),
+			}
+		}
+		if len(extraControllerArgs) > 0 {
+			startControllManagerConfig.controllerManagerOpts = append(
+				startControllManagerConfig.controllerManagerOpts,
+				withExtraControllerArgs(extraControllerArgs))
+		}
+
 		return startControllerManager(ctx, t, startControllManagerConfig, kongAddon)
 	}
 }
@@ -381,6 +394,13 @@ type startControllerManagerConfig struct {
 	controllerManagerOpts         []helpers.ControllerManagerOpt
 }
 
+func withExtraControllerArgs(extraArgs []string) helpers.ControllerManagerOpt {
+	return func(args []string) []string {
+		args = append(args, extraArgs...)
+		return args
+	}
+}
+
 // startControllerManager runs a controller manager from code base and connecting to the given kong addon.
 func startControllerManager(
 	ctx context.Context, t *testing.T,
@@ -437,16 +457,6 @@ func startControllerManager(
 		fmt.Sprintf("--election-namespace=%s", consts.ControllerNamespace),
 		fmt.Sprintf("--watch-namespace=%s", kongAddon.Namespace()),
 	}
-
-	// Add admin token and workspace args to controller args when running against Kong Enterprise with DB backed.
-	var extraControllerArgs []string
-	if testenv.KongEnterpriseEnabled() && testenv.DBMode() != testenv.DBModeOff {
-		extraControllerArgs = []string{
-			fmt.Sprintf("--kong-admin-token=%s", consts.KongTestPassword),
-			fmt.Sprintf("--kong-workspace=%s", consts.KongTestWorkspace),
-		}
-	}
-	allControllerArgs = slices.Concat(allControllerArgs, extraControllerArgs)
 
 	for _, opt := range setupCfg.controllerManagerOpts {
 		allControllerArgs = opt(allControllerArgs)

@@ -74,7 +74,7 @@ jobs:
         TEST_KONG_IMAGE: ${{ env.kong-gateway-enterprise-registry }}
         TEST_KONG_TAG: ${{ env.kong-gateway-enterprise-tag }}
         TEST_KONG_EFFECTIVE_VERSION: ${{ env.kong-gateway-enterprise-effective-version }}
-        TEST_KONG_PULL_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+        TEST_KONG_PULL_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
         TEST_KONG_PULL_PASSWORD: ${{ secrets.DOCKERHUB_NIGHTLY_PULL_TOKEN }}
 
 
@@ -118,7 +118,7 @@ jobs:
         TEST_KONG_IMAGE: ${{ env.kong-gateway-enterprise-registry }}
         TEST_KONG_TAG: ${{ env.kong-gateway-enterprise-tag }}
         TEST_KONG_EFFECTIVE_VERSION: ${{ env.kong-gateway-enterprise-effective-version }}
-        TEST_KONG_PULL_USERNAME: ${{ secrets.DOCKERHUB_USERNAME }}
+        TEST_KONG_PULL_USERNAME: ${{ vars.DOCKERHUB_USERNAME }}
         TEST_KONG_PULL_PASSWORD: ${{ secrets.DOCKERHUB_NIGHTLY_PULL_TOKEN }}
 
     - name: collect test coverage

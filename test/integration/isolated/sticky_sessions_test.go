@@ -5,7 +5,6 @@ import (
 
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
@@ -23,7 +22,7 @@ func TestStickySessionsEndpointProcessing(t *testing.T) {
 					"kubernetes.io/service-name": "test-service",
 				},
 			},
-			AddressType: discoveryv1.AddressTypeIPv4,
+
 			Endpoints: []discoveryv1.Endpoint{
 				{
 					Addresses: []string{"10.0.0.1"},
@@ -50,13 +49,6 @@ func TestStickySessionsEndpointProcessing(t *testing.T) {
 						Ready:       lo.ToPtr(false),
 						Terminating: lo.ToPtr(false), // Not ready, not terminating (should be skipped)
 					},
-				},
-			},
-			Ports: []discoveryv1.EndpointPort{
-				{
-					Name:     lo.ToPtr("http"),
-					Port:     lo.ToPtr(int32(80)),
-					Protocol: lo.ToPtr(corev1.ProtocolTCP),
 				},
 			},
 		}
@@ -103,9 +95,9 @@ func TestStickySessionsEndpointProcessing(t *testing.T) {
 
 	t.Run("endpoint processing behavior is correct for all conditions", func(t *testing.T) {
 		testCases := []struct {
-			name         string
-			ready        *bool
-			terminating  *bool
+			name          string
+			ready         *bool
+			terminating   *bool
 			shouldInclude bool
 		}{
 			{"ready endpoint", lo.ToPtr(true), lo.ToPtr(false), true},
@@ -120,7 +112,6 @@ func TestStickySessionsEndpointProcessing(t *testing.T) {
 		for _, tc := range testCases {
 			t.Run(tc.name, func(t *testing.T) {
 				endpoint := discoveryv1.Endpoint{
-					Addresses: []string{"10.0.0.1"},
 					Conditions: discoveryv1.EndpointConditions{
 						Ready:       tc.ready,
 						Terminating: tc.terminating,

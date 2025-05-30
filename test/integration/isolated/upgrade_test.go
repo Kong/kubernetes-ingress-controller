@@ -28,6 +28,7 @@ import (
 	"github.com/kong/kubernetes-configuration/pkg/clientset"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
+	testconsts "github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/integration/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
@@ -208,11 +209,22 @@ func TestUpgradeKICWithExistingPlugins(t *testing.T) {
 				}, consts.StatusWait, time.Second)
 
 				kongAddon := GetFromCtxForT[*kongaddon.Addon](ctx, t)
-				if runControllerManager {
-					startControllerManager(ctx, t, startControllerManagerConfig{
-						ingressClassName: "kong",
-					}, kongAddon)
+
+				startControllManagerConfig := startControllerManagerConfig{
+					ingressClassName: "kong",
 				}
+				if testenv.KongEnterpriseEnabled() && testenv.DBMode() != testenv.DBModeOff {
+					extraControllerArgs := []string{
+						fmt.Sprintf("--kong-admin-token=%s", testconsts.KongTestPassword),
+					}
+					startControllManagerConfig.controllerManagerOpts = append(
+						startControllManagerConfig.controllerManagerOpts,
+						withExtraControllerArgs(extraControllerArgs),
+					)
+				}
+
+				startControllerManager(ctx, t, startControllManagerConfig, kongAddon)
+
 			} else {
 				t.Logf("Waiting for the pod with KIC %s:%s to be up", newKICImageRepo, newKICImageTag)
 				assert.Eventually(t, func() bool {
@@ -293,7 +305,7 @@ func TestUpgradeKICWithExistingPlugins(t *testing.T) {
 func setUpKongAndKIC(ctx context.Context, t *testing.T, cfg *envconf.Config) context.Context {
 	cluster := GetClusterFromCtx(ctx)
 	ctx = setUpNamespaceAndCleaner(ctx, t, cfg)
-	// TODO: configure ingress class in the helm installation.
+	// TODO: configure ingress class and workspace in the helm installation:
 	ingressClass := "kong"
 	t.Logf("deploying the controller's IngressClass %q", ingressClass)
 	if !assert.NoError(t, helpers.CreateIngressClass(ctx, ingressClass, cluster.Client()), "failed creating IngressClass") {

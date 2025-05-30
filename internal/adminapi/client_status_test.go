@@ -12,7 +12,7 @@ import (
 
 func TestClient_AttachStatusClient(t *testing.T) {
 	client := &Client{}
-	
+
 	// Initially, no status client should be attached
 	assert.Nil(t, client.statusClient)
 
@@ -24,23 +24,23 @@ func TestClient_AttachStatusClient(t *testing.T) {
 			Namespace: "test-namespace",
 		},
 	}
-	
+
 	statusClient, err := NewStatusClient(discoveredAPI, managercfg.AdminAPIClientConfig{})
 	assert.NoError(t, err)
-	
+
 	// Attach the status client
 	client.AttachStatusClient(statusClient)
-	
+
 	// Verify that the status client was attached
 	assert.Equal(t, statusClient, client.statusClient)
 }
 
 func TestClient_AttachStatusClient_Nil(t *testing.T) {
 	client := &Client{}
-	
+
 	// Attach a nil status client (should be allowed)
 	client.AttachStatusClient(nil)
-	
+
 	// Verify that the status client is nil
 	assert.Nil(t, client.statusClient)
 }
@@ -89,16 +89,13 @@ func TestNewClientFactoryForWorkspace_BackwardCompatibility(t *testing.T) {
 
 func TestClientFactory_HasStatusDiscoverer(t *testing.T) {
 	factory := ClientFactory{
-		logger:               logr.Discard(),
-		workspace:            "",
 		opts:                 managercfg.AdminAPIClientConfig{},
-		adminToken:           "",
 		statusAPIsDiscoverer: nil, // No status discoverer
 	}
 
 	// Test that the factory has the status discoverer field
 	assert.Nil(t, factory.statusAPIsDiscoverer)
-	
+
 	// Test with a mock discoverer
 	mockDiscoverer := &Discoverer{}
 	factory.statusAPIsDiscoverer = mockDiscoverer

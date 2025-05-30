@@ -190,8 +190,7 @@ func New(
 	}
 
 	readinessChecker := clients.NewDefaultReadinessChecker(adminAPIClientsFactory, c.GatewayDiscoveryReadinessCheckTimeout, setupLog.WithName("readiness-checker"))
-	
-	
+
 	clientsManager, err := clients.NewAdminAPIClientsManager(
 		ctx,
 		initialKongClients,

@@ -1,7 +1,6 @@
 package adminapi
 
 import (
-	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,17 +13,17 @@ import (
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
-// testLogger returns a logger for testing
-func testLogger(t *testing.T) logr.Logger {
+// testLogger returns a logger for testing.
+func testLogger(_ *testing.T) logr.Logger {
 	return logr.Discard()
 }
 
 func TestStatusClient_IsReady(t *testing.T) {
 	tests := []struct {
-		name           string
-		statusCode     int
-		expectedError  bool
-		errorContains  string
+		name          string
+		statusCode    int
+		expectedError bool
+		errorContains string
 	}{
 		{
 			name:          "status endpoint returns 200",
@@ -68,7 +67,7 @@ func TestStatusClient_IsReady(t *testing.T) {
 			require.NoError(t, err)
 
 			// Test IsReady
-			ctx := context.Background()
+			ctx := t.Context()
 			err = client.IsReady(ctx)
 
 			if tt.expectedError {
@@ -141,7 +140,7 @@ func TestStatusClientFactory_CreateStatusClient(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			// Create a test server
-			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 				w.WriteHeader(tt.statusCode)
 			}))
 			defer server.Close()
@@ -161,7 +160,7 @@ func TestStatusClientFactory_CreateStatusClient(t *testing.T) {
 			}
 
 			// Test CreateStatusClient
-			ctx := context.Background()
+			ctx := t.Context()
 			client, err := factory.CreateStatusClient(ctx, discoveredAPI)
 
 			if tt.expectedError {

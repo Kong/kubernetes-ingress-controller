@@ -36,7 +36,7 @@ func NewStatusClient(statusAPI DiscoveredAdminAPI, opts managercfg.AdminAPIClien
 // IsReady checks if the Kong Gateway is ready by calling the /status endpoint.
 func (c *StatusClient) IsReady(ctx context.Context) error {
 	statusURL := fmt.Sprintf("%s/status", c.baseURL)
-	
+
 	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 

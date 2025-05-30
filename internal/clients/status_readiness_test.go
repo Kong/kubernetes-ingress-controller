@@ -49,12 +49,12 @@ func (m *mockStatusClientFactory) CreateStatusClient(ctx context.Context, discov
 
 func TestDefaultStatusReadinessChecker_CheckStatusReadiness(t *testing.T) {
 	tests := []struct {
-		name                     string
-		alreadyCreatedClients    []AlreadyCreatedStatusClient
-		pendingClients           []adminapi.DiscoveredAdminAPI
-		setupMocks               func(*mockStatusClientFactory, []*mockStatusClient)
-		expectedTurnedReady      int
-		expectedTurnedPending    int
+		name                  string
+		alreadyCreatedClients []AlreadyCreatedStatusClient
+		pendingClients        []adminapi.DiscoveredAdminAPI
+		setupMocks            func(*mockStatusClientFactory, []*mockStatusClient)
+		expectedTurnedReady   int
+		expectedTurnedPending int
 	}{
 		{
 			name:                  "no clients",
@@ -76,7 +76,7 @@ func TestDefaultStatusReadinessChecker_CheckStatusReadiness(t *testing.T) {
 					},
 				},
 			},
-			setupMocks: func(factory *mockStatusClientFactory, clients []*mockStatusClient) {
+			setupMocks: func(factory *mockStatusClientFactory, _ []*mockStatusClient) {
 				factory.On("CreateStatusClient", mock.Anything, mock.Anything).Return(&adminapi.StatusClient{}, nil)
 			},
 			expectedTurnedReady:   1,
@@ -94,7 +94,7 @@ func TestDefaultStatusReadinessChecker_CheckStatusReadiness(t *testing.T) {
 					},
 				},
 			},
-			setupMocks: func(factory *mockStatusClientFactory, clients []*mockStatusClient) {
+			setupMocks: func(factory *mockStatusClientFactory, _ []*mockStatusClient) {
 				factory.On("CreateStatusClient", mock.Anything, mock.Anything).Return(nil, errors.New("connection failed"))
 			},
 			expectedTurnedReady:   0,
@@ -111,8 +111,8 @@ func TestDefaultStatusReadinessChecker_CheckStatusReadiness(t *testing.T) {
 					return client
 				}(),
 			},
-			pendingClients: []adminapi.DiscoveredAdminAPI{},
-			setupMocks:     func(*mockStatusClientFactory, []*mockStatusClient) {},
+			pendingClients:        []adminapi.DiscoveredAdminAPI{},
+			setupMocks:            func(*mockStatusClientFactory, []*mockStatusClient) {},
 			expectedTurnedReady:   0,
 			expectedTurnedPending: 1,
 		},
@@ -126,8 +126,8 @@ func TestDefaultStatusReadinessChecker_CheckStatusReadiness(t *testing.T) {
 					return client
 				}(),
 			},
-			pendingClients: []adminapi.DiscoveredAdminAPI{},
-			setupMocks:     func(*mockStatusClientFactory, []*mockStatusClient) {},
+			pendingClients:        []adminapi.DiscoveredAdminAPI{},
+			setupMocks:            func(*mockStatusClientFactory, []*mockStatusClient) {},
 			expectedTurnedReady:   0,
 			expectedTurnedPending: 0,
 		},
@@ -149,7 +149,7 @@ func TestDefaultStatusReadinessChecker_CheckStatusReadiness(t *testing.T) {
 				logr.Discard(),
 			)
 
-			ctx := context.Background()
+			ctx := t.Context()
 			result := checker.CheckStatusReadiness(ctx, tt.alreadyCreatedClients, tt.pendingClients)
 
 			assert.Len(t, result.ClientsTurnedReady, tt.expectedTurnedReady)
@@ -235,7 +235,7 @@ func TestDefaultStatusReadinessChecker_checkPendingStatusClient(t *testing.T) {
 		expectedClient := &adminapi.StatusClient{}
 		factory.On("CreateStatusClient", mock.Anything, pendingClient).Return(expectedClient, nil).Once()
 
-		ctx := context.Background()
+		ctx := t.Context()
 		result := checker.checkPendingStatusClient(ctx, pendingClient)
 
 		assert.Equal(t, expectedClient, result)
@@ -245,7 +245,7 @@ func TestDefaultStatusReadinessChecker_checkPendingStatusClient(t *testing.T) {
 	t.Run("failed creation", func(t *testing.T) {
 		factory.On("CreateStatusClient", mock.Anything, pendingClient).Return(nil, errors.New("creation failed")).Once()
 
-		ctx := context.Background()
+		ctx := t.Context()
 		result := checker.checkPendingStatusClient(ctx, pendingClient)
 
 		assert.Nil(t, result)
@@ -265,7 +265,7 @@ func TestDefaultStatusReadinessChecker_checkAlreadyCreatedStatusClient(t *testin
 		client.On("IsReady", mock.Anything).Return(nil)
 		client.On("BaseRootURL").Return("https://10.0.0.1:8100")
 
-		ctx := context.Background()
+		ctx := t.Context()
 		result := checker.checkAlreadyCreatedStatusClient(ctx, client)
 
 		assert.True(t, result)
@@ -277,7 +277,7 @@ func TestDefaultStatusReadinessChecker_checkAlreadyCreatedStatusClient(t *testin
 		client.On("IsReady", mock.Anything).Return(errors.New("not ready"))
 		client.On("BaseRootURL").Return("https://10.0.0.1:8100")
 
-		ctx := context.Background()
+		ctx := t.Context()
 		result := checker.checkAlreadyCreatedStatusClient(ctx, client)
 
 		assert.False(t, result)

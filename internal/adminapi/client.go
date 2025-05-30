@@ -218,10 +218,10 @@ func (c *Client) AttachStatusClient(statusClient *StatusClient) {
 }
 
 type ClientFactory struct {
-	logger              logr.Logger
-	workspace           string
-	opts                managercfg.AdminAPIClientConfig
-	adminToken          string
+	logger               logr.Logger
+	workspace            string
+	opts                 managercfg.AdminAPIClientConfig
+	adminToken           string
 	statusAPIsDiscoverer *Discoverer
 }
 
@@ -286,21 +286,23 @@ func (cf ClientFactory) CreateAdminAPIClient(ctx context.Context, discoveredAdmi
 }
 
 // tryCreateStatusClient attempts to create a status client for the same pod as the admin API client.
-func (cf ClientFactory) tryCreateStatusClient(ctx context.Context, podRef k8stypes.NamespacedName) *StatusClient {
+//
+//nolint:unparam // This is a stub implementation that always returns nil for now
+func (cf ClientFactory) tryCreateStatusClient(_ context.Context, podRef k8stypes.NamespacedName) *StatusClient {
 	// Try to discover status APIs for the same service that the admin API belongs to
 	// We'll use the pod reference to find the corresponding status endpoint
-	
+
 	// This is a simplified implementation that assumes the status API is on the same pod
 	// but on a different port (8100 instead of 8444)
-	
+
 	// In a real implementation, you would use proper service discovery here
 	// For now, we'll return nil to keep the existing behavior
 	// The status client creation would need to be implemented based on your specific requirements
-	
+
 	cf.logger.V(logging.DebugLevel).Info(
 		"Status client creation not yet implemented",
 		"podRef", podRef,
 	)
-	
+
 	return nil
 }

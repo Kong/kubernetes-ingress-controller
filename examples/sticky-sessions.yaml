@@ -1,0 +1,213 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: echo-deployment
+  labels:
+    app: echo
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: echo
+  template:
+    metadata:
+      labels:
+        app: echo
+    spec:
+      containers:
+        - name: echo
+          image: hashicorp/http-echo:latest
+          args:
+            - -listen=:8080
+            - -text="Hello from pod $(HOSTNAME)"
+          ports:
+            - containerPort: 8080
+          env:
+            - name: HOSTNAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: echo
+  name: echo-service
+  annotations:
+    # Attach the KongUpstreamPolicy for sticky sessions
+    konghq.com/upstream-policy: echo-sticky-session-policy
+spec:
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: echo
+  type: ClusterIP
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: echo-ingress
+  annotations:
+    konghq.com/strip-path: "true"
+spec:
+  ingressClassName: kong
+  rules:
+    - http:
+        paths:
+          - path: /echo
+            pathType: Prefix
+            backend:
+              service:
+                name: echo-service
+                port:
+                  number: 80
+---
+# KongUpstreamPolicy configures sticky sessions using consistent hashing
+# based on a session cookie. This ensures that clients with the same
+# session ID will always be routed to the same backend pod.
+apiVersion: configuration.konghq.com/v1beta1
+kind: KongUpstreamPolicy
+metadata:
+  name: echo-sticky-session-policy
+spec:
+  # Use consistent hashing algorithm for session persistence
+  algorithm: consistent-hashing
+  slots: 100
+  
+  # Configure session-based sticky routing using cookies
+  hashOn:
+    cookie: session-id      # Name of the session cookie
+    cookiePath: /          # Path for the session cookie
+    
+  # Configure health checks to ensure proper failover
+  healthchecks:
+    active:
+      type: http
+      httpPath: /healthz
+      concurrency: 10
+      healthy:
+        interval: 10
+        successes: 3
+      unhealthy:
+        timeouts: 3
+        interval: 10
+    passive:
+      type: http
+      healthy:
+        successes: 3
+      unhealthy:
+        timeouts: 5
+---
+# Optional: Create a simple session management endpoint
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: session-script
+data:
+  session.html: |
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Sticky Session Demo</title>
+    </head>
+    <body>
+        <h1>Sticky Session Demo</h1>
+        <p>Your Session ID: <span id="sessionId"></span></p>
+        <p>Backend Pod Response: <span id="response"></span></p>
+        <button onclick="makeRequest()">Make Request</button>
+        
+        <script>
+        function getCookie(name) {
+            const value = "; " + document.cookie;
+            const parts = value.split("; " + name + "=");
+            if (parts.length === 2) return parts.pop().split(";").shift();
+        }
+        
+        function setCookie(name, value, days) {
+            const expires = new Date();
+            expires.setTime(expires.getTime() + (days * 24 * 60 * 60 * 1000));
+            document.cookie = name + "=" + value + ";expires=" + expires.toUTCString() + ";path=/";
+        }
+        
+        function makeRequest() {
+            let sessionId = getCookie('session-id');
+            if (!sessionId) {
+                sessionId = 'session-' + Math.random().toString(36).substr(2, 9);
+                setCookie('session-id', sessionId, 1);
+            }
+            
+            document.getElementById('sessionId').textContent = sessionId;
+            
+            fetch('/echo')
+                .then(response => response.text())
+                .then(data => {
+                    document.getElementById('response').textContent = data;
+                });
+        }
+        
+        // Make initial request
+        makeRequest();
+        </script>
+    </body>
+    </html>
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: session-demo
+  labels:
+    app: session-demo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: session-demo
+  template:
+    metadata:
+      labels:
+        app: session-demo
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:alpine
+          ports:
+            - containerPort: 80
+          volumeMounts:
+            - name: html
+              mountPath: /usr/share/nginx/html
+      volumes:
+        - name: html
+          configMap:
+            name: session-script
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: session-demo-service
+spec:
+  selector:
+    app: session-demo
+  ports:
+    - port: 80
+      targetPort: 80
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: session-demo-ingress
+spec:
+  ingressClassName: kong
+  rules:
+    - http:
+        paths:
+          - path: /demo
+            pathType: Prefix
+            backend:
+              service:
+                name: session-demo-service
+                port:
+                  number: 80

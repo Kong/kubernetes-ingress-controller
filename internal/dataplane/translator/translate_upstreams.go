@@ -95,11 +95,18 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 					// all derived targets will receive a weight of 0.
 					targetWeight := weight
 
+					// Count non-terminating targets for weight distribution
+					nonTerminatingTargets := 0
+					for _, target := range newTargets {
+						if target.Weight == nil || *target.Weight != 0 {
+							nonTerminatingTargets++
+						}
+					}
+
 					// If the backend governing this target is not set to a weight of 0,
-					// all targets derived from the backend split the weight, therefore
-					// equally splitting the traffic load.
-					if weight != 0 {
-						targetWeight = weight / len(newTargets)
+					// distribute weight among non-terminating targets only.
+					if weight != 0 && nonTerminatingTargets > 0 {
+						targetWeight = weight / nonTerminatingTargets
 						// minimum weight of 1 if weight zero was not specifically set.
 						if targetWeight == 0 {
 							targetWeight = 1
@@ -107,6 +114,10 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 					}
 
 					for i := range newTargets {
+						// Don't override weight 0 for terminating targets
+						if newTargets[i].Weight != nil && *newTargets[i].Weight == 0 {
+							continue
+						}
 						newTargets[i].Weight = &targetWeight
 					}
 				}
@@ -310,15 +321,23 @@ func getEndpoints(
 				// In most cases consumers should interpret this unknown state as ready.
 				// Field Ready has the same semantic as Endpoints from CoreV1 in Addresses.
 				// https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/#conditions
-				if endpoint.Conditions.Ready != nil && !*endpoint.Conditions.Ready {
+				
+				// Skip endpoints that are not ready, unless they are terminating.
+				// Terminating endpoints should be included with weight 0 to support sticky sessions.
+				isTerminating := endpoint.Conditions.Terminating != nil && *endpoint.Conditions.Terminating
+				isReady := endpoint.Conditions.Ready == nil || *endpoint.Conditions.Ready
+				
+				if !isReady && !isTerminating {
 					continue
 				}
+				
 				// One address per endpoint is rather expected (allowing multiple is due to historical reasons)
 				// read more https://github.com/kubernetes/kubernetes/issues/106267#issuecomment-978770401.
 				// These are all assumed to be fungible and clients may choose to only use the first element.
 				upstreamServer := util.Endpoint{
-					Address: endpoint.Addresses[0],
-					Port:    upstreamPort,
+					Address:      endpoint.Addresses[0],
+					Port:         upstreamPort,
+					Terminating:  isTerminating,
 				}
 				if _, exists := uniqueUpstream[upstreamServer]; !exists {
 					upstreamServers = append(upstreamServers, upstreamServer)
@@ -378,6 +397,13 @@ func targetsForEndpoints(endpoints []util.Endpoint) []kongstate.Target {
 				Target: kong.String(addr + ":" + endpoint.Port),
 			},
 		}
+		
+		// Set weight to 0 for terminating endpoints to support sticky sessions.
+		// This allows existing sessions to continue while preventing new traffic.
+		if endpoint.Terminating {
+			target.Weight = lo.ToPtr(0)
+		}
+		
 		targets = append(targets, target)
 	}
 	return targets

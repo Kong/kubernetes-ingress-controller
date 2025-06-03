@@ -370,6 +370,7 @@ func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report string
 			"feature-konnect-sync=false;"+
 			"feature-rewriteuris=false;"+
 			"feature-sanitizekonnectconfigdumps=true;"+
+			"feature-stickysessionsterminatingendpoints=false;"+
 			"hn=%s;"+
 			"kv=3.4.1;"+
 			"rf=traditional;"+

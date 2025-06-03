@@ -39,7 +39,7 @@ var (
 	oldKICImageRepo = testenv.ControllerImageUpgradeFrom()
 	oldKICImageTag  = testenv.ControllerTagUpgradeFrom()
 	newKICImageRepo = testenv.ControllerImage()
-	newKICImageTag  = testenv.ControllerImageTag()
+	newKICImageTag  = testenv.ControllerTag()
 )
 
 const (
@@ -247,7 +247,7 @@ func TestUpgradeKICWithExistingPlugins(t *testing.T) {
 			proxyURL := GetHTTPURLFromCtx(ctx)
 			assert.NotNil(t, proxyURL)
 
-			t.Logf("sendind HTTP GET request to %s%s to verify that aold configuration of ingress and plugin still works",
+			t.Logf("sendind HTTP GET request to %s%s to verify that old configuration of ingress and plugin still works",
 				proxyURL.Host, echoPath)
 			helpers.EventuallyGETPath(
 				t, proxyURL,

@@ -22,7 +22,7 @@ require (
 	github.com/avast/retry-go/v4 v4.6.1
 	github.com/blang/semver/v4 v4.0.0
 	github.com/dominikbraun/graph v0.23.0
-	github.com/go-logr/logr v1.4.2
+	github.com/go-logr/logr v1.4.3
 	github.com/go-logr/zapr v1.3.0
 	github.com/goccy/go-json v0.10.5
 	github.com/google/go-cmp v0.7.0

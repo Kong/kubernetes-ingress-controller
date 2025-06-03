@@ -176,6 +176,13 @@ func TestStickySessionsTerminatingEndpointsFeatureGate(t *testing.T) {
 						},
 					},
 				},
+				Ports: []discoveryv1.EndpointPort{
+					{
+						Name:     lo.ToPtr("http"),
+						Port:     lo.ToPtr(int32(80)),
+						Protocol: lo.ToPtr(corev1.ProtocolTCP),
+					},
+				},
 			},
 		}
 
@@ -231,6 +238,13 @@ func TestStickySessionsTerminatingEndpointsFeatureGate(t *testing.T) {
 							Ready:       lo.ToPtr(false),
 							Terminating: lo.ToPtr(true),
 						},
+					},
+				},
+				Ports: []discoveryv1.EndpointPort{
+					{
+						Name:     lo.ToPtr("http"),
+						Port:     lo.ToPtr(int32(80)),
+						Protocol: lo.ToPtr(corev1.ProtocolTCP),
 					},
 				},
 			},

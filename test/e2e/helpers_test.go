@@ -46,6 +46,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	conststest "github.com/kong/kubernetes-ingress-controller/v3/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/integration/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
@@ -92,6 +93,9 @@ const (
 
 	// badEchoPath is a wrong path to use for testing ingress misconfiguration.
 	badEchoPath = "/~/echo/**"
+
+	// lcManifestPath is the path of manifests to deploy limacharlie sensor daemon set for running faraday cage.
+	lcManifestPath = "manifests/limacharlie-daemonset.yaml"
 )
 
 // setupE2ETest builds a testing environment for the E2E test. It also sets up the environment's teardown and test
@@ -119,6 +123,8 @@ func setupE2ETest(t *testing.T, addons ...clusters.Addon) (context.Context, envi
 		}
 		helpers.TeardownCluster(ctx, t, env.Cluster())
 	})
+
+	deployLimaCharlieSensorIfEnabled(ctx, t, env)
 
 	return ctx, env
 }
@@ -916,6 +922,45 @@ func createGatewayAdminExposeService(ctx context.Context, t *testing.T, cluster 
 	service, err := cluster.Client().CoreV1().Services(namespace).Create(ctx, service, metav1.CreateOptions{})
 	require.NoError(t, err)
 	return service
+}
+
+func deployLimaCharlieSensorIfEnabled(ctx context.Context, t *testing.T, env environments.Environment) {
+	t.Helper()
+
+	// deploy limacharlie daemonset.
+	if lcInstallationKey := os.Getenv("LIMACHARLIE_INSTALLATION_KEY"); lcInstallationKey != "" {
+		t.Log("Deploying limacharlie sensor for running faraday cage")
+		_, err := env.Cluster().Client().CoreV1().Secrets(namespace).Get(ctx, "limacharlie-secret", metav1.GetOptions{})
+		if err != nil && apierrors.IsNotFound(err) {
+			t.Log("Creating secret for limacharlie installation key")
+			secret := &corev1.Secret{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "limacharlie-secret",
+					Namespace: namespace,
+				},
+				StringData: map[string]string{
+					"installation-key": lcInstallationKey,
+				},
+			}
+			_, err = env.Cluster().Client().CoreV1().Secrets(namespace).Create(ctx, secret, metav1.CreateOptions{})
+			require.NoError(t, err)
+		}
+
+		t.Logf("Deploying %s manifest to the cluster", lcManifestPath)
+		manifest := getTestManifest(t, lcManifestPath, true)
+		kubeconfigFilename := getTemporaryKubeconfig(t, env)
+		cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFilename, "apply", "-f", "-")
+		cmd.Stdin = manifest
+		out, err := cmd.CombinedOutput()
+		require.NoError(t, err, string(out))
+
+		require.Eventually(t, func() bool {
+			ds, err := env.Cluster().Client().AppsV1().DaemonSets(namespace).Get(ctx, "lc-sensor", metav1.GetOptions{})
+			require.NoError(t, err)
+			t.Logf("%d/%d pod(s) of lc-sensor daemon set available", ds.Status.NumberAvailable, ds.Status.CurrentNumberScheduled)
+			return ds.Status.NumberAvailable == ds.Status.CurrentNumberScheduled
+		}, consts.StatusWait, consts.WaitTick)
+	}
 }
 
 func dumpKongConfiguration(ctx context.Context, t *testing.T, cluster clusters.Cluster, outputDir string) {

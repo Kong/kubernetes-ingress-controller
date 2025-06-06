@@ -57,10 +57,10 @@ type FeatureFlags struct {
 	// that are sharing the same combination of backends to one Kong service.
 	CombinedServicesFromDifferentHTTPRoutes bool
 
-	// StickySessionsTerminatingEndpoints indicates whether to keep terminating endpoints in Kong upstreams with weight=0
-	// for sticky sessions. This allows existing sessions to continue while preventing new sessions from being assigned
+	// EnableDrainSupport indicates whether to keep terminating endpoints in Kong upstreams with weight=0
+	// for graceful connection draining. This allows existing sessions to continue while preventing new sessions from being assigned
 	// to terminating pods.
-	StickySessionsTerminatingEndpoints bool
+	EnableDrainSupport bool
 
 	// SupportRedirectPlugin indicates whether the Kong gateway supports the `redirect` plugin.
 	// This is supported starting with Kong 3.9.
@@ -86,7 +86,7 @@ func NewFeatureFlags(
 		KongServiceFacade:                       featureGates.Enabled(managercfg.KongServiceFacadeFeature),
 		KongCustomEntity:                        featureGates.Enabled(managercfg.KongCustomEntityFeature),
 		CombinedServicesFromDifferentHTTPRoutes: featureGates.Enabled(managercfg.CombinedServicesFromDifferentHTTPRoutesFeature),
-		StickySessionsTerminatingEndpoints:      enableDrainSupport,
+		EnableDrainSupport:                      enableDrainSupport,
 		SupportRedirectPlugin:                   supportRedirectPlugin,
 	}
 }

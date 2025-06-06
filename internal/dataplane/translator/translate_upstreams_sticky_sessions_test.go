@@ -212,7 +212,7 @@ func TestStickySessionsTerminatingEndpointsDrainSupport(t *testing.T) {
 			mockGetEndpointSlices,
 			false, // isSvcUpstream
 			"cluster.local",
-			false, // enableStickySessionsTerminatingEndpoints = false
+			false, // enableDrainSupport = false
 		)
 
 		// Should only have the ready endpoint, not the terminating one
@@ -276,7 +276,7 @@ func TestStickySessionsTerminatingEndpointsDrainSupport(t *testing.T) {
 			mockGetEndpointSlices,
 			false, // isSvcUpstream
 			"cluster.local",
-			true, // enableStickySessionsTerminatingEndpoints = true
+			true, // enableDrainSupport = true
 		)
 
 		// Should have both endpoints

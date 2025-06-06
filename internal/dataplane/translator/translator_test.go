@@ -4753,7 +4753,6 @@ func TestNewFeatureFlags(t *testing.T) {
 		updateStatusFlag      bool
 		enterpriseEdition     bool
 		supportRedirectPlugin bool
-		enableDrainSupport    bool
 		expectedFeatureFlags  FeatureFlags
 	}{
 		{
@@ -4788,7 +4787,7 @@ func TestNewFeatureFlags(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actualFlags := NewFeatureFlags(tc.featureGates, tc.routerFlavor, tc.updateStatusFlag, tc.enterpriseEdition, tc.supportRedirectPlugin, tc.enableDrainSupport)
+			actualFlags := NewFeatureFlags(tc.featureGates, tc.routerFlavor, tc.updateStatusFlag, tc.enterpriseEdition, tc.supportRedirectPlugin)
 
 			require.Equal(t, tc.expectedFeatureFlags, actualFlags)
 		})
@@ -5113,6 +5112,7 @@ func mustNewTranslator(t *testing.T, storer store.Storer) *Translator {
 		},
 		fakeSchemaServiceProvier{},
 		consts.DefaultClusterDomain,
+		false, // enableDrainSupport
 	)
 	require.NoError(t, err)
 	return p

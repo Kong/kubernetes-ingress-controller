@@ -57,11 +57,6 @@ type FeatureFlags struct {
 	// that are sharing the same combination of backends to one Kong service.
 	CombinedServicesFromDifferentHTTPRoutes bool
 
-	// EnableDrainSupport indicates whether to keep terminating endpoints in Kong upstreams with weight=0
-	// for graceful connection draining. This allows existing sessions to continue while preventing new sessions from being assigned
-	// to terminating pods.
-	EnableDrainSupport bool
-
 	// SupportRedirectPlugin indicates whether the Kong gateway supports the `redirect` plugin.
 	// This is supported starting with Kong 3.9.
 	// If `redirect` plugin is supported, we will translate the `requestRedirect` filter to `redirect` plugin
@@ -75,7 +70,6 @@ func NewFeatureFlags(
 	updateStatusFlag bool,
 	enterpriseEdition bool,
 	supportRedirectPlugin bool,
-	enableDrainSupport bool,
 ) FeatureFlags {
 	return FeatureFlags{
 		ReportConfiguredKubernetesObjects:       updateStatusFlag,
@@ -86,7 +80,6 @@ func NewFeatureFlags(
 		KongServiceFacade:                       featureGates.Enabled(managercfg.KongServiceFacadeFeature),
 		KongCustomEntity:                        featureGates.Enabled(managercfg.KongCustomEntityFeature),
 		CombinedServicesFromDifferentHTTPRoutes: featureGates.Enabled(managercfg.CombinedServicesFromDifferentHTTPRoutesFeature),
-		EnableDrainSupport:                      enableDrainSupport,
 		SupportRedirectPlugin:                   supportRedirectPlugin,
 	}
 }
@@ -113,7 +106,8 @@ type Translator struct {
 	failuresCollector          *failures.ResourceFailuresCollector
 	translatedObjectsCollector *ObjectsCollector
 
-	clusterDomain string
+	clusterDomain      string
+	enableDrainSupport bool
 }
 
 // NewTranslator produces a new Translator object provided a logging mechanism
@@ -125,6 +119,7 @@ func NewTranslator(
 	featureFlags FeatureFlags,
 	schemaServiceProvider SchemaServiceProvider,
 	clusterDomain string,
+	enableDrainSupport bool,
 ) (*Translator, error) {
 	failuresCollector := failures.NewResourceFailuresCollector(logger)
 
@@ -143,6 +138,7 @@ func NewTranslator(
 		failuresCollector:          failuresCollector,
 		translatedObjectsCollector: translatedObjectsCollector,
 		clusterDomain:              clusterDomain,
+		enableDrainSupport:         enableDrainSupport,
 	}, nil
 }
 

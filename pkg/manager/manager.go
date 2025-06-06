@@ -16,7 +16,6 @@ import (
 // Manager is an object representing an instance of the Kong Ingress Controller.
 type Manager struct {
 	id      ID
-	config  managercfg.Config
 	logger  logr.Logger
 	manager *managerinternal.Manager
 }
@@ -29,8 +28,8 @@ func NewManager(ctx context.Context, id ID, logger logr.Logger, cfg managercfg.C
 	}
 
 	return &Manager{
-		id:      id,
-		config:  cfg,
+		id: id,
+
 		logger:  logger.WithValues("managerID", id.String()),
 		manager: m,
 	}, nil

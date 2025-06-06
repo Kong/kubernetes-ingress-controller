@@ -108,7 +108,7 @@ Adding a new version? You'll need three changes:
 
  ## [3.4.6]
 
- > Release date: 2025-06-05
+ > Release date: 2025-06-06
 
  ### Fixed
 

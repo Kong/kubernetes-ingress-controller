@@ -156,9 +156,9 @@ func TestEndpointProcessingWithTerminatingCondition(t *testing.T) {
 	})
 }
 
-func TestStickySessionsTerminatingEndpointsFeatureGate(t *testing.T) {
-	t.Run("feature gate disabled - terminating endpoints should be excluded", func(t *testing.T) {
-		// Test that when the feature gate is disabled, terminating endpoints are excluded
+func TestStickySessionsTerminatingEndpointsDrainSupport(t *testing.T) {
+	t.Run("drain support disabled - terminating endpoints should be excluded", func(t *testing.T) {
+		// Test that when drain support is disabled, terminating endpoints are excluded
 		endpointSlices := []*discoveryv1.EndpointSlice{
 			{
 				Endpoints: []discoveryv1.Endpoint{
@@ -203,7 +203,7 @@ func TestStickySessionsTerminatingEndpointsFeatureGate(t *testing.T) {
 			Protocol: corev1.ProtocolTCP,
 		}
 
-		// Test with feature gate disabled (false)
+		// Test with drain support disabled (false)
 		processedEndpoints := getEndpoints(
 			zapr.NewLogger(zap.NewNop()),
 			service,
@@ -221,8 +221,8 @@ func TestStickySessionsTerminatingEndpointsFeatureGate(t *testing.T) {
 		require.False(t, processedEndpoints[0].Terminating)
 	})
 
-	t.Run("feature gate enabled - terminating endpoints should be included", func(t *testing.T) {
-		// Test that when the feature gate is enabled, terminating endpoints are included
+	t.Run("drain support enabled - terminating endpoints should be included", func(t *testing.T) {
+		// Test that when drain support is enabled, terminating endpoints are included
 		endpointSlices := []*discoveryv1.EndpointSlice{
 			{
 				Endpoints: []discoveryv1.Endpoint{
@@ -267,7 +267,7 @@ func TestStickySessionsTerminatingEndpointsFeatureGate(t *testing.T) {
 			Protocol: corev1.ProtocolTCP,
 		}
 
-		// Test with feature gate enabled (true)
+		// Test with drain support enabled (true)
 		processedEndpoints := getEndpoints(
 			zapr.NewLogger(zap.NewNop()),
 			service,

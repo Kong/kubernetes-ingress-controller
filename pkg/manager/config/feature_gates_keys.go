@@ -30,11 +30,6 @@ const (
 	// CombinedServicesFromDifferentHTTPRoutesFeature is the name of the feature gate that enables combining rules sharing the same backendRefs
 	// from different HTTPRoutes in the same namespace into one Kong gateway service to reduce total number of Kong gateway services.
 	CombinedServicesFromDifferentHTTPRoutesFeature = "CombinedServicesFromDifferentHTTPRoutes"
-
-	// StickySessionsTerminatingEndpointsFeature is the name of the feature gate that enables keeping terminating endpoints
-	// in Kong upstreams with weight=0 for sticky sessions. This allows existing sessions to continue while preventing
-	// new sessions from being assigned to terminating pods.
-	StickySessionsTerminatingEndpointsFeature = "StickySessionsTerminatingEndpoints"
 )
 
 // GetFeatureGatesDefaults returns the default values for all feature gates.
@@ -50,6 +45,5 @@ func GetFeatureGatesDefaults() FeatureGates {
 		FallbackConfigurationFeature:                   false,
 		KongCustomEntityFeature:                        true,
 		CombinedServicesFromDifferentHTTPRoutesFeature: false,
-		StickySessionsTerminatingEndpointsFeature:      false,
 	}
 }

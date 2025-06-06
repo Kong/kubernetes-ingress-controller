@@ -204,6 +204,7 @@ func New(
 		c.UpdateStatus,
 		kongStartUpConfig.Version.IsKongGatewayEnterprise(),
 		supportRedirectPlugin,
+		c.EnableDrainSupport,
 	)
 
 	referenceIndexers := ctrlref.NewCacheIndexers(setupLog.WithName("reference-indexers"))

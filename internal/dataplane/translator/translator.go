@@ -75,6 +75,7 @@ func NewFeatureFlags(
 	updateStatusFlag bool,
 	enterpriseEdition bool,
 	supportRedirectPlugin bool,
+	enableDrainSupport bool,
 ) FeatureFlags {
 	return FeatureFlags{
 		ReportConfiguredKubernetesObjects:       updateStatusFlag,
@@ -85,7 +86,7 @@ func NewFeatureFlags(
 		KongServiceFacade:                       featureGates.Enabled(managercfg.KongServiceFacadeFeature),
 		KongCustomEntity:                        featureGates.Enabled(managercfg.KongCustomEntityFeature),
 		CombinedServicesFromDifferentHTTPRoutes: featureGates.Enabled(managercfg.CombinedServicesFromDifferentHTTPRoutesFeature),
-		StickySessionsTerminatingEndpoints:      featureGates.Enabled(managercfg.StickySessionsTerminatingEndpointsFeature),
+		StickySessionsTerminatingEndpoints:      enableDrainSupport,
 		SupportRedirectPlugin:                   supportRedirectPlugin,
 	}
 }

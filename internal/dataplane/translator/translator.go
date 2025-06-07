@@ -56,6 +56,7 @@ type FeatureFlags struct {
 	// CombinedServicesFromDifferentHTTPRoutes indicates whether we should combine rules from different HTTPRoutes
 	// that are sharing the same combination of backends to one Kong service.
 	CombinedServicesFromDifferentHTTPRoutes bool
+
 	// SupportRedirectPlugin indicates whether the Kong gateway supports the `redirect` plugin.
 	// This is supported starting with Kong 3.9.
 	// If `redirect` plugin is supported, we will translate the `requestRedirect` filter to `redirect` plugin
@@ -105,7 +106,8 @@ type Translator struct {
 	failuresCollector          *failures.ResourceFailuresCollector
 	translatedObjectsCollector *ObjectsCollector
 
-	clusterDomain string
+	clusterDomain      string
+	enableDrainSupport bool
 }
 
 // NewTranslator produces a new Translator object provided a logging mechanism
@@ -117,6 +119,7 @@ func NewTranslator(
 	featureFlags FeatureFlags,
 	schemaServiceProvider SchemaServiceProvider,
 	clusterDomain string,
+	enableDrainSupport bool,
 ) (*Translator, error) {
 	failuresCollector := failures.NewResourceFailuresCollector(logger)
 
@@ -135,6 +138,7 @@ func NewTranslator(
 		failuresCollector:          failuresCollector,
 		translatedObjectsCollector: translatedObjectsCollector,
 		clusterDomain:              clusterDomain,
+		enableDrainSupport:         enableDrainSupport,
 	}, nil
 }
 

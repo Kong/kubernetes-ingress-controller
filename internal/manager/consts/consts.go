@@ -30,6 +30,10 @@ const (
 	// TODO: change this in next major release: https://github.com/Kong/kubernetes-ingress-controller/issues/6756
 	DefaultClusterDomain = ""
 
+	// DefaultEnableDrainSupport is the default value for enabling drain support feature.
+	// When enabled, terminating endpoints are kept in Kong upstreams with weight=0 for graceful connection draining.
+	DefaultEnableDrainSupport = false
+
 	// DefaultConfigMapSelector is the default label selector used to ingest ConfigMaps in the DataPlane sync.
 	DefaultConfigMapSelector = "konghq.com/configmap"
 

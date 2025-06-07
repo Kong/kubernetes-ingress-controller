@@ -106,6 +106,14 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+ ## Unreleased
+
+ ### Added
+
+ - Added support for drain support functionality.
+   It can be enabled by setting the flag `--enable-drain-support` to `true`.
+   [#7466](https://github.com/Kong/kubernetes-ingress-controller/pull/7466)
+
  ## [3.4.6]
 
  > Release date: 2025-06-06

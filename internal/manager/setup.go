@@ -39,6 +39,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/clock"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object/status"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
@@ -445,7 +446,15 @@ func setupLicenseGetter(
 	// we probably want to avoid that long term. If we do have separate toggles, we need an AND condition that sets up
 	// the client and makes it available to all Konnect-related subsystems.
 	if c.Konnect.LicenseSynchronizationEnabled {
-		konnectLicenseAPIClient, err := konnectLicense.NewClient(c.Konnect)
+		nn, err := util.GetPodNN()
+		if err != nil {
+			return nil, err
+		}
+		konnectLicenseAPIClient, err := konnectLicense.NewClient(c.Konnect,
+			konnectLicense.NewSecretLicenseStore(
+				mgr.GetClient(), nn.Namespace, c.Konnect.ControlPlaneID,
+			),
+		)
 		if err != nil {
 			return nil, fmt.Errorf("failed creating konnect client: %w", err)
 		}

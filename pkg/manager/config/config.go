@@ -7,6 +7,7 @@ import (
 
 	"github.com/samber/mo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
 )
 
 // OptionalNamespacedName is a type that represents a NamespacedName that can be omitted in config.
@@ -55,6 +56,11 @@ type Config struct {
 	ProxySyncSeconds                       float32
 	InitCacheSyncDuration                  time.Duration
 	ProxyTimeoutSeconds                    float32
+
+	// KubeRestConfig takes precedence over any fields related to what it configures,
+	// such as APIServerHost, APIServerQPS, etc. It's intended to be used when the controller
+	// is run as a part of Kong Operator. It bypass the mechanism of constructing this config.
+	KubeRestConfig *rest.Config
 
 	// Kubernetes configurations
 	KubeconfigPath           string

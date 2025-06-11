@@ -5,12 +5,11 @@ import (
 	"net"
 
 	"github.com/go-logr/logr"
+	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
-
-	"github.com/kong/go-kong/kong"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 

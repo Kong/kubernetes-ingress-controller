@@ -16,9 +16,9 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
-func TestTerminatingEndpointStickySessionSupport(t *testing.T) {
+func TestTerminatingEndpointDrainSupport(t *testing.T) {
 	t.Run("terminating endpoints should be included with weight 0", func(t *testing.T) {
-		// Test that terminating endpoints are included with weight 0 to support sticky sessions
+		// Test that terminating endpoints are included with weight 0 for drain support
 		endpoints := []util.Endpoint{
 			{
 				Address:     "10.0.0.1",
@@ -156,7 +156,7 @@ func TestEndpointProcessingWithTerminatingCondition(t *testing.T) {
 	})
 }
 
-func TestStickySessionsTerminatingEndpointsDrainSupport(t *testing.T) {
+func TestTerminatingEndpointsDrainSupport(t *testing.T) {
 	t.Run("drain support disabled - terminating endpoints should be excluded", func(t *testing.T) {
 		// Test that when drain support is disabled, terminating endpoints are excluded
 		endpointSlices := []*discoveryv1.EndpointSlice{

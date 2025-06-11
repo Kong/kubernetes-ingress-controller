@@ -216,7 +216,12 @@ func New(
 	cache := store.NewCacheStores()
 	storer := store.New(cache, c.IngressClassName, logger)
 
-	configTranslator, err := translator.NewTranslator(logger, storer, c.KongWorkspace, translatorFeatureFlags, NewSchemaServiceGetter(clientsManager), c.ClusterDomain)
+	configTranslator, err := translator.NewTranslator(logger, storer, c.KongWorkspace, translatorFeatureFlags, NewSchemaServiceGetter(clientsManager),
+		translator.Config{
+			ClusterDomain:      c.ClusterDomain,
+			EnableDrainSupport: c.EnableDrainSupport,
+		},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create translator: %w", err)
 	}

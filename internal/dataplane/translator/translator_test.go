@@ -4166,8 +4166,334 @@ func TestGetEndpoints(t *testing.T) {
 			if testCase.clusterDomain != "" {
 				clusterDomain = testCase.clusterDomain
 			}
-			result := getEndpoints(zapr.NewLogger(zap.NewNop()), testCase.svc, testCase.port, testCase.proto, testCase.fn, testCase.isServiceUpstream, clusterDomain)
+			cfg := getEndpointsConfig{
+				IsSvcUpstream:      testCase.isServiceUpstream,
+				ClusterDomain:      clusterDomain,
+				EnableDrainSupport: false,
+			}
+			result := getEndpoints(zapr.NewLogger(zap.NewNop()), testCase.svc, testCase.port, testCase.proto, testCase.fn, cfg)
 			require.Equal(t, testCase.result, result)
+		})
+	}
+
+	// Test cases for drain support functionality
+	drainSupportTests := []struct {
+		name               string
+		svc                *corev1.Service
+		port               *corev1.ServicePort
+		proto              corev1.Protocol
+		fn                 func(string, string) ([]*discoveryv1.EndpointSlice, error)
+		enableDrainSupport bool
+		expectedResult     []util.Endpoint
+	}{
+		{
+			name: "drain support disabled should exclude terminating endpoints",
+			svc: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					Type:      corev1.ServiceTypeClusterIP,
+					ClusterIP: "1.1.1.1",
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "default",
+							TargetPort: intstr.FromInt(80),
+						},
+					},
+				},
+			},
+			port: &corev1.ServicePort{
+				Name:       "default",
+				TargetPort: intstr.FromInt(80),
+			},
+			proto: corev1.ProtocolTCP,
+			fn: func(string, string) ([]*discoveryv1.EndpointSlice, error) {
+				return []*discoveryv1.EndpointSlice{
+					{
+						Endpoints: []discoveryv1.Endpoint{
+							{
+								Addresses: []string{"1.1.1.1"},
+								NodeName:  lo.ToPtr("node1"),
+								Conditions: discoveryv1.EndpointConditions{
+									Ready: lo.ToPtr(true),
+								},
+							},
+							{
+								Addresses: []string{"1.1.1.2"},
+								NodeName:  lo.ToPtr("node2"),
+								Conditions: discoveryv1.EndpointConditions{
+									Ready:       lo.ToPtr(false),
+									Terminating: lo.ToPtr(true),
+								},
+							},
+						},
+						Ports: []discoveryv1.EndpointPort{
+							{
+								Protocol: lo.ToPtr(corev1.ProtocolTCP),
+								Port:     lo.ToPtr(int32(80)),
+								Name:     lo.ToPtr("default"),
+							},
+						},
+					},
+				}, nil
+			},
+			enableDrainSupport: false,
+			expectedResult: []util.Endpoint{
+				{
+					Address: "1.1.1.1",
+					Port:    "80",
+				},
+			},
+		},
+		{
+			name: "drain support enabled should include terminating endpoints",
+			svc: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					Type:      corev1.ServiceTypeClusterIP,
+					ClusterIP: "1.1.1.1",
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "default",
+							TargetPort: intstr.FromInt(80),
+						},
+					},
+				},
+			},
+			port: &corev1.ServicePort{
+				Name:       "default",
+				TargetPort: intstr.FromInt(80),
+			},
+			proto: corev1.ProtocolTCP,
+			fn: func(string, string) ([]*discoveryv1.EndpointSlice, error) {
+				return []*discoveryv1.EndpointSlice{
+					{
+						Endpoints: []discoveryv1.Endpoint{
+							{
+								Addresses: []string{"1.1.1.1"},
+								NodeName:  lo.ToPtr("node1"),
+								Conditions: discoveryv1.EndpointConditions{
+									Ready: lo.ToPtr(true),
+								},
+							},
+							{
+								Addresses: []string{"1.1.1.2"},
+								NodeName:  lo.ToPtr("node2"),
+								Conditions: discoveryv1.EndpointConditions{
+									Ready:       lo.ToPtr(false),
+									Terminating: lo.ToPtr(true),
+								},
+							},
+						},
+						Ports: []discoveryv1.EndpointPort{
+							{
+								Protocol: lo.ToPtr(corev1.ProtocolTCP),
+								Port:     lo.ToPtr(int32(80)),
+								Name:     lo.ToPtr("default"),
+							},
+						},
+					},
+				}, nil
+			},
+			enableDrainSupport: true,
+			expectedResult: []util.Endpoint{
+				{
+					Address: "1.1.1.1",
+					Port:    "80",
+				},
+				{
+					Address:     "1.1.1.2",
+					Port:        "80",
+					Terminating: true,
+				},
+			},
+		},
+		{
+			name: "drain support enabled with only terminating endpoints should include them",
+			svc: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					Type:      corev1.ServiceTypeClusterIP,
+					ClusterIP: "1.1.1.1",
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "default",
+							TargetPort: intstr.FromInt(80),
+						},
+					},
+				},
+			},
+			port: &corev1.ServicePort{
+				Name:       "default",
+				TargetPort: intstr.FromInt(80),
+			},
+			proto: corev1.ProtocolTCP,
+			fn: func(string, string) ([]*discoveryv1.EndpointSlice, error) {
+				return []*discoveryv1.EndpointSlice{
+					{
+						Endpoints: []discoveryv1.Endpoint{
+							{
+								Addresses: []string{"1.1.1.1"},
+								NodeName:  lo.ToPtr("node1"),
+								Conditions: discoveryv1.EndpointConditions{
+									Ready:       lo.ToPtr(false),
+									Terminating: lo.ToPtr(true),
+								},
+							},
+							{
+								Addresses: []string{"1.1.1.2"},
+								NodeName:  lo.ToPtr("node2"),
+								Conditions: discoveryv1.EndpointConditions{
+									Ready:       lo.ToPtr(false),
+									Terminating: lo.ToPtr(true),
+								},
+							},
+						},
+						Ports: []discoveryv1.EndpointPort{
+							{
+								Protocol: lo.ToPtr(corev1.ProtocolTCP),
+								Port:     lo.ToPtr(int32(80)),
+								Name:     lo.ToPtr("default"),
+							},
+						},
+					},
+				}, nil
+			},
+			enableDrainSupport: true,
+			expectedResult: []util.Endpoint{
+				{
+					Address:     "1.1.1.1",
+					Port:        "80",
+					Terminating: true,
+				},
+				{
+					Address:     "1.1.1.2",
+					Port:        "80",
+					Terminating: true,
+				},
+			},
+		},
+		{
+			name: "drain support disabled with only terminating endpoints should return empty",
+			svc: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					Type:      corev1.ServiceTypeClusterIP,
+					ClusterIP: "1.1.1.1",
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "default",
+							TargetPort: intstr.FromInt(80),
+						},
+					},
+				},
+			},
+			port: &corev1.ServicePort{
+				Name:       "default",
+				TargetPort: intstr.FromInt(80),
+			},
+			proto: corev1.ProtocolTCP,
+			fn: func(string, string) ([]*discoveryv1.EndpointSlice, error) {
+				return []*discoveryv1.EndpointSlice{
+					{
+						Endpoints: []discoveryv1.Endpoint{
+							{
+								Addresses: []string{"1.1.1.1"},
+								NodeName:  lo.ToPtr("node1"),
+								Conditions: discoveryv1.EndpointConditions{
+									Ready:       lo.ToPtr(false),
+									Terminating: lo.ToPtr(true),
+								},
+							},
+						},
+						Ports: []discoveryv1.EndpointPort{
+							{
+								Protocol: lo.ToPtr(corev1.ProtocolTCP),
+								Port:     lo.ToPtr(int32(80)),
+								Name:     lo.ToPtr("default"),
+							},
+						},
+					},
+				}, nil
+			},
+			enableDrainSupport: false,
+			expectedResult:     []util.Endpoint{},
+		},
+		{
+			name: "drain support enabled with mixed endpoint conditions",
+			svc: &corev1.Service{
+				Spec: corev1.ServiceSpec{
+					Type:      corev1.ServiceTypeClusterIP,
+					ClusterIP: "1.1.1.1",
+					Ports: []corev1.ServicePort{
+						{
+							Name:       "default",
+							TargetPort: intstr.FromInt(80),
+						},
+					},
+				},
+			},
+			port: &corev1.ServicePort{
+				Name:       "default",
+				TargetPort: intstr.FromInt(80),
+			},
+			proto: corev1.ProtocolTCP,
+			fn: func(string, string) ([]*discoveryv1.EndpointSlice, error) {
+				return []*discoveryv1.EndpointSlice{
+					{
+						Endpoints: []discoveryv1.Endpoint{
+							{
+								Addresses: []string{"1.1.1.1"},
+								NodeName:  lo.ToPtr("node1"),
+								Conditions: discoveryv1.EndpointConditions{
+									Ready: lo.ToPtr(true),
+								},
+							},
+							{
+								Addresses: []string{"1.1.1.2"},
+								NodeName:  lo.ToPtr("node2"),
+								Conditions: discoveryv1.EndpointConditions{
+									Ready: lo.ToPtr(false),
+								},
+							},
+							{
+								Addresses: []string{"1.1.1.3"},
+								NodeName:  lo.ToPtr("node3"),
+								Conditions: discoveryv1.EndpointConditions{
+									Ready:       lo.ToPtr(false),
+									Terminating: lo.ToPtr(true),
+								},
+							},
+						},
+						Ports: []discoveryv1.EndpointPort{
+							{
+								Protocol: lo.ToPtr(corev1.ProtocolTCP),
+								Port:     lo.ToPtr(int32(80)),
+								Name:     lo.ToPtr("default"),
+							},
+						},
+					},
+				}, nil
+			},
+			enableDrainSupport: true,
+			expectedResult: []util.Endpoint{
+				{
+					Address: "1.1.1.1",
+					Port:    "80",
+				},
+				{
+					Address:     "1.1.1.3",
+					Port:        "80",
+					Terminating: true,
+				},
+			},
+		},
+	}
+
+	for _, testCase := range drainSupportTests {
+		t.Run(testCase.name, func(t *testing.T) {
+			cfg := getEndpointsConfig{
+				IsSvcUpstream:      false,
+				ClusterDomain:      consts.DefaultClusterDomain,
+				EnableDrainSupport: testCase.enableDrainSupport,
+			}
+			result := getEndpoints(zapr.NewLogger(zap.NewNop()), testCase.svc, testCase.port, testCase.proto, testCase.fn, cfg)
+			require.Equal(t, testCase.expectedResult, result)
 		})
 	}
 }
@@ -5111,7 +5437,10 @@ func mustNewTranslator(t *testing.T, storer store.Storer) *Translator {
 			KongServiceFacade:                 true,
 		},
 		fakeSchemaServiceProvier{},
-		consts.DefaultClusterDomain,
+		Config{
+			EnableDrainSupport: consts.DefaultEnableDrainSupport,
+			ClusterDomain:      consts.DefaultClusterDomain,
+		},
 	)
 	require.NoError(t, err)
 	return p

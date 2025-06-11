@@ -110,6 +110,15 @@ type Translator struct {
 	enableDrainSupport bool
 }
 
+// Config is a configuration for the Translator.
+type Config struct {
+	// EnableDrainSupport indicates whether the translator should support draining endpoints.
+	EnableDrainSupport bool
+
+	// ClusterDomain is the cluster domain used for translating Kubernetes objects.
+	ClusterDomain string
+}
+
 // NewTranslator produces a new Translator object provided a logging mechanism
 // and a Kubernetes object store.
 func NewTranslator(
@@ -118,8 +127,7 @@ func NewTranslator(
 	workspace string,
 	featureFlags FeatureFlags,
 	schemaServiceProvider SchemaServiceProvider,
-	clusterDomain string,
-	enableDrainSupport bool,
+	config Config,
 ) (*Translator, error) {
 	failuresCollector := failures.NewResourceFailuresCollector(logger)
 
@@ -137,8 +145,8 @@ func NewTranslator(
 		schemaServiceProvider:      schemaServiceProvider,
 		failuresCollector:          failuresCollector,
 		translatedObjectsCollector: translatedObjectsCollector,
-		clusterDomain:              clusterDomain,
-		enableDrainSupport:         enableDrainSupport,
+		clusterDomain:              config.ClusterDomain,
+		enableDrainSupport:         config.EnableDrainSupport,
 	}, nil
 }
 

@@ -221,8 +221,13 @@ func getServiceEndpoints(
 
 	// Check all protocols for associated endpoints.
 	endpoints := []util.Endpoint{}
+	cfg := getEndpointsConfig{
+		IsSvcUpstream:      isSvcUpstream,
+		ClusterDomain:      clusterDomain,
+		EnableDrainSupport: enableDrainSupport,
+	}
 	for protocol := range protocols {
-		newEndpoints := getEndpoints(logger, svc, servicePort, protocol, s.GetEndpointSlicesForService, isSvcUpstream, clusterDomain, enableDrainSupport)
+		newEndpoints := getEndpoints(logger, svc, servicePort, protocol, s.GetEndpointSlicesForService, cfg)
 		endpoints = append(endpoints, newEndpoints...)
 	}
 	if len(endpoints) == 0 {
@@ -250,6 +255,12 @@ func getIngressClassParametersOrDefault(s store.Storer) (configurationv1alpha1.I
 	return params.Spec, nil
 }
 
+type getEndpointsConfig struct {
+	IsSvcUpstream      bool
+	ClusterDomain      string
+	EnableDrainSupport bool
+}
+
 // getEndpoints returns a list of <endpoint ip>:<port> for a given service/target port combination.
 // It also checks if the service is an upstream service either by its annotations
 // of by IngressClassParameters configuration provided as a flag.
@@ -259,20 +270,18 @@ func getEndpoints(
 	port *corev1.ServicePort,
 	proto corev1.Protocol,
 	getEndpointSlices func(string, string) ([]*discoveryv1.EndpointSlice, error),
-	isSvcUpstream bool,
-	clusterDomain string,
-	enableDrainSupport bool,
+	cfg getEndpointsConfig,
 ) []util.Endpoint {
 	if service == nil || port == nil {
 		return []util.Endpoint{}
 	}
 
 	// If service is an upstream service...
-	if isSvcUpstream || annotations.HasServiceUpstreamAnnotation(service.Annotations) {
+	if cfg.IsSvcUpstream || annotations.HasServiceUpstreamAnnotation(service.Annotations) {
 		// ... return its address as the only endpoint.
 		svcDomainName := service.Name + "." + service.Namespace + ".svc"
-		if clusterDomain != "" {
-			svcDomainName += "." + clusterDomain
+		if cfg.ClusterDomain != "" {
+			svcDomainName += "." + cfg.ClusterDomain
 		}
 		return []util.Endpoint{
 			{
@@ -330,7 +339,7 @@ func getEndpoints(
 				// Skip endpoints that are not ready
 				if !isReady {
 					// Only include terminating endpoints if drain support is enabled
-					if !isTerminating || !enableDrainSupport {
+					if !isTerminating || !cfg.EnableDrainSupport {
 						continue
 					}
 				}
@@ -342,7 +351,7 @@ func getEndpoints(
 					Address: endpoint.Addresses[0],
 					Port:    upstreamPort,
 					// Only mark as terminating if drain support is enabled
-					Terminating: isTerminating && enableDrainSupport,
+					Terminating: isTerminating && cfg.EnableDrainSupport,
 				}
 				if _, exists := uniqueUpstream[upstreamServer]; !exists {
 					upstreamServers = append(upstreamServers, upstreamServer)

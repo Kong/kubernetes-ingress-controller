@@ -211,9 +211,11 @@ func TestTerminatingEndpointsDrainSupport(t *testing.T) {
 			port,
 			corev1.ProtocolTCP,
 			mockGetEndpointSlices,
-			false, // isSvcUpstream
-			"cluster.local",
-			false, // enableDrainSupport = false
+			getEndpointsConfig{
+				IsSvcUpstream:      false,
+				ClusterDomain:      "cluster.local",
+				EnableDrainSupport: false,
+			},
 		)
 
 		// Should only have the ready endpoint, not the terminating one
@@ -275,9 +277,11 @@ func TestTerminatingEndpointsDrainSupport(t *testing.T) {
 			port,
 			corev1.ProtocolTCP,
 			mockGetEndpointSlices,
-			false, // isSvcUpstream
-			"cluster.local",
-			true, // enableDrainSupport = true
+			getEndpointsConfig{
+				IsSvcUpstream:      false,
+				ClusterDomain:      "cluster.local",
+				EnableDrainSupport: true,
+			},
 		)
 
 		// Should have both endpoints

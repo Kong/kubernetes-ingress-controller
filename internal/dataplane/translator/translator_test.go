@@ -4166,7 +4166,12 @@ func TestGetEndpoints(t *testing.T) {
 			if testCase.clusterDomain != "" {
 				clusterDomain = testCase.clusterDomain
 			}
-			result := getEndpoints(zapr.NewLogger(zap.NewNop()), testCase.svc, testCase.port, testCase.proto, testCase.fn, testCase.isServiceUpstream, clusterDomain, false)
+			cfg := getEndpointsConfig{
+				IsSvcUpstream:      testCase.isServiceUpstream,
+				ClusterDomain:      clusterDomain,
+				EnableDrainSupport: false,
+			}
+			result := getEndpoints(zapr.NewLogger(zap.NewNop()), testCase.svc, testCase.port, testCase.proto, testCase.fn, cfg)
 			require.Equal(t, testCase.result, result)
 		})
 	}
@@ -4482,7 +4487,12 @@ func TestGetEndpoints(t *testing.T) {
 
 	for _, testCase := range drainSupportTests {
 		t.Run(testCase.name, func(t *testing.T) {
-			result := getEndpoints(zapr.NewLogger(zap.NewNop()), testCase.svc, testCase.port, testCase.proto, testCase.fn, false, consts.DefaultClusterDomain, testCase.enableDrainSupport)
+			cfg := getEndpointsConfig{
+				IsSvcUpstream:      false,
+				ClusterDomain:      consts.DefaultClusterDomain,
+				EnableDrainSupport: testCase.enableDrainSupport,
+			}
+			result := getEndpoints(zapr.NewLogger(zap.NewNop()), testCase.svc, testCase.port, testCase.proto, testCase.fn, cfg)
 			require.Equal(t, testCase.expectedResult, result)
 		})
 	}
@@ -5427,8 +5437,10 @@ func mustNewTranslator(t *testing.T, storer store.Storer) *Translator {
 			KongServiceFacade:                 true,
 		},
 		fakeSchemaServiceProvier{},
-		consts.DefaultClusterDomain,
-		consts.DefaultEnableDrainSupport,
+		Config{
+			EnableDrainSupport: consts.DefaultEnableDrainSupport,
+			ClusterDomain:      consts.DefaultClusterDomain,
+		},
 	)
 	require.NoError(t, err)
 	return p

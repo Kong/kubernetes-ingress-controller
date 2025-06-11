@@ -11,7 +11,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
-func TestStickySessionsEndpointProcessing(t *testing.T) {
+func TestDrainSupportEndpointProcessing(t *testing.T) {
 	t.Run("terminating endpoints should be included with weight 0", func(t *testing.T) {
 		// Simulate endpoint processing logic for terminating pods
 		endpointSlice := &discoveryv1.EndpointSlice{
@@ -57,7 +57,7 @@ func TestStickySessionsEndpointProcessing(t *testing.T) {
 		var processedEndpoints []util.Endpoint
 		for _, endpoint := range endpointSlice.Endpoints {
 			// Skip endpoints that are not ready, unless they are terminating.
-			// Terminating endpoints should be included with weight 0 to support sticky sessions.
+			// Terminating endpoints should be included with weight 0 for drain support.
 			isTerminating := endpoint.Conditions.Terminating != nil && *endpoint.Conditions.Terminating
 			isReady := endpoint.Conditions.Ready == nil || *endpoint.Conditions.Ready
 

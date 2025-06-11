@@ -5,11 +5,12 @@ import (
 	"net"
 
 	"github.com/go-logr/logr"
-	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
+
+	"github.com/kong/go-kong/kong"
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 
@@ -412,7 +413,7 @@ func targetsForEndpoints(endpoints []util.Endpoint) []kongstate.Target {
 			},
 		}
 
-		// Set weight to 0 for terminating endpoints to support sticky sessions.
+		// Set weight to 0 for terminating endpoints for drain support.
 		// This allows existing sessions to continue while preventing new traffic.
 		if endpoint.Terminating {
 			target.Weight = lo.ToPtr(0)

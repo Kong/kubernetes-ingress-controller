@@ -5428,7 +5428,7 @@ func mustNewTranslator(t *testing.T, storer store.Storer) *Translator {
 		},
 		fakeSchemaServiceProvier{},
 		consts.DefaultClusterDomain,
-		consts.DefaultEnableDrainSupport, // enableDrainSupport
+		consts.DefaultEnableDrainSupport,
 	)
 	require.NoError(t, err)
 	return p

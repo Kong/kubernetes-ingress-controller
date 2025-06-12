@@ -74,13 +74,12 @@ kind: KongUpstreamPolicy
 metadata:
   name: echo-drain-policy
 spec:
-  # Use consistent hashing algorithm for session persistence
-  algorithm: consistent-hashing
+  # Use sticky-sessions algorithm for session persistence
+  algorithm: sticky-sessions
   slots: 100
   
   # Configure session-based sticky routing using cookies
   hashOn:
-    cookie: session-id      # Name of the session cookie
     cookiePath: /          # Path for the session cookie
     
   # Configure health checks to ensure proper failover

@@ -11,9 +11,20 @@ import (
 
 // GetKubeconfig returns a Kubernetes REST config object based on the configuration.
 func GetKubeconfig(c managercfg.Config) (*rest.Config, error) {
-	config, err := clientcmd.BuildConfigFromFlags(c.APIServerHost, c.KubeconfigPath)
-	if err != nil {
-		return nil, err
+	var (
+		config *rest.Config
+		err    error
+	)
+	switch c.KubeRestConfig {
+	case nil:
+		// If no kubeconfig path or REST config is provided, use the in-cluster config.
+		config, err = clientcmd.BuildConfigFromFlags(c.APIServerHost, c.KubeconfigPath)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		// If a REST config is provided, use it directly.
+		config = c.KubeRestConfig
 	}
 
 	// Set the user agent so it's possible to identify the controller in the API server logs.

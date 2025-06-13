@@ -63,3 +63,50 @@ func GenerateKongBuilder(_ context.Context) (*kong.Builder, []string, error) {
 
 	return kongbuilder, extraControllerArgs, nil
 }
+
+// GenerateKongBuilderWithController generates a Kong builder that installs both KIC and Kong gateway.
+func GenerateKongBuilderWithController() (*kong.Builder, error) {
+	kongbuilder := kong.NewBuilder().WithNamespace(consts.ControllerNamespace)
+
+	if testenv.KongEnterpriseEnabled() {
+		licenseJSON, err := kong.GetLicenseJSONFromEnv()
+		if err != nil {
+			return nil, err
+		}
+		kongbuilder = kongbuilder.WithProxyEnterpriseEnabled(licenseJSON)
+		if testenv.DBMode() != testenv.DBModeOff {
+			kongbuilder.WithProxyEnterpriseSuperAdminPassword(consts.KongTestPassword)
+		}
+	}
+
+	if image, tag := testenv.KongImage(), testenv.KongTag(); image != "" && tag != "" {
+		kongbuilder = kongbuilder.WithProxyImage(image, tag)
+	} else if tag != "" || image != "" {
+		return nil, fmt.Errorf("when specifying TEST_KONG_IMAGE or TEST_KONG_TAG, both need to be provided")
+	}
+
+	if effectiveKongVersion := testenv.KongEffectiveVersion(); effectiveKongVersion != "" {
+		kongbuilder = kongbuilder.WithAdditionalValue("image.effectiveSemver", effectiveKongVersion)
+	}
+
+	if user, pass := testenv.KongPullUsername(), testenv.KongPullPassword(); user != "" || pass != "" {
+		if user == "" || pass == "" {
+			return nil, fmt.Errorf("TEST_KONG_PULL_USERNAME requires TEST_KONG_PULL_PASSWORD")
+		}
+		kongbuilder = kongbuilder.WithProxyImagePullSecret("", user, pass, "")
+	}
+
+	if testenv.DBMode() == testenv.DBModePostgres {
+		kongbuilder = kongbuilder.WithPostgreSQL()
+	}
+
+	flavor := testenv.KongRouterFlavor()
+	if len(flavor) == 0 {
+		flavor = dpconf.RouterFlavorTraditional
+	}
+	kongbuilder = kongbuilder.WithProxyEnvVar("router_flavor", string(flavor))
+
+	kongbuilder.WithProxyAdminServiceTypeLoadBalancer()
+
+	return kongbuilder, nil
+}

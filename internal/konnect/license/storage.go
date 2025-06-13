@@ -89,7 +89,7 @@ func (s *SecretLicenseStore) Load(
 	}
 	updateAt, err := strconv.ParseInt(string(decodedUpdateAt), 10, 64)
 	if err != nil {
-		return license.KonnectLicense{}, fmt.Errorf("failed to parse updated_at of license stored in secret %s: %w", secret.Name, err)
+		return license.KonnectLicense{}, fmt.Errorf("failed to parse updated_at as timestamp of license stored in secret %s: %w", secret.Name, err)
 	}
 	return license.KonnectLicense{
 		Payload:   string(decodedPayload),

@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 
 	konnectlicense "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/license"
@@ -195,7 +196,7 @@ func TestLicenseClient(t *testing.T) {
 			ts := httptest.NewServer(server)
 			defer ts.Close()
 
-			c, err := konnectlicense.NewClient(managercfg.KonnectConfig{Address: ts.URL}, &mockLicenseStorer{l: tc.storedLicense})
+			c, err := konnectlicense.NewClient(managercfg.KonnectConfig{Address: ts.URL}, logr.Discard(), &mockLicenseStorer{l: tc.storedLicense})
 			require.NoError(t, err)
 			tc.assertions(t, c)
 		})

@@ -20,6 +20,7 @@ const (
 	licenseResourceNamePrefix = "konnect-license-"
 )
 
+// Storer is the interface to store license fetched from Konnect and load license from storage if failed to fetch.
 type Storer interface {
 	Store(context.Context, license.KonnectLicense) error
 	Load(context.Context) (license.KonnectLicense, error)
@@ -33,6 +34,9 @@ type SecretLicenseStore struct {
 
 var _ Storer = &SecretLicenseStore{}
 
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;update
+
+// NewSecretLicenseStore creates a storage to store the fetched license to a secret.
 func NewSecretLicenseStore(cl client.Client, namespace, controlPlaneID string) *SecretLicenseStore {
 	return &SecretLicenseStore{
 		cl:             cl,
@@ -41,6 +45,7 @@ func NewSecretLicenseStore(cl client.Client, namespace, controlPlaneID string) *
 	}
 }
 
+// Store stores license to the secret `konnect-license-<cpid>`.
 func (s *SecretLicenseStore) Store(ctx context.Context, l license.KonnectLicense) error {
 	secret := &corev1.Secret{}
 	err := s.cl.Get(ctx, k8stypes.NamespacedName{
@@ -59,6 +64,7 @@ func (s *SecretLicenseStore) Store(ctx context.Context, l license.KonnectLicense
 	return s.cl.Update(ctx, secret)
 }
 
+// Load loads the license from the secret from secret `konnect-license-<cpid>`.
 func (s *SecretLicenseStore) Load(
 	ctx context.Context,
 ) (license.KonnectLicense, error) {

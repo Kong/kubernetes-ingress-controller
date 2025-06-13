@@ -11,12 +11,10 @@ import (
 
 // GetKubeconfig returns a Kubernetes REST config object based on the configuration.
 func GetKubeconfig(c managercfg.Config) (*rest.Config, error) {
-	var (
-		config *rest.Config
-		err    error
-	)
+	var config *rest.Config
 	switch c.KubeRestConfig {
 	case nil:
+		var err error
 		// If no kubeconfig path or REST config is provided, use the in-cluster config.
 		config, err = clientcmd.BuildConfigFromFlags(c.APIServerHost, c.KubeconfigPath)
 		if err != nil {
@@ -47,7 +45,7 @@ func GetKubeconfig(c managercfg.Config) (*rest.Config, error) {
 		config.Impersonate.UserName = c.Impersonate
 	}
 
-	return config, err
+	return config, nil
 }
 
 // GetKubeClient returns a Kubernetes client based on the configuration.

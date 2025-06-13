@@ -1,12 +1,12 @@
 package license_test
 
 import (
-	"context"
 	"encoding/base64"
 	"strconv"
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -14,7 +14,6 @@ import (
 
 	konnectlicense "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
-	"github.com/stretchr/testify/require"
 )
 
 func TestSecretLicenseStore_Store(t *testing.T) {
@@ -55,7 +54,7 @@ func TestSecretLicenseStore_Store(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cl := fake.NewClientBuilder().WithObjects(tc.secret).Build()
 			s := konnectlicense.NewSecretLicenseStore(cl, "default", "test-cp")
-			err := s.Store(context.Background(), tc.license)
+			err := s.Store(t.Context(), tc.license)
 			if tc.expectError {
 				require.Error(t, err)
 				return
@@ -63,7 +62,7 @@ func TestSecretLicenseStore_Store(t *testing.T) {
 
 			require.NoError(t, err)
 			secret := &corev1.Secret{}
-			err = cl.Get(context.Background(), client.ObjectKeyFromObject(tc.secret), secret)
+			err = cl.Get(t.Context(), client.ObjectKeyFromObject(tc.secret), secret)
 			require.NoError(t, err)
 			// fake client stores stringData of secret as-is.
 			require.Equal(t, tc.license.Payload, secret.StringData["payload"])
@@ -144,7 +143,7 @@ func TestSecretLicenseStore_Load(t *testing.T) {
 			cl := fake.NewClientBuilder().WithObjects(tc.secret).Build()
 			s := konnectlicense.NewSecretLicenseStore(cl, "default", "test-cp")
 
-			l, err := s.Load(context.Background())
+			l, err := s.Load(t.Context())
 			if tc.expectError {
 				require.Error(t, err)
 				return
@@ -153,6 +152,5 @@ func TestSecretLicenseStore_Load(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, tc.license, l)
 		})
-
 	}
 }

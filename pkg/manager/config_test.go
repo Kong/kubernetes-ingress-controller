@@ -52,6 +52,7 @@ func TestNewConfig(t *testing.T) {
 			GatewayDiscoveryReadinessCheckInterval: managercfg.DefaultDataPlanesReadinessReconciliationInterval,
 			GatewayDiscoveryReadinessCheckTimeout:  managercfg.DefaultDataPlanesReadinessCheckTimeout,
 			KongAdminSvcPortNames:                  []string{"admin-tls", "kong-admin-tls"},
+			KongStatusSvcPortNames:                 []string{"status"},
 			ProxySyncSeconds:                       dataplane.DefaultSyncSeconds,
 			InitCacheSyncDuration:                  dataplane.DefaultCacheSyncWaitDuration,
 			ProxyTimeoutSeconds:                    dataplane.DefaultTimeoutSeconds,

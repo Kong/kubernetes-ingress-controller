@@ -34,7 +34,7 @@ type Client struct {
 var KICLicenseAPIPathPattern = "%s/kic/api/control-planes/%s/v1/licenses"
 
 // NewClient creates a License API Konnect client.
-func NewClient(cfg managercfg.KonnectConfig, licenseStore Storer) (*Client, error) {
+func NewClient(cfg managercfg.KonnectConfig, logger logr.Logger, licenseStore Storer) (*Client, error) {
 	tlsConfig := tls.Config{
 		MinVersion: tls.VersionTLS12,
 	}
@@ -52,6 +52,7 @@ func NewClient(cfg managercfg.KonnectConfig, licenseStore Storer) (*Client, erro
 	c.Transport = useragent.NewTransport(transport)
 
 	return &Client{
+		logger:         logger,
 		address:        cfg.Address,
 		controlPlaneID: cfg.ControlPlaneID,
 		httpClient:     c,

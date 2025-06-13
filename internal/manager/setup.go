@@ -446,11 +446,14 @@ func setupLicenseGetter(
 	// we probably want to avoid that long term. If we do have separate toggles, we need an AND condition that sets up
 	// the client and makes it available to all Konnect-related subsystems.
 	if c.Konnect.LicenseSynchronizationEnabled {
+		setupLog.Info("Creating konnect license client")
 		nn, err := util.GetPodNN()
 		if err != nil {
 			return nil, err
 		}
-		konnectLicenseAPIClient, err := konnectLicense.NewClient(c.Konnect,
+		konnectLicenseAPIClient, err := konnectLicense.NewClient(
+			c.Konnect,
+			ctrl.LoggerFrom(ctx).WithName("konnect-license-client"),
 			konnectLicense.NewSecretLicenseStore(
 				mgr.GetClient(), nn.Namespace, c.Konnect.ControlPlaneID,
 			),

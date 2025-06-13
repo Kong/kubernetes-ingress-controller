@@ -18,5 +18,6 @@ type KonnectConfig struct {
 	LicenseSynchronizationEnabled bool
 	InitialLicensePollingPeriod   time.Duration
 	LicensePollingPeriod          time.Duration
+	LicenseStorageEnabled         bool
 	ConsumersSyncDisabled         bool
 }

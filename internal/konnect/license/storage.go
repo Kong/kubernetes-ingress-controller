@@ -18,6 +18,8 @@ import (
 const (
 	// licenseResourceNamePrefix is the prefix of the secret name storing the konnect license.
 	licenseResourceNamePrefix = "konnect-license-"
+	// LabelKeyManagedBy is the label key to mark that the secret is managed by KIC.
+	LabelKeyManagedBy = "managed-by"
 )
 
 // Storer is the interface to store license fetched from Konnect and load license from storage if failed to fetch.
@@ -55,7 +57,13 @@ func (s *SecretLicenseStore) Store(ctx context.Context, l license.KonnectLicense
 	if err != nil {
 		return err
 	}
-	// TODO: set labels/annotations of the secret?
+
+	// Add label to mark that the secret is managed by KIC.
+	if secret.Labels == nil {
+		secret.Labels = map[string]string{}
+	}
+	secret.Labels[LabelKeyManagedBy] = "konghq.com/ingress-controller"
+
 	secret.StringData = map[string]string{
 		"payload":    l.Payload,
 		"updated_at": strconv.FormatInt(l.UpdatedAt.Unix(), 10),

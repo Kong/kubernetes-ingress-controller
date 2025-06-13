@@ -191,6 +191,9 @@ func (c *CLIConfig) bindFlagSet() {
 	flagSet.IntVar(&c.DiagnosticServerPort, "diagnostic-server-port", consts.DiagnosticsPort, "The port to listen on for the profiling and config dump server.")
 	_ = flagSet.MarkHidden("diagnostic-server-port")
 
+	// Drain support
+	flagSet.BoolVar(&c.EnableDrainSupport, "enable-drain-support", consts.DefaultEnableDrainSupport, "Include terminating endpoints in Kong upstreams with weight=0 for graceful connection draining.")
+
 	// Feature Gates (see FEATURE_GATES.md).
 	flagSet.Var(flags.NewMapStringBoolForFeatureGatesWithDefaults(&c.FeatureGates), "feature-gates", "A set of comma separated key=value pairs that describe feature gates for alpha/beta/experimental features. "+
 		fmt.Sprintf("See the Feature Gates documentation for information and available options: %s.", managercfg.DocsURL))

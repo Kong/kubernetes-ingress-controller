@@ -129,6 +129,10 @@ type Config struct {
 	// instead of this toggle, move the server out of the internal.Manager
 	DisableRunningDiagnosticsServer bool
 
+	// EnableDrainSupport controls whether to include terminating endpoints in Kong upstreams
+	// with weight=0 for graceful connection draining
+	EnableDrainSupport bool
+
 	// Feature Gates
 	FeatureGates FeatureGates
 

@@ -40,6 +40,7 @@
 | `--enable-controller-service` | `bool` | Enable the Service controller. | `true` |
 | `--enable-controller-tcpingress` | `bool` | Enable the TCPIngress controller. | `true` |
 | `--enable-controller-udpingress` | `bool` | Enable the UDPIngress controller. | `true` |
+| `--enable-drain-support` | `bool` | Include terminating endpoints in Kong upstreams with weight=0 for graceful connection draining. | `false` |
 | `--enable-reverse-sync` | `bool` | Send configuration to Kong even if the configuration checksum has not changed since previous update. | `false` |
 | `--feature-gates` | `list of string=bool` | A set of comma separated key=value pairs that describe feature gates for alpha/beta/experimental features. See the Feature Gates documentation for information and available options: https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md. |  |
 | `--gateway-api-controller-name` | `string` | The controller name to match on Gateway API resources. | `konghq.com/kic-gateway-controller` |

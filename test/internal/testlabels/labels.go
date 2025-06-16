@@ -16,6 +16,7 @@ const (
 	KindKongUpstreamPolicy = "KongUpstreamPolicy"
 	KindKongLicense        = "KongLicense"
 	KindKongCustomEntity   = "KongCustomEntity"
+	KindKongPlugin         = "KongPlugin"
 )
 
 const (

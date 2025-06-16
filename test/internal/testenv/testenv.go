@@ -98,6 +98,16 @@ func ControllerTag() string {
 	return os.Getenv("TEST_CONTROLLER_TAG")
 }
 
+// ControllerImageUpgradeFrom is the repository of controller image to upgrade from in tests upgrading KIC.
+func ControllerImageUpgradeFrom() string {
+	return os.Getenv("TEST_CONTROLLER_IMAGE_UPGRADE_FROM")
+}
+
+// ControllerTagUpgradeFrom is the tag of controller image to upgrade from in tests upgrading KIC.
+func ControllerTagUpgradeFrom() string {
+	return os.Getenv("TEST_CONTROLLER_TAG_UPGRADE_FROM")
+}
+
 // ControllerImageTag is the combined Controller image and tag if both are set, or empty string if not.
 func ControllerImageTag() string {
 	if ControllerImage() != "" && ControllerTag() != "" {

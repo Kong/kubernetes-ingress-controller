@@ -9,7 +9,6 @@ rules:
   resources:
   - configmaps
   - nodes
-  - secrets
   verbs:
   - list
   - watch
@@ -28,6 +27,15 @@ rules:
   verbs:
   - get
   - list
+  - watch
+- apiGroups:
+  - ""
+  resources:
+  - secrets
+  verbs:
+  - get
+  - list
+  - update
   - watch
 - apiGroups:
   - ""

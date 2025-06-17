@@ -55,6 +55,7 @@ Once a feature graduates from `Alpha` to `Beta` maturity these preview docs will
 | ExpressionRoutes | `false` | Alpha | 2.10.0 | 3.0.0 |
 | Knative          | `false` | Alpha | 0.8.0  | 3.0.0 |
 | KongCustomEntity | `true`  | GA    | 3.4.0  | TBD   |
+| CombinedServicesFromDifferentHTTPRoutes | `false` | GA | 3.4.0  | TBD   |
 
 Features that reach GA and over time become stable will be removed from this table, they can be found in the main [KIC CRD Documentation][specs] and [Guides][guides].
 
@@ -74,7 +75,6 @@ Features that reach GA and over time become stable will be removed from this tab
 | FallbackConfiguration                   | `false` | Alpha | 3.2.0  | TBD   |
 | KongCustomEntity                        | `false` | Alpha | 3.2.0  | 3.3.0 |
 | KongCustomEntity                        | `true`  | Beta  | 3.3.0  | 3.4.0 |
-| CombinedServicesFromDifferentHTTPRoutes | `false` | Alpha | 3.4.0  | TBD   |
 
 **NOTE**: The `Gateway` feature gate refers to [Gateway
  API](https://github.com/kubernetes-sigs/gateway-api) APIs which are in

@@ -74,6 +74,7 @@
 | `--konnect-disable-consumers-sync` | `bool` | Disable synchronization of consumers with Konnect. | `false` |
 | `--konnect-initial-license-polling-period` | `duration` | Polling period to be used before the first license is retrieved. | `1m0s` |
 | `--konnect-license-polling-period` | `duration` | Polling period to be used after the first license is retrieved. | `12h0m0s` |
+| `--konnect-license-storage-enabled` | `bool` | Store licenses fetched from Konnect to Secrets locally to use them later when connection to Konnect is broken. Only effective when --konnect-licensing-enabled is true. | `true` |
 | `--konnect-licensing-enabled` | `bool` | Retrieve licenses from Konnect if available. Overrides licenses provided via the environment. | `false` |
 | `--konnect-refresh-node-period` | `duration` | Period of uploading status of KIC and controlled Kong instances. | `1m0s` |
 | `--konnect-sync-enabled` | `bool` | Enable synchronization of data plane configuration with a Konnect control plane. | `false` |

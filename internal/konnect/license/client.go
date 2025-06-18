@@ -11,6 +11,7 @@ import (
 	neturl "net/url"
 	"time"
 
+	"github.com/go-logr/logr"
 	"github.com/samber/mo"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/tracing"
@@ -22,16 +23,20 @@ import (
 
 // Client interacts with the Konnect license API.
 type Client struct {
+	logger         logr.Logger
 	address        string
 	controlPlaneID string
 	httpClient     *http.Client
+
+	enableLicenseStorage bool
+	licenseStore         Storer
 }
 
 // KICLicenseAPIPathPattern is the path pattern for KIC license operations.
 var KICLicenseAPIPathPattern = "%s/kic/api/control-planes/%s/v1/licenses"
 
 // NewClient creates a License API Konnect client.
-func NewClient(cfg managercfg.KonnectConfig) (*Client, error) {
+func NewClient(cfg managercfg.KonnectConfig, logger logr.Logger) (*Client, error) {
 	tlsConfig := tls.Config{
 		MinVersion: tls.VersionTLS12,
 	}
@@ -49,10 +54,17 @@ func NewClient(cfg managercfg.KonnectConfig) (*Client, error) {
 	c.Transport = useragent.NewTransport(transport)
 
 	return &Client{
-		address:        cfg.Address,
-		controlPlaneID: cfg.ControlPlaneID,
-		httpClient:     c,
+		logger:               logger,
+		address:              cfg.Address,
+		controlPlaneID:       cfg.ControlPlaneID,
+		httpClient:           c,
+		enableLicenseStorage: cfg.LicenseStorageEnabled,
 	}, nil
+}
+
+func (c *Client) WithLicenseStore(licenseStore Storer) *Client {
+	c.licenseStore = licenseStore
+	return c
 }
 
 func (c *Client) kicLicenseAPIEndpoint() string {
@@ -63,6 +75,14 @@ func (c *Client) Get(ctx context.Context) (mo.Option[license.KonnectLicense], er
 	// Make a request to the Konnect license API to list all licenses.
 	response, err := c.listLicenses(ctx)
 	if err != nil {
+		if c.enableLicenseStorage {
+			c.logger.Error(err, "failed to list licenses on Konnect, try to load from local storage")
+			l, loadErr := c.licenseStore.Load(ctx)
+			if loadErr == nil {
+				return mo.Some(l), nil
+			}
+			c.logger.Error(loadErr, "failed to load license from local storage")
+		}
 		return mo.None[license.KonnectLicense](), fmt.Errorf("failed to list licenses: %w", err)
 	}
 
@@ -70,6 +90,11 @@ func (c *Client) Get(ctx context.Context) (mo.Option[license.KonnectLicense], er
 	l, err := listLicensesResponseToKonnectLicense(response)
 	if err != nil {
 		return mo.None[license.KonnectLicense](), fmt.Errorf("failed to convert list licenses response: %w", err)
+	}
+
+	if c.enableLicenseStorage && l.IsPresent() {
+		err = c.licenseStore.Store(ctx, l.MustGet())
+		c.logger.Error(err, "failed to store retrieved license to local storage")
 	}
 
 	return l, nil

@@ -256,6 +256,10 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 					Name:  "CONTROLLER_FEATURE_GATES",
 					Value: fmt.Sprintf("%s=true", managercfg.GatewayAlphaFeature),
 				},
+				corev1.EnvVar{
+					Name:  "CONTROLLER_LOG_LEVEL",
+					Value: "debug",
+				},
 			)
 		}
 	}

@@ -55,7 +55,7 @@ Once a feature graduates from `Alpha` to `Beta` maturity these preview docs will
 | ExpressionRoutes | `false` | Alpha | 2.10.0 | 3.0.0 |
 | Knative          | `false` | Alpha | 0.8.0  | 3.0.0 |
 | KongCustomEntity | `true`  | GA    | 3.4.0  | TBD   |
-| CombinedServicesFromDifferentHTTPRoutes | `false` | GA | 3.4.0  | TBD   |
+| CombinedServicesFromDifferentHTTPRoutes | `false` | GA | 3.5.0  | TBD   |
 
 Features that reach GA and over time become stable will be removed from this table, they can be found in the main [KIC CRD Documentation][specs] and [Guides][guides].
 

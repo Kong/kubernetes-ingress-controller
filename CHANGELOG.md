@@ -122,6 +122,12 @@ Adding a new version? You'll need three changes:
    can set `--konnect-license-storage-enabled` to `false` to disable it.
    [#7488](https://github.com/Kong/kubernetes-ingress-controller/pull/7488)
 
+### Fixed
+
+- Count the `attachedRoutes` of a `Gateway` in the correct way in case of `HTTPRoute`s
+  with multiple parent references.
+  [#7517](https://github.com/Kong/kubernetes-ingress-controller/pull/7517)
+
  ## [3.4.6]
 
  > Release date: 2025-06-06

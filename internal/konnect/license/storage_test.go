@@ -18,10 +18,9 @@ import (
 
 func TestSecretLicenseStore_Store(t *testing.T) {
 	testCases := []struct {
-		name        string
-		secret      *corev1.Secret
-		license     license.KonnectLicense
-		expectError bool
+		name    string
+		secret  *corev1.Secret
+		license license.KonnectLicense
 	}{
 		{
 			name: "stored secrets",
@@ -36,17 +35,20 @@ func TestSecretLicenseStore_Store(t *testing.T) {
 				UpdatedAt: time.Now(),
 				ID:        "some-license-id",
 			},
-			expectError: false,
 		},
 		{
-			name: "secret not found",
+			name: "should create secret when secret not found",
 			secret: &corev1.Secret{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "another-secret",
 					Namespace: "default",
 				},
 			},
-			expectError: true,
+			license: license.KonnectLicense{
+				Payload:   "another-license-payload",
+				UpdatedAt: time.Now(),
+				ID:        "another-license-id",
+			},
 		},
 	}
 
@@ -55,14 +57,13 @@ func TestSecretLicenseStore_Store(t *testing.T) {
 			cl := fake.NewClientBuilder().WithObjects(tc.secret).Build()
 			s := konnectlicense.NewSecretLicenseStore(cl, "default", "test-cp")
 			err := s.Store(t.Context(), tc.license)
-			if tc.expectError {
-				require.Error(t, err)
-				return
-			}
 
 			require.NoError(t, err)
 			secret := &corev1.Secret{}
-			err = cl.Get(t.Context(), client.ObjectKeyFromObject(tc.secret), secret)
+			err = cl.Get(t.Context(), client.ObjectKey{
+				Namespace: "default",
+				Name:      "konnect-license-test-cp",
+			}, secret)
 			require.NoError(t, err)
 			// fake client stores stringData of secret as-is.
 			require.Equal(t, tc.license.Payload, secret.StringData["payload"])

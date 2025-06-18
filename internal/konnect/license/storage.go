@@ -43,7 +43,7 @@ type SecretLicenseStore struct {
 
 var _ Storer = &SecretLicenseStore{}
 
-//+kubebuilder:rbac:groups="",resources=secrets,verbs=get;update
+//+kubebuilder:rbac:groups="",resources=secrets,verbs=create;get;update
 
 // NewSecretLicenseStore creates a storage to store the fetched license to a secret.
 func NewSecretLicenseStore(cl client.Client, namespace, controlPlaneID string) *SecretLicenseStore {
@@ -62,7 +62,19 @@ func (s *SecretLicenseStore) Store(ctx context.Context, l license.KonnectLicense
 		Name:      licenseResourceNamePrefix + s.controlPlaneID,
 	}, secret)
 	if err != nil {
-		return err
+		if client.IgnoreNotFound(err) != nil {
+			return err
+		}
+		// Create the secret in case that the secret is not found.
+		secret.Name = licenseResourceNamePrefix + s.controlPlaneID
+		secret.Namespace = s.namespace
+		secret.Labels = map[string]string{labels.ManagedByLabel: labels.ManagedByLabelValueIngressController}
+		secret.StringData = map[string]string{
+			secretKeyPayload:   l.Payload,
+			secretKeyUpdatedAt: strconv.FormatInt(l.UpdatedAt.Unix(), 10),
+			secretKeyID:        l.ID,
+		}
+		return s.cl.Create(ctx, secret)
 	}
 
 	// Add label to mark that the secret is managed by KIC.

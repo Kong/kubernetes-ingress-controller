@@ -132,6 +132,14 @@ Adding a new version? You'll need three changes:
    deprecated since version [3.4.0](#340). They are available in a dedicated [repository][kconf].
    If you depend on them, please update your dependencies to use the new repository.
    [#7540](https://github.com/Kong/kubernetes-ingress-controller/pull/7540)
+   
+### Fixed
+
+  - When synchronization of license with Konnect is enabled 
+    (`--konnect-licensing-enabled` is `true`), do not mark the pod as ready
+    until there is an available license fetched from Konnect or stored in the
+    `Secret`.
+    [#7520](https://github.com/Kong/kubernetes-ingress-controller/pull/7520)
 
 
 ## [3.4.7]

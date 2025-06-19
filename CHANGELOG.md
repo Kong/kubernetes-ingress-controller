@@ -106,6 +106,14 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+ ## Unreleased
+
+### Fixed
+
+- Count the `attachedRoutes` of a `Gateway` in the correct way in case of `HTTPRoute`s
+  with multiple parent references.
+  [#7517](https://github.com/Kong/kubernetes-ingress-controller/pull/7517)
+
  ## [3.4.6]
 
  > Release date: 2025-06-06

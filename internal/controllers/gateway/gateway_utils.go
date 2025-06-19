@@ -734,6 +734,7 @@ func getAttachedRoutesForListener(ctx context.Context, mgrc client.Client, gatew
 			}
 			if accepted {
 				attachedRoutes++
+				break
 			}
 		}
 	}

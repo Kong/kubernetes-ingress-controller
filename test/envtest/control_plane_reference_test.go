@@ -48,7 +48,7 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 		}
 		konnectCPRef = &commonv1alpha1.ControlPlaneRef{
 			Type:      commonv1alpha1.ControlPlaneRefKonnectID,
-			KonnectID: lo.ToPtr("konnect-id"),
+			KonnectID: lo.ToPtr(commonv1alpha1.KonnectIDType("konnect-id")),
 		}
 
 		validConsumer = func() *configurationv1.KongConsumer {

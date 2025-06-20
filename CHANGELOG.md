@@ -123,6 +123,15 @@ Adding a new version? You'll need three changes:
    can set `--konnect-license-storage-enabled` to `false` to disable it.
    [#7488](https://github.com/Kong/kubernetes-ingress-controller/pull/7488)
 
+### Fixed
+
+  - When synchronization of license with Konnect is enabled 
+    (`--konnect-licensing-enabled` is `true`), do not mark the pod as ready
+    until there is an available license fetched from Konnect or stored in the
+    `Secret`.
+    [#7520](https://github.com/Kong/kubernetes-ingress-controller/pull/7520)
+
+
 ## [3.4.7]
 
 > Release date: 2025-06-20

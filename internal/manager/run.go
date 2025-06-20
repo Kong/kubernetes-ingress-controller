@@ -36,6 +36,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/nodes"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils/kongconfig"
@@ -66,6 +67,7 @@ type Manager struct {
 	admissionServer      mo.Option[*admission.Server]
 	kubeconfig           *rest.Config
 	clientsManager       *clients.AdminAPIClientsManager
+	licenseGetter        mo.Option[license.Getter]
 }
 
 // New configures the controller manager call Start.
@@ -358,6 +360,7 @@ func New(
 		return nil, err
 	}
 	if licenseGetter != nil {
+		m.licenseGetter = mo.Some(licenseGetter)
 		setupLog.Info("Inject license getter to config translator",
 			"license_getter_type", fmt.Sprintf("%T", licenseGetter))
 		configTranslator.InjectLicenseGetter(licenseGetter)
@@ -548,6 +551,16 @@ func (m *Manager) IsReady() error {
 	case <-m.m.Elected():
 		if !m.synchronizer.IsReady() {
 			return errors.New("synchronizer not yet configured")
+		}
+		// Do not mark the pod ready if KIC is configured to synchronize license from Konnect but no license can be found.
+		if m.cfg.Konnect.LicenseSynchronizationEnabled {
+			licenseGetter, present := m.licenseGetter.Get()
+			if !present {
+				return errors.New("Konnect license getter not present")
+			}
+			if !licenseGetter.GetLicense().IsPresent() {
+				return errors.New("No Konnect license available")
+			}
 		}
 	// If we're not the leader then just report as ready.
 	default:

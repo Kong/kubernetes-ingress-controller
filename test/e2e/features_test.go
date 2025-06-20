@@ -9,21 +9,27 @@ import (
 	"crypto/x509"
 	"fmt"
 	"net/http"
+	"os"
+	"os/exec"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/blang/semver/v4"
+	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/loadimage"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/kind"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
@@ -543,4 +549,117 @@ func TestDefaultIngressClass(t *testing.T) {
 		}
 		return false
 	}, ingressWait, time.Second)
+}
+
+func TestDeployAllInOneGatewayOnlyTCP(t *testing.T) {
+	t.Log("configuring all-in-one-dbless-gateway-only-enterprise.yaml manifest test")
+	t.Parallel()
+	ctx, env := setupE2ETest(t)
+
+	if os.Getenv(ktfkong.LicenseDataEnvVar) == "" {
+		t.Skipf("no license available to test enterprise: %s was not provided", ktfkong.LicenseDataEnvVar)
+	}
+
+	t.Log("creating the kong namespace")
+	ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "kong"}}
+	_, err := env.Cluster().Client().CoreV1().Namespaces().Create(ctx, ns, metav1.CreateOptions{})
+	if !apierrors.IsAlreadyExists(err) {
+		require.NoError(t, err)
+	}
+
+	secretClient := env.Cluster().Client().CoreV1().Secrets(namespace)
+	t.Log("generating a superuser password")
+	adminPassword, adminPasswordSecretYAML, err := generateAdminPasswordSecret()
+	require.NoError(t, err)
+	_, err = secretClient.Create(ctx, adminPasswordSecretYAML.DeepCopy(), metav1.CreateOptions{})
+	require.NoError(t, err)
+	os.Setenv("KONG_ADMIN_TOKEN", adminPassword)
+
+	t.Log("generating a license secret")
+	licenseSecret, err := ktfkong.GetLicenseSecretFromEnv()
+	require.NoError(t, err)
+	_, err = secretClient.Create(ctx, licenseSecret, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Log("deploying kong components")
+	t.Log("waiting for testing environment to be ready")
+	envReadyCtx, envReadyCancel := context.WithTimeout(ctx, testenv.EnvironmentReadyTimeout())
+	defer envReadyCancel()
+	require.NoError(t, <-env.WaitForReady(envReadyCtx))
+
+	manifestPath := "manifests/all-in-one-dbless-gateway-only-enterprise.yaml"
+	t.Logf("deploying %s manifest to the cluster", manifestPath)
+	manifest := getTestManifest(t, manifestPath, false)
+	kubeconfigFilename := getTemporaryKubeconfig(t, env)
+	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfigFilename, "apply", "-f", "-")
+	cmd.Stdin = manifest
+	out, err := cmd.CombinedOutput()
+	require.NoError(t, err, string(out))
+
+	helpers.WaitForDeploymentRollout(ctx, t, env.Cluster(), namespace, "proxy-kong")
+
+	t.Log("deploying a TCP service to test the ingress controller and proxy")
+	container := generators.NewContainer("tcpecho-tcproute", test.EchoImage, test.EchoTCPPort)
+	container.Env = []corev1.EnvVar{
+		{
+			Name:  "POD_NAME",
+			Value: "tcpecho-tcproute",
+		},
+	}
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(corev1.NamespaceDefault).Create(ctx, deployment, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	service.Spec.Ports = []corev1.ServicePort{
+		{
+			Name:       "echo",
+			Protocol:   corev1.ProtocolTCP,
+			Port:       tcpListenerPort,
+			TargetPort: intstr.FromInt(test.EchoTCPPort),
+		},
+	}
+	_, err = env.Cluster().Client().CoreV1().Services(corev1.NamespaceDefault).Create(ctx, service, metav1.CreateOptions{})
+	require.NoError(t, err)
+
+	rawConfig := fmt.Sprintf(`{
+  "_transform": false,
+  "_format_version": "3.0",
+  "services": [
+    {
+      "name": "tcp-echo",
+	  "id":"cd13aae2-d333-5b6b-a1cf-ec67822b186f",
+      "host": "%s.default.svc.cluster.local",
+      "protocol": "tcp",
+	  "port": 8888
+    }
+  ],
+  "routes": [
+    {
+      "expression": "net.dst.port == 8888",
+      "name": "tcp-echo",
+      "protocols": [
+        "tcp"
+      ],
+	  "service":{"id":"cd13aae2-d333-5b6b-a1cf-ec67822b186f"}
+    }
+  ]
+}`, service.Name)
+
+	t.Log("Creating a Kong client to apply Kong configuration")
+	proxyIP := getKongProxyIP(ctx, t, env)
+	kongClient, err := kong.NewTestClient(lo.ToPtr("http://"+proxyIP+":8001"), &http.Client{})
+	require.NoError(t, err, "Should create Kong client successfully")
+	require.Eventually(t, func() bool {
+		err = kongClient.ReloadDeclarativeRawConfig(ctx, bytes.NewReader([]byte(rawConfig)), false, true)
+		if err != nil {
+			t.Logf("failed to apply declarative config to Kong gateway: %v", err)
+			return false
+		}
+		t.Log("Successfully applied declarative config to Kong gateway")
+		return true
+	}, ingressWait, 10*time.Second)
+
+	verifyTCPRoute(ctx, t, env)
 }

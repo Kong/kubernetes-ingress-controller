@@ -78,8 +78,15 @@ func TestManagerDoesntStartUntilKubernetesAPIReachable(t *testing.T) {
 }
 
 func TestManager_NoLeakedGoroutinesAfterContextCancellation(t *testing.T) {
+	// Create a new telemetry server.
+	ts := NewTelemetryServer(t)
+	// Start the telemetry server.
+	ts.Start(t.Context(), t)
+
 	// Not using t.Parallel() because goleak.VerifyNone(t) does not work with parallel tests.
 	t.Cleanup(func() {
+		// Stop the telemetry server.
+		ts.Stop(t)
 		t.Logf("Checking for goroutine leaks")
 		// Ignore leaks in controller-runtime/manager before the issue fixed:
 		// https://github.com/kubernetes-sigs/controller-runtime/issues/3218
@@ -105,6 +112,7 @@ func TestManager_NoLeakedGoroutinesAfterContextCancellation(t *testing.T) {
 		WithDefaultEnvTestsConfig(envcfg),
 		WithDiagnosticsServer(diagnosticsServerPort),
 		WithAdmissionWebhookEnabled(webhookKey, webhookCert, webhookServerPort),
+		WithTelemetry(ts.Endpoint(), 100*time.Millisecond),
 	)
 	go func() {
 		err := m.Run(ctx)
@@ -115,6 +123,20 @@ func TestManager_NoLeakedGoroutinesAfterContextCancellation(t *testing.T) {
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		require.NoError(t, m.IsReady())
 	}, time.Minute, time.Millisecond)
+
+	const (
+		waitTime = 3 * time.Second
+		tickTime = 10 * time.Millisecond
+	)
+	t.Log("Waiting for the anonymous reports to become ready")
+	require.Eventuallyf(t, func() bool {
+		select {
+		case <-ts.ReportChan():
+			return true
+		case <-time.After(tickTime):
+			return false
+		}
+	}, waitTime, tickTime, "telemetry report never matched expected value")
 
 	t.Log("Cancelling context")
 	cancel()

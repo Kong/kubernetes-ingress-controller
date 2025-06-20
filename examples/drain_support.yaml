@@ -80,7 +80,11 @@ spec:
   
   # Configure session-based sticky routing using cookies
   hashOn:
-    cookiePath: /          # Path for the session cookie
+    input: "none"
+  
+  stickySessions:
+    cookie: session-id
+    cookiePath: "/"
     
   # Configure health checks to ensure proper failover
   healthchecks:

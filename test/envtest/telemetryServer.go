@@ -15,14 +15,18 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
 )
 
+// TelemetryServer represents a server that listens for telemetry data over a TLS connection.
 type TelemetryServer struct {
-	reportChan chan []byte
-	listener   net.Listener
-	started    bool
-	cancel     context.CancelFunc
+	reportChan chan []byte        // Channel to receive telemetry reports.
+	listener   net.Listener       // TLS listener for incoming telemetry connections.
+	started    bool               // Indicates whether the server is running.
+	cancel     context.CancelFunc // Function to cancel the server's context.
 }
 
+// NewTelemetryServer creates and configures a new TelemetryServer instance.
+// It generates a TLS listener using a self-signed certificate.
 func NewTelemetryServer(t *testing.T) *TelemetryServer {
+	t.Helper()
 	t.Log("configuring TLS listener - server for telemetry data")
 	cert := certificate.MustGenerateCert()
 	telemetryServerListener, err := tls.Listen("tcp", "localhost:0", &tls.Config{
@@ -40,10 +44,15 @@ func NewTelemetryServer(t *testing.T) *TelemetryServer {
 	}
 }
 
+// Start begins the telemetry server, accepting incoming connections and processing telemetry data.
+// It does not block.
 func (ts *TelemetryServer) Start(ctx context.Context, t *testing.T) {
+	t.Helper()
 	ctx, cancelFunc := context.WithCancel(ctx)
 
+	// handleConnection processes incoming telemetry data from a single connection.
 	handleConnection := func(ctx context.Context, t *testing.T, conn net.Conn, wg *sync.WaitGroup) {
+		t.Helper()
 		defer func() {
 			if err := conn.Close(); err != nil {
 				t.Logf("error closing connection: %v", err)
@@ -52,7 +61,7 @@ func (ts *TelemetryServer) Start(ctx context.Context, t *testing.T) {
 		}()
 
 		for {
-			report := make([]byte, 2048) // Report is much shorter.
+			report := make([]byte, 2048) // Buffer for telemetry data.
 			n, err := conn.Read(report)
 			if errors.Is(err, io.EOF) {
 				break
@@ -62,8 +71,8 @@ func (ts *TelemetryServer) Start(ctx context.Context, t *testing.T) {
 			}
 			t.Logf("received %d bytes of telemetry report", n)
 			select {
-			case ts.reportChan <- report[:n]:
-			case <-ctx.Done():
+			case ts.reportChan <- report[:n]: // Send the report to the channel.
+			case <-ctx.Done(): // Exit if the context is canceled.
 				return
 			}
 		}
@@ -71,16 +80,15 @@ func (ts *TelemetryServer) Start(ctx context.Context, t *testing.T) {
 
 	t.Logf("Starting telemetry server")
 	go func() {
-		// Any function return indicates that either the
-		// report was sent or there was nothing to send.
+		// Main loop to accept and handle incoming connections.
 		var wg sync.WaitGroup
 		for {
 			select {
 			case <-ctx.Done():
-				t.Logf("Context cancelled, stopping  telemetry server")
+				t.Logf("Context cancelled, stopping telemetry server")
 				wg.Wait()
 				close(ts.reportChan)
-				t.Logf("Telemetry server  stopped")
+				t.Logf("Telemetry server stopped")
 				return
 			default:
 				conn, err := ts.listener.Accept()
@@ -100,15 +108,19 @@ func (ts *TelemetryServer) Start(ctx context.Context, t *testing.T) {
 	ts.cancel = cancelFunc
 }
 
+// Endpoint returns the address of the telemetry server.
 func (ts *TelemetryServer) Endpoint() string {
 	return ts.listener.Addr().String()
 }
 
+// ReportChan provides access to the telemetry report channel.
 func (ts *TelemetryServer) ReportChan() chan []byte {
 	return ts.reportChan
 }
 
+// Stop shuts down the telemetry server, closing the listener and canceling the context.
 func (ts *TelemetryServer) Stop(t *testing.T) {
+	t.Helper()
 	t.Log("Stopping telemetry server")
 	ts.cancel()
 	assert.NoError(t, ts.listener.Close())

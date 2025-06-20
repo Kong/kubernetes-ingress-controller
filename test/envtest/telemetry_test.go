@@ -32,10 +32,8 @@ import (
 func TestTelemetry(t *testing.T) {
 	t.Parallel()
 
-	// Create a new telemetry server.
 	ts := NewTelemetryServer(t)
 	defer ts.Stop(t)
-	// Start telemetry server.
 	ts.Start(t.Context(), t)
 
 	t.Log("configuring envtest and creating K8s objects for telemetry test")

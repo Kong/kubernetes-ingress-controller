@@ -78,9 +78,7 @@ func TestManagerDoesntStartUntilKubernetesAPIReachable(t *testing.T) {
 }
 
 func TestManager_NoLeakedGoroutinesAfterContextCancellation(t *testing.T) {
-	// Create a new telemetry server.
 	ts := NewTelemetryServer(t)
-	// Start the telemetry server.
 	ts.Start(t.Context(), t)
 
 	// Not using t.Parallel() because goleak.VerifyNone(t) does not work with parallel tests.

@@ -107,6 +107,22 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+ ## Unreleased
+
+ ### Added
+
+ - Added support for drain support functionality.
+   It can be enabled by setting the flag `--enable-drain-support` to `true`.
+   [#7466](https://github.com/Kong/kubernetes-ingress-controller/pull/7466)
+ - Store the license fetched from Konnect to the `Secret` named `konnect-license-<cpID>`
+   in the same namespace where KIC runs. The `cpID` is the ID of the Konnect
+   control plane. If the `Secret` does not exist, KIC will create it. However,
+   the `Secret` is not automatically cleaned up so you need to delete it manually
+   when you uninstall KIC.
+   It is enabled by default when `--konnect-licensing-enabled` is `true`. You
+   can set `--konnect-license-storage-enabled` to `false` to disable it.
+   [#7488](https://github.com/Kong/kubernetes-ingress-controller/pull/7488)
+
 ## [3.4.7]
 
 > Release date: 2025-06-20

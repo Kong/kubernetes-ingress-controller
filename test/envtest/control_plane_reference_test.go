@@ -3,8 +3,10 @@
 package envtest
 
 import (
+	"context"
 	"testing"
 
+	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -17,6 +19,8 @@ import (
 	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/conditions"
 )
 
@@ -24,9 +28,8 @@ import (
 // It expects that if an object has a ControlPlaneReference set, it should only be programmed if the reference
 // is set to 'kic'.
 func TestControlPlaneReferenceHandling(t *testing.T) {
-	t.Parallel()
-
-	ctx := t.Context()
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
 
 	const ingressClassName = "kongenvtest"
 	scheme := Scheme(t, WithKong)
@@ -34,13 +37,26 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 	ctrlClient := NewControllerClient(t, scheme, envcfg)
 	deployIngressClass(ctx, t, ingressClassName, ctrlClient)
 	ns := CreateNamespace(ctx, t, ctrlClient)
-	RunManager(ctx, t, envcfg,
+
+	var (
+		webhookCert, webhookKey = certificate.MustGenerateCertPEMFormat(
+			certificate.WithDNSNames("localhost"),
+		)
+		admissionWebhookPort = helpers.GetFreePort(t)
+		kongContainer        = runKongEnterprise(ctx, t)
+	)
+
+	logs := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithUpdateStatus(),
 		WithIngressClass(ingressClassName),
 		WithPublishService(ns.Name),
 		WithProxySyncSeconds(0.10),
+		WithAdmissionWebhookEnabled(webhookKey, webhookCert, admissionWebhookPort),
+		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
+	WaitForManagerStart(t, logs)
+	setupValidatingWebhookConfigurationForEnvTest(ctx, t, admissionWebhookPort, webhookCert, client.NewNamespacedClient(ctrlClient, ns.Name))
 
 	var (
 		kicCPRef = &commonv1alpha1.ControlPlaneRef{
@@ -48,7 +64,7 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 		}
 		konnectCPRef = &commonv1alpha1.ControlPlaneRef{
 			Type:      commonv1alpha1.ControlPlaneRefKonnectID,
-			KonnectID: lo.ToPtr("konnect-id"),
+			KonnectID: lo.ToPtr(commonv1alpha1.KonnectIDType("konnect-id")),
 		}
 
 		validConsumer = func() *configurationv1.KongConsumer {
@@ -60,7 +76,7 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 						annotations.IngressClassKey: ingressClassName,
 					},
 				},
-				Username: "consumer",
+				Username: uuid.New().String(),
 			}
 		}
 		validConsumerGroup = func() *configurationv1beta1.KongConsumerGroup {
@@ -73,7 +89,7 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 					},
 				},
 				Spec: configurationv1beta1.KongConsumerGroupSpec{
-					Name: "consumer-group",
+					Name: "consumer-group-" + lo.RandomString(8, lo.LowerCaseLettersCharset),
 				},
 			}
 		}
@@ -118,7 +134,7 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 			name:                            "KongConsumer - with ControlPlaneRef != kic",
 			object:                          validConsumer(),
 			controlPlaneRef:                 konnectCPRef,
-			expectedErrorOnCreationContains: "is invalid: spec.controlPlaneRef: Invalid value: \"object\": 'konnectID' type is not supported",
+			expectedErrorOnCreationContains: "'konnectID' type is not supported",
 		},
 		{
 			name:   "KongConsumerGroup - without ControlPlaneRef",
@@ -133,7 +149,7 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 			name:                            "KongConsumerGroup - with ControlPlaneRef != kic",
 			object:                          validConsumerGroup(),
 			controlPlaneRef:                 konnectCPRef,
-			expectedErrorOnCreationContains: "is invalid: spec.controlPlaneRef: Invalid value: \"object\": 'konnectID' type is not supported",
+			expectedErrorOnCreationContains: "'konnectID' type is not supported",
 		},
 		{
 			name:   "KongVault - without ControlPlaneRef",
@@ -148,7 +164,7 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 			name:                            "KongVault - with ControlPlaneRef != kic",
 			object:                          validVault(),
 			controlPlaneRef:                 konnectCPRef,
-			expectedErrorOnCreationContains: "is invalid: spec.controlPlaneRef: Invalid value: \"object\": 'konnectID' type is not supported",
+			expectedErrorOnCreationContains: "'konnectID' type is not supported",
 		},
 	}
 

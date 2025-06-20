@@ -35,22 +35,22 @@ e2e:
       istio: '1.21.2'
 
   # renovate: datasource=helm depName=kuma registryUrl=https://kumahq.github.io/charts versioning=helm
-  kuma: '2.10.1'
+  kuma: '2.11.0'
 
 integration:
   helm:
     # renovate: datasource=helm depName=kong registryUrl=https://charts.konghq.com versioning=helm
-    kong: '2.48.0'
+    kong: '2.49.0'
   # renovate: datasource=docker depName=kindest/node versioning=docker
   kind: 'v1.33.0'
   # renovate: datasource=docker depName=kong versioning=docker
-  kong-oss: '3.9.0'
+  kong-oss: '3.9.1'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
   kong-ee: '3.9.1.1'
 
 kongintegration:
   # renovate: datasource=docker depName=kong versioning=docker
-  kong-oss: '3.9.0'
+  kong-oss: '3.9.1'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
   kong-ee: '3.9.1.1'
 

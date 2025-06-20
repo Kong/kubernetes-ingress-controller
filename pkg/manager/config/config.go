@@ -7,6 +7,7 @@ import (
 
 	"github.com/samber/mo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
 )
 
 // OptionalNamespacedName is a type that represents a NamespacedName that can be omitted in config.
@@ -54,6 +55,11 @@ type Config struct {
 	ProxySyncSeconds                       float32
 	InitCacheSyncDuration                  time.Duration
 	ProxyTimeoutSeconds                    float32
+
+	// KubeRestConfig takes precedence over any fields related to what it configures,
+	// such as APIServerHost, APIServerQPS, etc. It's intended to be used when the controller
+	// is run as a part of Kong Operator. It bypass the mechanism of constructing this config.
+	KubeRestConfig *rest.Config
 
 	// Kubernetes configurations
 	KubeconfigPath           string
@@ -121,6 +127,10 @@ type Config struct {
 	// TODO: https://github.com/Kong/kubernetes-ingress-controller/issues/7285
 	// instead of this toggle, move the server out of the internal.Manager
 	DisableRunningDiagnosticsServer bool
+
+	// EnableDrainSupport controls whether to include terminating endpoints in Kong upstreams
+	// with weight=0 for graceful connection draining
+	EnableDrainSupport bool
 
 	// Feature Gates
 	FeatureGates FeatureGates

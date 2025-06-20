@@ -115,6 +115,7 @@ func TestWebhookUpdate(t *testing.T) {
 	logClusterInfo(t, cluster)
 
 	defer func() {
+		helpers.DumpDiagnosticsIfFailed(ctx, t, env.Cluster())
 		helpers.TeardownCluster(ctx, t, env.Cluster())
 	}()
 

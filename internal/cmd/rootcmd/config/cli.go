@@ -189,6 +189,9 @@ func (c *CLIConfig) bindFlagSet() {
 	flagSet.IntVar(&c.DiagnosticServerPort, "diagnostic-server-port", consts.DiagnosticsPort, "The port to listen on for the profiling and config dump server.")
 	_ = flagSet.MarkHidden("diagnostic-server-port")
 
+	// Drain support
+	flagSet.BoolVar(&c.EnableDrainSupport, "enable-drain-support", consts.DefaultEnableDrainSupport, "Include terminating endpoints in Kong upstreams with weight=0 for graceful connection draining.")
+
 	// Feature Gates (see FEATURE_GATES.md).
 	flagSet.Var(flags.NewMapStringBoolForFeatureGatesWithDefaults(&c.FeatureGates), "feature-gates", "A set of comma separated key=value pairs that describe feature gates for alpha/beta/experimental features. "+
 		fmt.Sprintf("See the Feature Gates documentation for information and available options: %s.", managercfg.DocsURL))
@@ -199,6 +202,7 @@ func (c *CLIConfig) bindFlagSet() {
 	// Konnect
 	flagSet.BoolVar(&c.Konnect.ConfigSynchronizationEnabled, "konnect-sync-enabled", false, "Enable synchronization of data plane configuration with a Konnect control plane.")
 	flagSet.BoolVar(&c.Konnect.LicenseSynchronizationEnabled, "konnect-licensing-enabled", false, "Retrieve licenses from Konnect if available. Overrides licenses provided via the environment.")
+	flagSet.BoolVar(&c.Konnect.LicenseStorageEnabled, "konnect-license-storage-enabled", true, "Store licenses fetched from Konnect to Secrets locally to use them later when connection to Konnect is broken. Only effective when --konnect-licensing-enabled is true.")
 	flagSet.DurationVar(&c.Konnect.InitialLicensePollingPeriod, "konnect-initial-license-polling-period", license.DefaultInitialPollingPeriod, "Polling period to be used before the first license is retrieved.")
 	flagSet.DurationVar(&c.Konnect.LicensePollingPeriod, "konnect-license-polling-period", license.DefaultPollingPeriod, "Polling period to be used after the first license is retrieved.")
 	flagSet.StringVar(&c.Konnect.ControlPlaneID, "konnect-control-plane-id", "", "An ID of a control plane that is to be synchronized with data plane configuration.")

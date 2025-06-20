@@ -101,12 +101,18 @@ func New(
 
 	gateway.SetControllerName(gatewayapi.GatewayController(c.GatewayAPIControllerName))
 
-	setupLog.Info("Getting the kubernetes client configuration")
-	kubeconfig, err := utils.GetKubeconfig(c)
-	if err != nil {
-		return nil, fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
+	setupLog.Info("Getting the Kubernetes client configuration")
+	if c.KubeRestConfig != nil {
+		setupLog.Info("Using KubeRestConfig from configuration")
+		m.kubeconfig = c.KubeRestConfig
+	} else {
+		setupLog.Info("Using Kubeconfig based on fields from configuration")
+		kubeconfigConstructed, err := utils.GetKubeconfig(c)
+		if err != nil {
+			return nil, fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
+		}
+		m.kubeconfig = kubeconfigConstructed
 	}
-	m.kubeconfig = kubeconfig
 
 	adminAPIsDiscoverer, err := adminapi.NewDiscoverer(sets.New(c.KongAdminSvcPortNames...))
 	if err != nil {
@@ -163,7 +169,7 @@ func New(
 	setupLog.Info("Configuring and building the controller manager")
 	managerOpts := setupManagerOptions(ctx, setupLog, &c, dbMode)
 
-	mgr, err := ctrl.NewManager(kubeconfig, managerOpts)
+	mgr, err := ctrl.NewManager(m.kubeconfig, managerOpts)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create controller manager: %w", err)
 	}
@@ -210,7 +216,12 @@ func New(
 	cache := store.NewCacheStores()
 	storer := store.New(cache, c.IngressClassName, logger)
 
-	configTranslator, err := translator.NewTranslator(logger, storer, c.KongWorkspace, translatorFeatureFlags, NewSchemaServiceGetter(clientsManager), c.ClusterDomain)
+	configTranslator, err := translator.NewTranslator(logger, storer, c.KongWorkspace, translatorFeatureFlags, NewSchemaServiceGetter(clientsManager),
+		translator.Config{
+			ClusterDomain:      c.ClusterDomain,
+			EnableDrainSupport: c.EnableDrainSupport,
+		},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create translator: %w", err)
 	}

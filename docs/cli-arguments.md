@@ -40,6 +40,7 @@
 | `--enable-controller-service` | `bool` | Enable the Service controller. | `true` |
 | `--enable-controller-tcpingress` | `bool` | Enable the TCPIngress controller. | `true` |
 | `--enable-controller-udpingress` | `bool` | Enable the UDPIngress controller. | `true` |
+| `--enable-drain-support` | `bool` | Include terminating endpoints in Kong upstreams with weight=0 for graceful connection draining. | `false` |
 | `--enable-reverse-sync` | `bool` | Send configuration to Kong even if the configuration checksum has not changed since previous update. | `false` |
 | `--feature-gates` | `list of string=bool` | A set of comma separated key=value pairs that describe feature gates for alpha/beta/experimental features. See the Feature Gates documentation for information and available options: https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md. |  |
 | `--gateway-api-controller-name` | `string` | The controller name to match on Gateway API resources. | `konghq.com/kic-gateway-controller` |
@@ -73,6 +74,7 @@
 | `--konnect-disable-consumers-sync` | `bool` | Disable synchronization of consumers with Konnect. | `false` |
 | `--konnect-initial-license-polling-period` | `duration` | Polling period to be used before the first license is retrieved. | `1m0s` |
 | `--konnect-license-polling-period` | `duration` | Polling period to be used after the first license is retrieved. | `12h0m0s` |
+| `--konnect-license-storage-enabled` | `bool` | Store licenses fetched from Konnect to Secrets locally to use them later when connection to Konnect is broken. Only effective when --konnect-licensing-enabled is true. | `true` |
 | `--konnect-licensing-enabled` | `bool` | Retrieve licenses from Konnect if available. Overrides licenses provided via the environment. | `false` |
 | `--konnect-refresh-node-period` | `duration` | Period of uploading status of KIC and controlled Kong instances. | `1m0s` |
 | `--konnect-sync-enabled` | `bool` | Enable synchronization of data plane configuration with a Konnect control plane. | `false` |

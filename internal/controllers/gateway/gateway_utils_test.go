@@ -279,6 +279,159 @@ func TestGetListenerStatus(t *testing.T) {
 	}
 }
 
+func TestGetAttachedRoutesForListener(t *testing.T) {
+	group := gatewayapi.V1Group
+	kind := gatewayapi.Kind("Gateway")
+	sectionName := gatewayapi.SectionName("http")
+	gatewayName := "my-gateway"
+	myGateway := gatewayapi.Gateway{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      gatewayName,
+			Namespace: "default",
+		},
+		Spec: gatewayapi.GatewaySpec{
+			Listeners: []gatewayapi.Listener{{
+				Name:     sectionName,
+				Port:     80,
+				Protocol: gatewayapi.HTTPProtocolType,
+			}},
+		},
+		Status: gatewayapi.GatewayStatus{
+			Listeners: []gatewayapi.ListenerStatus{
+				{
+					Name: sectionName,
+					SupportedKinds: []gatewayapi.RouteGroupKind{
+						{
+							Group: lo.ToPtr(gatewayapi.V1Group),
+							Kind:  gatewayapi.Kind("HTTPRoute"),
+						},
+					},
+				},
+			},
+		},
+	}
+
+	ctx := t.Context()
+	scheme := runtime.NewScheme()
+	require.NoError(t, gatewayapi.InstallV1(scheme))
+
+	client := fake.NewClientBuilder().WithScheme(scheme).Build()
+
+	generateHTTPRoute := func(gateways []gatewayapi.ObjectName) gatewayapi.HTTPRoute {
+		var parentRefs []gatewayapi.ParentReference
+		for _, gateway := range gateways {
+			parentRefs = append(parentRefs, gatewayapi.ParentReference{
+				Group: &group,
+				Kind:  &kind,
+				Name:  gateway,
+			})
+		}
+		var parentRefsStatus []gatewayapi.RouteParentStatus
+		for _, gateway := range gateways {
+			parentRefsStatus = append(parentRefsStatus, gatewayapi.RouteParentStatus{
+				ParentRef: gatewayapi.ParentReference{
+					Group: &group,
+					Kind:  &kind,
+					Name:  gateway,
+				},
+			})
+		}
+		// Create a single HTTPRoute with the specified parentRefs
+		return gatewayapi.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				GenerateName: "http-1-",
+				Namespace:    "default",
+			},
+			Spec: gatewayapi.HTTPRouteSpec{
+				CommonRouteSpec: gatewayapi.CommonRouteSpec{
+					ParentRefs: parentRefs,
+				},
+			},
+			Status: gatewayapi.HTTPRouteStatus{
+				RouteStatus: gatewayapi.RouteStatus{
+					Parents: parentRefsStatus,
+				},
+			},
+		}
+	}
+
+	tests := []struct {
+		name          string
+		routes        []gatewayapi.HTTPRoute
+		listenerIndex int
+		want          int32
+	}{
+		{
+			name: "single route with single parentRef",
+			routes: []gatewayapi.HTTPRoute{
+				generateHTTPRoute(
+					[]gatewayapi.ObjectName{gatewayapi.ObjectName(gatewayName)},
+				),
+			},
+			listenerIndex: 0,
+			want:          1,
+		},
+		{
+			name: "single route with multiple parentRefs",
+			routes: []gatewayapi.HTTPRoute{
+				generateHTTPRoute(
+					[]gatewayapi.ObjectName{
+						gatewayapi.ObjectName(gatewayName), "other-gateway",
+					},
+				),
+			},
+			listenerIndex: 0,
+			want:          1,
+		},
+		{
+			name: "multiple routes with multiple parentRefs",
+			routes: []gatewayapi.HTTPRoute{
+				generateHTTPRoute(
+					[]gatewayapi.ObjectName{
+						gatewayapi.ObjectName(gatewayName), "other-gateway",
+					},
+				),
+				generateHTTPRoute(
+					[]gatewayapi.ObjectName{
+						gatewayapi.ObjectName(gatewayName), "other-gateway",
+					},
+				),
+			},
+			listenerIndex: 0,
+			want:          2,
+		},
+		{
+			name: "route not accepted by gateway",
+			routes: []gatewayapi.HTTPRoute{
+				generateHTTPRoute(
+					[]gatewayapi.ObjectName{
+						"other-gateway",
+					},
+				),
+			},
+			listenerIndex: 0,
+			want:          0,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			for _, route := range tt.routes {
+				require.NoError(t, client.Create(ctx, &route))
+			}
+
+			got, err := getAttachedRoutesForListener(ctx, client, myGateway, tt.listenerIndex)
+
+			// Tear down the created routes
+			require.NoError(t, client.DeleteAllOf(ctx, &gatewayapi.HTTPRoute{}))
+
+			// Check that the number of routes returned matches the expected count
+			assert.NoError(t, err)
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
 func assertOnlyOneConditionForType(t *testing.T, conditions []metav1.Condition) {
 	conditionsNum := lo.CountValuesBy(conditions, func(c metav1.Condition) string {
 		return c.Type

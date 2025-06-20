@@ -12,7 +12,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/telemetry"
 )
 
 // Run sets up a default stderr logger and starts the controller manager.
@@ -40,35 +39,6 @@ func Run(ctx context.Context, c managercfg.Config, output io.Writer) error {
 	health.NewHealthCheckServer(
 		healthz.Ping, health.NewHealthCheckerFromFunc(m.IsReady),
 	).Start(ctx, c.ProbeAddr, logger.WithName("health-check"))
-
-	if c.AnonymousReports {
-		stopAnonymousReports, err := telemetry.SetupAnonymousReports(
-			ctx,
-			m.GetKubeconfig(),
-			m.GetClientsManager(),
-			telemetry.ReportConfig{
-				SplunkEndpoint:                   c.SplunkEndpoint,
-				SplunkEndpointInsecureSkipVerify: c.SplunkEndpointInsecureSkipVerify,
-				TelemetryPeriod:                  c.TelemetryPeriod,
-				ReportValues: telemetry.ReportValues{
-					PublishServiceNN:               c.PublishService.OrEmpty(),
-					FeatureGates:                   c.FeatureGates,
-					MeshDetection:                  len(c.WatchNamespaces) == 0,
-					KonnectSyncEnabled:             c.Konnect.ConfigSynchronizationEnabled,
-					GatewayServiceDiscoveryEnabled: c.KongAdminSvc.IsPresent(),
-				},
-			},
-			mid,
-		)
-		if err != nil {
-			logger.Error(err, "Failed setting up anonymous reports, continuing without telemetry")
-		} else {
-			defer stopAnonymousReports()
-			logger.Info("Anonymous reports enabled")
-		}
-	} else {
-		logger.Info("Anonymous reports disabled, skipping")
-	}
 
 	return m.Run(ctx)
 }

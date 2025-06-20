@@ -4,19 +4,14 @@ package envtest
 
 import (
 	"context"
-	"crypto/tls"
 	"errors"
 	"fmt"
-	"io"
-	"net"
 	"os"
 	"strings"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/google/go-cmp/cmp"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
@@ -32,28 +27,16 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
-	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
 )
 
 func TestTelemetry(t *testing.T) {
 	t.Parallel()
 
-	t.Log("configuring TLS listener - server for telemetry data")
-	cert := certificate.MustGenerateCert()
-	telemetryServerListener, err := tls.Listen("tcp", "localhost:0", &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		// The same version as the one used by TLS forwarder in the pkg telemetry.
-		MinVersion: tls.VersionTLS13,
-		MaxVersion: tls.VersionTLS13,
-	})
-	require.NoError(t, err)
-	defer telemetryServerListener.Close()
-	// Run a server that will receive the report, it's expected
-	// to be the first connection and the payload.
-	reportChan := make(chan []byte)
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-	go runTelemetryServer(ctx, t, telemetryServerListener, reportChan)
+	// Create a new telemetry server.
+	ts := NewTelemetryServer(t)
+	defer ts.Stop(t)
+	// Start telemetry server.
+	ts.Start(t.Context(), t)
 
 	t.Log("configuring envtest and creating K8s objects for telemetry test")
 	envcfg := Setup(t, scheme.Scheme)
@@ -64,13 +47,13 @@ func TestTelemetry(t *testing.T) {
 	require.NoError(t, err)
 	c, err := utils.GetKubeconfig(cfg)
 	require.NoError(t, err)
-	createK8sObjectsForTelemetryTest(ctx, t, c)
+	createK8sObjectsForTelemetryTest(t.Context(), t, c)
 
 	t.Log("starting the controller manager")
 	go func() {
-		RunManager(ctx, t, envcfg, AdminAPIOptFns(),
+		RunManager(t.Context(), t, envcfg, AdminAPIOptFns(),
 			WithDefaultEnvTestsConfig(envcfg),
-			WithTelemetry(telemetryServerListener.Addr().String(), 100*time.Millisecond),
+			WithTelemetry(ts.Endpoint(), 100*time.Millisecond),
 		)
 	}()
 
@@ -86,7 +69,7 @@ func TestTelemetry(t *testing.T) {
 	)
 	require.Eventuallyf(t, func() bool {
 		select {
-		case report := <-reportChan:
+		case report := <-ts.ReportChan():
 			return verifyTelemetryReport(t, k8sVersion, string(report))
 		case <-time.After(tickTime):
 			return false
@@ -279,52 +262,6 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 			require.NoError(t, err)
 		}
 	}
-}
-
-func runTelemetryServer(ctx context.Context, t *testing.T, listener net.Listener, reportChan chan<- []byte) {
-	handleConnection := func(ctx context.Context, t *testing.T, conn net.Conn, wg *sync.WaitGroup) {
-		defer func() {
-			if err := conn.Close(); err != nil {
-				t.Logf("error closing connection: %v", err)
-			}
-			wg.Done()
-		}()
-
-		for {
-			report := make([]byte, 2048) // Report is much shorter.
-			n, err := conn.Read(report)
-			if errors.Is(err, io.EOF) {
-				break
-			}
-			if !assert.NoError(t, err) {
-				return
-			}
-			t.Logf("received %d bytes of telemetry report", n)
-			select {
-			case reportChan <- report[:n]:
-			case <-ctx.Done():
-				return
-			}
-		}
-	}
-
-	// Any function return indicates that either the
-	// report was sent or there was nothing to send.
-	var wg sync.WaitGroup
-	for {
-		conn, err := listener.Accept()
-		if err != nil && errors.Is(err, net.ErrClosed) {
-			break
-		}
-		if !assert.NoError(t, err) {
-			break
-		}
-		wg.Add(1)
-		go handleConnection(ctx, t, conn, &wg)
-	}
-
-	wg.Wait()
-	close(reportChan)
 }
 
 func verifyTelemetryReport(t *testing.T, k8sVersion *version.Info, report string) bool {

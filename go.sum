@@ -228,8 +228,8 @@ github.com/kong/go-database-reconciler v1.24.1 h1:c0gHP8WEt9HF602IxwJq8ZsKKmQ13w
 github.com/kong/go-database-reconciler v1.24.1/go.mod h1:AXbC5CtSZv8ldtt8ho4Ol2K1gi8mZ948d1EHckECHC8=
 github.com/kong/go-kong v0.66.1 h1:UVdemzcCpfXEl6O/VHdf0rT2bXdIO5ykuJbf2z1JTko=
 github.com/kong/go-kong v0.66.1/go.mod h1:wRMPAXGOB3kn53TF6zN4l2JhIWPUfXDFKNHkMHBB3iQ=
-github.com/kong/kubernetes-configuration v1.4.1-0.20250618154647-0d1a506508ed h1:CzlODEoR3eM4Ew51gguaOIPvOzxWsB961hk7oFF8FDM=
-github.com/kong/kubernetes-configuration v1.4.1-0.20250618154647-0d1a506508ed/go.mod h1:RY98VEk4jdcjFTuL4tFoBHjBftYvXlpv91xQDYSBE7E=
+github.com/kong/kubernetes-configuration v1.4.1-0.20250623142530-403ef6b96f0b h1:IbKRfbeP3bchAoPI9LsOwNRjkKLUF8qKGXykN2UqvR4=
+github.com/kong/kubernetes-configuration v1.4.1-0.20250623142530-403ef6b96f0b/go.mod h1:Pqm6hhgk4CvHpw+OIhlVqdpfrNo0B6Z4zkiI9O7V1jM=
 github.com/kong/kubernetes-telemetry v0.1.10 h1:V+/Lco8VFY/CzoELwOPcGTyg0zbj/HAvoFkH50UsKYs=
 github.com/kong/kubernetes-telemetry v0.1.10/go.mod h1:/r/FevTOGegCqaxXCJyGkbE1E3IcYUGJd7xX7D73s2Y=
 github.com/kong/kubernetes-testing-framework v0.47.2 h1:+2Z9anTpbV/hwNeN+NFQz53BMU+g3QJydkweBp3tULo=

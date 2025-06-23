@@ -188,7 +188,7 @@ func TestCRDValidations(t *testing.T) {
 			},
 		},
 		{
-			name: "KongUpstreamPolicy - only one of spec.hashOn.(cookie|header|uriCapture|queryArg) can be set",
+			name: "KongUpstreamPolicy - only one of spec.hashOn.(input|cookie|header|uriCapture|queryArg) can be set",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
 				for i, invalidHashOn := range generateInvalidHashOns() {
 					t.Run(fmt.Sprintf("invalidHashOn[%d]", i), func(t *testing.T) {
@@ -201,7 +201,7 @@ func TestCRDValidations(t *testing.T) {
 			},
 		},
 		{
-			name: "KongUpstreamPolicy - only one of spec.hashOnFallback.(header|uriCapture|queryArg) can be set",
+			name: "KongUpstreamPolicy - only one of spec.hashOnFallback.(input|header|uriCapture|queryArg) can be set",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
 				invalidHashOns := lo.Reject(generateInvalidHashOns(), func(hashOn configurationv1beta1.KongUpstreamHash, _ int) bool {
 					// Filter out Cookie which is not allowed in spec.hashOnFallback.
@@ -337,14 +337,14 @@ func TestCRDValidations(t *testing.T) {
 			},
 		},
 		{
-			name: "KongUpstreamPolicy - hashOn can only be set when algorithm is set to consistent-hashing",
+			name: "KongUpstreamPolicy - hashOn can only be set when algorithm is set to consistent-hashing or sticky-sessions",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
 				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
 					HashOn: &configurationv1beta1.KongUpstreamHash{
 						Header: lo.ToPtr("header-name"), // Could be any of the hashOn fields.
 					},
 				})
-				require.ErrorContains(t, err, `spec.algorithm must be set to "consistent-hashing" when spec.hashOn is set.`)
+				require.ErrorContains(t, err, `spec.algorithm must be set to either 'consistent-hashing' or 'sticky-sessions' when spec.hashOn is set.`)
 			},
 		},
 		{
@@ -361,7 +361,7 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongUpstreamPolicy - hashOn(Fallback).input enum is validated",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				validValues := []string{"ip", "consumer", "path"}
+				validValues := []string{"ip", "consumer", "path", "none"}
 				for _, validValue := range validValues {
 					t.Run(fmt.Sprintf("valid-value[%s]", validValue), func(t *testing.T) {
 						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
@@ -395,7 +395,7 @@ func TestCRDValidations(t *testing.T) {
 		{
 			name: "KongUpstreamPolicy - algorithm enum is validated",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
-				validValues := []string{"consistent-hashing", "round-robin", "least-connections", "latency"}
+				validValues := []string{"consistent-hashing", "round-robin", "least-connections", "latency", "sticky-sessions"}
 				for _, validValue := range validValues {
 					t.Run(fmt.Sprintf("valid-value[%s]", validValue), func(t *testing.T) {
 						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
@@ -409,7 +409,7 @@ func TestCRDValidations(t *testing.T) {
 					err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: lo.ToPtr("unknown-algorithm"),
 					})
-					require.ErrorContains(t, err, `spec.algorithm: Unsupported value: "unknown-algorithm": supported values: "round-robin", "consistent-hashing", "least-connections", "latency"`)
+					require.ErrorContains(t, err, `spec.algorithm: Unsupported value: "unknown-algorithm": supported values: "round-robin", "consistent-hashing", "least-connections", "latency", "sticky-sessions"`)
 				})
 			},
 		},

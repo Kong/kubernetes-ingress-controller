@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"sync"
 	"testing"
@@ -190,6 +191,16 @@ func setupTestServer(ctx context.Context, t *testing.T) (Client, int) {
 		require.NoError(t, err)
 	}()
 	t.Log("Started diagnostics collector")
+
+	// Wait for the server to be ready
+	require.Eventually(t, func() bool {
+		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", port))
+		if err != nil {
+			return false
+		}
+		conn.Close()
+		return true
+	}, 5*time.Second, 100*time.Millisecond, "Server should be ready")
 
 	return client, port
 }

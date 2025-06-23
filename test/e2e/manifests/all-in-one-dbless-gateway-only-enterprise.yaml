@@ -118,7 +118,7 @@ spec:
           value: expressions
         - name: KONG_LOG_LEVEL
           value: debug
-        image: kong/kong-gateway:3.10
+        image: kong/kong-gateway-dev:3.11.0.0-rc.4
         lifecycle:
           preStop:
             exec:

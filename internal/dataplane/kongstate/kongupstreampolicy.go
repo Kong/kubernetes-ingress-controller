@@ -83,6 +83,9 @@ func TranslateKongUpstreamPolicy(policy configurationv1beta1.KongUpstreamPolicyS
 		HashFallbackHeader:     translateHashOnHeader(policy.HashOnFallback),
 		HashFallbackURICapture: translateHashOnURICapture(policy.HashOnFallback),
 		HashFallbackQueryArg:   translateHashOnQueryArg(policy.HashOnFallback),
+
+		StickySessionsCookie:     translateStickySessionsCookie(policy.StickySessions),
+		StickySessionsCookiePath: translateStickySessionsCookiePath(policy.StickySessions),
 	}
 }
 
@@ -211,4 +214,18 @@ func translateHTTPStatuses(statuses []configurationv1beta1.HTTPStatus) []int {
 	// Using lo.Map only in case healthy.HTTPStatuses is not nil, because lo.Map creates a non-nil slice even
 	// if the input slice is nil.
 	return lo.Map(statuses, func(s configurationv1beta1.HTTPStatus, _ int) int { return int(s) })
+}
+
+func translateStickySessionsCookie(stickySessions *configurationv1beta1.KongUpstreamStickySessions) *string {
+	if stickySessions == nil {
+		return nil
+	}
+	return &stickySessions.Cookie
+}
+
+func translateStickySessionsCookiePath(stickySessions *configurationv1beta1.KongUpstreamStickySessions) *string {
+	if stickySessions == nil {
+		return nil
+	}
+	return stickySessions.CookiePath
 }

@@ -111,20 +111,20 @@ Adding a new version? You'll need three changes:
 
  ### Added
 
- - Added support for drain support functionality.
-   It can be enabled by setting the flag `--enable-drain-support` to `true`.
-   [#7466](https://github.com/Kong/kubernetes-ingress-controller/pull/7466)
-   [#7512](https://github.com/Kong/kubernetes-ingress-controller/pull/7512)
-   [#7533](https://github.com/Kong/kubernetes-ingress-controller/pull/7533)
-   [#7538](https://github.com/Kong/kubernetes-ingress-controller/pull/7538)
- - Store the license fetched from Konnect to the `Secret` named `konnect-license-<cpID>`
-   in the same namespace where KIC runs. The `cpID` is the ID of the Konnect
-   control plane. If the `Secret` does not exist, KIC will create it. However,
-   the `Secret` is not automatically cleaned up so you need to delete it manually
-   when you uninstall KIC.
-   It is enabled by default when `--konnect-licensing-enabled` is `true`. You
-   can set `--konnect-license-storage-enabled` to `false` to disable it.
-   [#7488](https://github.com/Kong/kubernetes-ingress-controller/pull/7488)
+- Added support for drain support functionality.
+  It can be enabled by setting the flag `--enable-drain-support` to `true`.
+  [#7466](https://github.com/Kong/kubernetes-ingress-controller/pull/7466)
+  [#7512](https://github.com/Kong/kubernetes-ingress-controller/pull/7512)
+  [#7533](https://github.com/Kong/kubernetes-ingress-controller/pull/7533)
+  [#7538](https://github.com/Kong/kubernetes-ingress-controller/pull/7538)
+- Store the license fetched from Konnect to the `Secret` named `konnect-license-<cpID>`
+  in the same namespace where KIC runs. The `cpID` is the ID of the Konnect
+  control plane. If the `Secret` does not exist, KIC will create it. However,
+  the `Secret` is not automatically cleaned up so you need to delete it manually
+  when you uninstall KIC.
+  It is enabled by default when `--konnect-licensing-enabled` is `true`. You
+  can set `--konnect-license-storage-enabled` to `false` to disable it.
+  [#7488](https://github.com/Kong/kubernetes-ingress-controller/pull/7488)
 
   ### Changed
 
@@ -135,11 +135,11 @@ Adding a new version? You'll need three changes:
    
 ### Fixed
 
-  - When synchronization of license with Konnect is enabled 
-    (`--konnect-licensing-enabled` is `true`), do not mark the pod as ready
-    until there is an available license fetched from Konnect or stored in the
-    `Secret`.
-    [#7520](https://github.com/Kong/kubernetes-ingress-controller/pull/7520)
+- When synchronization of license with Konnect is enabled 
+  (`--konnect-licensing-enabled` is `true`), do not mark the pod as ready
+  until there is an available license fetched from Konnect or stored in the
+  `Secret`.
+  [#7520](https://github.com/Kong/kubernetes-ingress-controller/pull/7520)
 
 
 ## [3.4.7]

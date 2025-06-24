@@ -39,7 +39,7 @@ require (
 	github.com/moul/pb v0.0.0-20220425114252-bca18df4138c
 	github.com/phayes/freeport v0.0.0-20220201140144-74d24b5ae9f5
 	github.com/prometheus/client_golang v1.22.0
-	github.com/prometheus/common v0.64.0
+	github.com/prometheus/common v0.65.0
 	github.com/samber/lo v1.51.0
 	github.com/samber/mo v1.14.0
 	github.com/sethvargo/go-password v0.3.1

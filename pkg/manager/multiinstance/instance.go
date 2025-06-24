@@ -6,23 +6,32 @@ import (
 	"sync"
 
 	"github.com/go-logr/logr"
+
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 // instance represents a single manager.Manager instance in the multi-instance manager.
 type instance struct {
-	logger logr.Logger
-	in     ManagerInstance
+	logger  logr.Logger
+	in      ManagerInstance
+	cfgHash string
 
 	stopOnce sync.Once
 	stopCh   chan struct{}
 }
 
-func newInstance(in ManagerInstance, logger logr.Logger) *instance {
-	return &instance{
-		logger: logger.WithValues("instanceID", in.ID()),
-		in:     in,
-		stopCh: make(chan struct{}),
+func newInstance(in ManagerInstance, logger logr.Logger) (*instance, error) {
+	hash, err := managercfg.Hash(in.Config())
+	if err != nil {
+		return nil, err
 	}
+
+	return &instance{
+		logger:  logger.WithValues("instanceID", in.ID()),
+		in:      in,
+		cfgHash: hash,
+		stopCh:  make(chan struct{}),
+	}, nil
 }
 
 // Stop stops the instance. Only its first call has an effect.
@@ -36,6 +45,16 @@ func (i *instance) Stop() {
 // StopChannel returns a channel one can use to wait for the instance to stop.
 func (i *instance) StopChannel() <-chan struct{} {
 	return i.stopCh
+}
+
+// Config returns the configuration of the instance.
+func (i *instance) Config() managercfg.Config {
+	return i.in.Config()
+}
+
+// ConfigHash returns a hash of the instance's configuration.
+func (i *instance) ConfigHash() string {
+	return i.cfgHash
 }
 
 // Run runs the instance in a goroutine and blocks until the instance is stopped or the context is done.

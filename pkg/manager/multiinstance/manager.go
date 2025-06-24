@@ -9,6 +9,7 @@ import (
 	"github.com/go-logr/logr"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 const (
@@ -22,6 +23,7 @@ const (
 type ManagerInstance interface {
 	ID() manager.ID
 	Run(context.Context) error
+	Config() managercfg.Config
 	IsReady() error
 	DiagnosticsHandler() http.Handler
 }
@@ -99,7 +101,11 @@ func (m *Manager) ScheduleInstance(in ManagerInstance) error {
 	}
 
 	// Keep track of the instance, but do not start it from here.
-	m.instances[in.ID()] = newInstance(in, m.logger)
+	instance, err := newInstance(in, m.logger)
+	if err != nil {
+		return err
+	}
+	m.instances[in.ID()] = instance
 
 	// Send a signal to the scheduling channel to start the instance.
 	m.schedulingQueue <- in.ID()
@@ -141,6 +147,16 @@ func (m *Manager) IsInstanceReady(id manager.ID) error {
 		return NewInstanceNotFoundError(id)
 	}
 	return in.IsReady()
+}
+
+func (m *Manager) GetInstanceConfigHash(id manager.ID) (string, error) {
+	m.instancesLock.RLock()
+	defer m.instancesLock.RUnlock()
+	in, ok := m.instances[id]
+	if !ok {
+		return "", NewInstanceNotFoundError(id)
+	}
+	return in.ConfigHash(), nil
 }
 
 func (m *Manager) runInstance(ctx context.Context, instanceID manager.ID) {

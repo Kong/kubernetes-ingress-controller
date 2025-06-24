@@ -9,6 +9,7 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 )
 
 // mockInstance is a mock implementation of multiinstance.ManagerInstance.
@@ -17,6 +18,11 @@ type mockInstance struct {
 	returnErrOnRun     error
 	wasStarted         atomic.Bool
 	wasContextCanceled atomic.Bool
+}
+
+// Config implements multiinstance.ManagerInstance.
+func (m *mockInstance) Config() managercfg.Config {
+	return managercfg.Config{}
 }
 
 func newMockInstance(id manager.ID) *mockInstance {

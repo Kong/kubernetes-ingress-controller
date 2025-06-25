@@ -125,6 +125,14 @@ Adding a new version? You'll need three changes:
    can set `--konnect-license-storage-enabled` to `false` to disable it.
    [#7488](https://github.com/Kong/kubernetes-ingress-controller/pull/7488)
 
+  ### Changed
+
+ - Removed CRD type bindings under `/pkg` and clientsets under `/pkg/clientset`. They're
+   deprecated since version [3.4.0](#340). They are available in a dedicated [repository][kconf].
+   If you depend on them, please update your dependencies to use the new repository.
+   [#7540](https://github.com/Kong/kubernetes-ingress-controller/pull/7540)
+
+
 ## [3.4.7]
 
 > Release date: 2025-06-20
@@ -246,7 +254,7 @@ This release addresses the security advisory [GHSA-58mg-ww7q-xw3p][sec_advisory_
 > Release date: 2024-12-18
 
 **NOTE**:
-This release has been affectd by the security advisory [GHSA-58mg-ww7q-xw3p][sec_advisory_58mg].
+This release has been affected by the security advisory [GHSA-58mg-ww7q-xw3p][sec_advisory_58mg].
 The images for this release have been removed and are no longer available for use.
 Please use [3.4.1] or later instead.
 

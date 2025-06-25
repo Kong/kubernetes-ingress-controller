@@ -5,10 +5,18 @@ import (
 	"os"
 	"time"
 
+	"github.com/cnf/structhash"
 	"github.com/samber/mo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 )
+
+// Hash computes a hash of the given config.
+func Hash(cfg Config) (string, error) {
+	// Use structhash to compute a hash of the config.
+	// This is used to detect changes in the config of the manager instances.
+	return structhash.Hash(cfg, 1)
+}
 
 // OptionalNamespacedName is a type that represents a NamespacedName that can be omitted in config.
 type OptionalNamespacedName = mo.Option[k8stypes.NamespacedName]

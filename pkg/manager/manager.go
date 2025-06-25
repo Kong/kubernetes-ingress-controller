@@ -16,6 +16,7 @@ import (
 // Manager is an object representing an instance of the Kong Ingress Controller.
 type Manager struct {
 	id      ID
+	cfg     managercfg.Config
 	logger  logr.Logger
 	manager *managerinternal.Manager
 }
@@ -28,8 +29,8 @@ func NewManager(ctx context.Context, id ID, logger logr.Logger, cfg managercfg.C
 	}
 
 	return &Manager{
-		id: id,
-
+		id:      id,
+		cfg:     cfg,
 		logger:  logger.WithValues("managerID", id.String()),
 		manager: m,
 	}, nil
@@ -51,6 +52,11 @@ func (m *Manager) IsReady() error {
 // ID returns the unique identifier of the manager.
 func (m *Manager) ID() ID {
 	return m.id
+}
+
+// Config returns the configuration of the manager.
+func (m *Manager) Config() managercfg.Config {
+	return m.cfg
 }
 
 // GetKubeconfig returns the Kubernetes REST config object associated with the instance.

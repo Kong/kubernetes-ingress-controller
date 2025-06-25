@@ -291,7 +291,7 @@ manifests.single: kustomize ## Compose single-file deployment manifests from bui
 # ------------------------------------------------------------------------------
 
 .PHONY: generate
-generate: generate.controllers generate.gateway-api-consts generate.crd-kustomize generate.docs generate.go fmt
+generate: generate.controllers generate.gateway-api-consts generate.crd-kustomize generate.docs generate.go fmt manifests
 
 .PHONY: generate.controllers
 generate.controllers: controller-gen

@@ -1718,7 +1718,7 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 			},
 			expectedFailures: []failures.ResourceFailure{
 				lo.Must(failures.NewResourceFailure(
-					"sticky sessions algorithm specified in KongUpstreamPolicy 'policy' is not supported",
+					"sticky sessions algorithm specified in KongUpstreamPolicy 'policy' is not supported with Kong Gateway versions < 3.11.0",
 					serviceAnnotatedWithKongUpstreamPolicy(),
 				)),
 			},

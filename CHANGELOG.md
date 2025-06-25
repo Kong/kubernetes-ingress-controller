@@ -116,6 +116,7 @@ Adding a new version? You'll need three changes:
    [#7466](https://github.com/Kong/kubernetes-ingress-controller/pull/7466)
    [#7512](https://github.com/Kong/kubernetes-ingress-controller/pull/7512)
    [#7533](https://github.com/Kong/kubernetes-ingress-controller/pull/7533)
+   [#7538](https://github.com/Kong/kubernetes-ingress-controller/pull/7538)
  - Store the license fetched from Konnect to the `Secret` named `konnect-license-<cpID>`
    in the same namespace where KIC runs. The `cpID` is the ID of the Konnect
    control plane. If the `Secret` does not exist, KIC will create it. However,

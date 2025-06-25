@@ -305,7 +305,10 @@ func (ks *KongState) FillUpstreamOverrides(
 			if kongUpstreamPolicy.Spec.Algorithm != nil && *kongUpstreamPolicy.Spec.Algorithm == "sticky-sessions" &&
 				kongVersion.LT(versions.KongStickySessionsCutoff) {
 				failuresCollector.PushResourceFailure(
-					fmt.Sprintf("sticky sessions algorithm specified in KongUpstreamPolicy '%s' is not supported", kongUpstreamPolicy.Name),
+					fmt.Sprintf(
+						"sticky sessions algorithm specified in KongUpstreamPolicy '%s' is not supported with Kong Gateway versions < %s",
+						kongUpstreamPolicy.Name, versions.KongStickySessionsCutoff,
+					),
 					lo.Map(servicesGroup, servicesAsObjects)...,
 				)
 				continue

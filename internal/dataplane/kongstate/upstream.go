@@ -139,6 +139,12 @@ func (u *Upstream) overrideByKongUpstreamPolicy(policy *configurationv1beta1.Kon
 	if kongUpstreamOverrides.HashFallbackURICapture != nil {
 		u.HashFallbackURICapture = kongUpstreamOverrides.HashFallbackURICapture
 	}
+	if kongUpstreamOverrides.StickySessionsCookie != nil {
+		u.StickySessionsCookie = kongUpstreamOverrides.StickySessionsCookie
+	}
+	if kongUpstreamOverrides.StickySessionsCookiePath != nil {
+		u.StickySessionsCookiePath = kongUpstreamOverrides.StickySessionsCookiePath
+	}
 }
 
 // override sets Upstream fields by KongIngress first, then by k8s Service's annotations.

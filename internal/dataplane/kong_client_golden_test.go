@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -259,7 +260,7 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 	// Create the translator.
 	logger := zapr.NewLogger(zap.NewNop())
 	s := store.New(cacheStores, "kong", logger)
-	p, err := translator.NewTranslator(logger, s, "", tc.featureFlags, fakeSchemaServiceProvier{},
+	p, err := translator.NewTranslator(logger, s, "", semver.MustParse("3.9.1"), tc.featureFlags, fakeSchemaServiceProvier{},
 		translator.Config{
 			ClusterDomain:      consts.DefaultClusterDomain,
 			EnableDrainSupport: consts.DefaultEnableDrainSupport,

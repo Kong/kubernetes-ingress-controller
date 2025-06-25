@@ -78,7 +78,12 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 				serviceMap[serviceName] = service
 
 				// get the new targets for this backend service
-				newTargets := getServiceEndpoints(t.logger, t.storer, k8sService, port, t.clusterDomain, t.enableDrainSupport)
+				newTargets := getServiceEndpoints(
+					t.logger, t.storer,
+					k8sService, port,
+					t.clusterDomain,
+					t.enableDrainSupport,
+				)
 
 				if len(newTargets) == 0 {
 					t.logger.V(logging.InfoLevel).Info("No targets could be found for kubernetes service",

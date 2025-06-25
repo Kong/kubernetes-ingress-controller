@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"github.com/go-logr/logr/testr"
 	"github.com/go-logr/zapr"
@@ -37,6 +38,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/rels"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 )
 
 var kongConsumerTypeMeta = metav1.TypeMeta{
@@ -48,6 +50,8 @@ var serviceTypeMeta = metav1.TypeMeta{
 	APIVersion: "v1",
 	Kind:       "Service",
 }
+
+var defaultTestKongVersion = semver.MustParse("3.9.1")
 
 func TestKongState_SanitizedCopy(t *testing.T) {
 	testedFields := sets.New[string]()
@@ -1550,13 +1554,15 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 	testCases := []struct {
 		name                 string
 		upstream             Upstream
+		kongVersion          semver.Version
 		kongUpstreamPolicies []*configurationv1beta1.KongUpstreamPolicy
 		kongIngresses        []*configurationv1.KongIngress
 		expectedUpstream     kong.Upstream
 		expectedFailures     []failures.ResourceFailure
 	}{
 		{
-			name: "upstream with no overrides",
+			name:        "upstream with no overrides",
+			kongVersion: defaultTestKongVersion,
 			upstream: Upstream{
 				Upstream: kong.Upstream{
 					Name: kong.String("foo-upstream"),
@@ -1567,7 +1573,8 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 			},
 		},
 		{
-			name: "upstream backed by service annotated with KongUpstreamPolicy",
+			name:        "upstream backed by service annotated with KongUpstreamPolicy",
+			kongVersion: defaultTestKongVersion,
 			upstream: Upstream{
 				Upstream: kong.Upstream{
 					Name: kong.String("foo-upstream"),
@@ -1593,7 +1600,8 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 			},
 		},
 		{
-			name: "upstream backed by service annotated with KongUpstreamPolicy that doesn't exist",
+			name:        "upstream backed by service annotated with KongUpstreamPolicy that doesn't exist",
+			kongVersion: defaultTestKongVersion,
 			upstream: Upstream{
 				Upstream: kong.Upstream{
 					Name: kong.String("foo-upstream"),
@@ -1613,7 +1621,8 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 			},
 		},
 		{
-			name: "KongUpstreamPolicy is applied even if KongIngress is not found",
+			name:        "KongUpstreamPolicy is applied even if KongIngress is not found",
+			kongVersion: defaultTestKongVersion,
 			upstream: Upstream{
 				Upstream: kong.Upstream{
 					Name: kong.String("foo-upstream"),
@@ -1645,7 +1654,8 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 			},
 		},
 		{
-			name: "KongUpstreamPolicy overwrites KongIngress",
+			name:        "KongUpstreamPolicy overwrites KongIngress",
+			kongVersion: defaultTestKongVersion,
 			upstream: Upstream{
 				Upstream: kong.Upstream{
 					Name: kong.String("foo-upstream"),
@@ -1681,6 +1691,65 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 				Algorithm: kong.String("least-connections"),
 			},
 		},
+		{
+			name:        "KongUpstreamPolicy with algorithm sticky-sessions is not supported for Kong < 3.11",
+			kongVersion: defaultTestKongVersion,
+			upstream: Upstream{
+				Upstream: kong.Upstream{
+					Name: kong.String("foo-upstream"),
+				},
+				Service: Service{
+					K8sServices: map[string]*corev1.Service{"": serviceAnnotatedWithKongUpstreamPolicy()},
+				},
+			},
+			kongUpstreamPolicies: []*configurationv1beta1.KongUpstreamPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      kongUpstreamPolicyName,
+						Namespace: "default",
+					},
+					Spec: configurationv1beta1.KongUpstreamPolicySpec{
+						Algorithm: lo.ToPtr("sticky-sessions"),
+					},
+				},
+			},
+			expectedUpstream: kong.Upstream{
+				Name: kong.String("foo-upstream"),
+			},
+			expectedFailures: []failures.ResourceFailure{
+				lo.Must(failures.NewResourceFailure(
+					"sticky sessions algorithm specified in KongUpstreamPolicy 'policy' is not supported",
+					serviceAnnotatedWithKongUpstreamPolicy(),
+				)),
+			},
+		},
+		{
+			name:        "KongUpstreamPolicy with algorithm sticky-sessions is supported for Kong >= 3.11",
+			kongVersion: versions.KongStickySessionsCutoff,
+			upstream: Upstream{
+				Upstream: kong.Upstream{
+					Name: kong.String("foo-upstream"),
+				},
+				Service: Service{
+					K8sServices: map[string]*corev1.Service{"": serviceAnnotatedWithKongUpstreamPolicy()},
+				},
+			},
+			kongUpstreamPolicies: []*configurationv1beta1.KongUpstreamPolicy{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      kongUpstreamPolicyName,
+						Namespace: "default",
+					},
+					Spec: configurationv1beta1.KongUpstreamPolicySpec{
+						Algorithm: lo.ToPtr("sticky-sessions"),
+					},
+				},
+			},
+			expectedUpstream: kong.Upstream{
+				Name:      kong.String("foo-upstream"),
+				Algorithm: kong.String("sticky-sessions"),
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -1693,7 +1762,7 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 			failuresCollector := failures.NewResourceFailuresCollector(logr.Discard())
 
 			kongState := KongState{Upstreams: []Upstream{tc.upstream}}
-			kongState.FillUpstreamOverrides(s, logr.Discard(), failuresCollector)
+			kongState.FillUpstreamOverrides(s, logr.Discard(), failuresCollector, tc.kongVersion)
 			require.Equal(t, tc.expectedUpstream, kongState.Upstreams[0].Upstream)
 			require.ElementsMatch(t, tc.expectedFailures, failuresCollector.PopResourceFailures())
 		})
@@ -1988,7 +2057,7 @@ func TestFillOverrides_ServiceFailures(t *testing.T) {
 			require.NoError(t, err)
 			logger := zapr.NewLogger(zap.NewNop())
 			failuresCollector := failures.NewResourceFailuresCollector(logger)
-			tt.state.FillOverrides(logger, store, failuresCollector)
+			tt.state.FillOverrides(logger, store, failuresCollector, defaultTestKongVersion)
 			if len(tt.expectedTranslationFailureMessages) > 0 {
 				translationFailures := failuresCollector.PopResourceFailures()
 				for nsName, expectedMessage := range tt.expectedTranslationFailureMessages {

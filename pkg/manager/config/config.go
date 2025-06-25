@@ -13,13 +13,9 @@ import (
 
 // Hash computes a hash of the given config.
 func Hash(cfg Config) (string, error) {
-	// Use hashstructure to compute a hash of the config.
+	// Use structhash to compute a hash of the config.
 	// This is used to detect changes in the config of the manager instances.
-	hash, err := structhash.Hash(cfg, 1)
-	if err != nil {
-		return "", err
-	}
-	return hash, nil
+	return structhash.Hash(cfg, 1)
 }
 
 // OptionalNamespacedName is a type that represents a NamespacedName that can be omitted in config.

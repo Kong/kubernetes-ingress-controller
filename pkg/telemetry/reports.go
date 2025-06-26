@@ -44,6 +44,7 @@ func SetupAnonymousReports(
 	clientsProvider GatewayClientsProvider,
 	reportCfg ReportConfig,
 	instanceID interface{ String() string },
+	fixedPayloadCustomizer types.PayloadCustomizer,
 ) (func(), error) {
 	logger := ctrl.LoggerFrom(ctx).WithName("telemetry")
 
@@ -86,6 +87,12 @@ func SetupAnonymousReports(
 		"db": kongDB,
 		"rf": routerFlavor,
 		"id": instanceID.String(), // Universal unique identifier for this system.
+	}
+
+	if fixedPayloadCustomizer != nil {
+		if customizedPayload := fixedPayloadCustomizer(fixedPayload); customizedPayload != nil {
+			fixedPayload = customizedPayload
+		}
 	}
 
 	// Use defaults when not specified.

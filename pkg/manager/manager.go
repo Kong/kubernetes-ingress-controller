@@ -59,6 +59,7 @@ func (m *Manager) Run(ctx context.Context) error {
 				},
 			},
 			m.id,
+			m.cfg.AnonymousReportsFixedPayloadCustomizer,
 		)
 		if err != nil {
 			m.logger.Error(err, "Failed setting up anonymous reports, continuing without telemetry")

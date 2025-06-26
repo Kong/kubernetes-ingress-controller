@@ -30,7 +30,7 @@ require (
 	github.com/google/pprof v0.0.0-20241210010833-40e02aabc2ad
 	github.com/google/uuid v1.6.0
 	github.com/jpillora/backoff v1.0.0
-	github.com/kong/go-database-reconciler v1.24.1
+	github.com/kong/go-database-reconciler v1.24.2
 	github.com/kong/go-kong v0.66.2-0.20250624172857-72863432614c
 	github.com/kong/kubernetes-configuration v1.4.1-0.20250623142530-403ef6b96f0b
 	github.com/kong/kubernetes-telemetry v0.1.10

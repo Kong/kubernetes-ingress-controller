@@ -70,6 +70,7 @@ func Setup(t *testing.T, scheme *k8sruntime.Scheme, optModifiers ...OptionModifi
 
 	testEnv := &envtest.Environment{
 		ControlPlaneStopTimeout: time.Second * 60,
+		DownloadBinaryAssets:    true,
 	}
 
 	t.Logf("starting envtest environment for test %s...", t.Name())

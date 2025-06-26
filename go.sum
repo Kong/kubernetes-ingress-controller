@@ -228,8 +228,8 @@ github.com/klauspost/compress v1.18.0 h1:c/Cqfb0r+Yi+JtIEq73FWXVkRonBlf0CRNYc8Zt
 github.com/klauspost/compress v1.18.0/go.mod h1:2Pp+KzxcywXVXMr50+X0Q/Lsb43OQHYWRCY2AiWywWQ=
 github.com/kong/go-database-reconciler v1.24.2 h1:TNY4dy+uJcmSlWAElye65eVl1Wd1xgOYsJ73mW+DQ4M=
 github.com/kong/go-database-reconciler v1.24.2/go.mod h1:fWjwkA2MDQu1QKLV8qeUCagGmOU4wNhPAQkl5LBfYd0=
-github.com/kong/go-kong v0.66.2-0.20250624172857-72863432614c h1:rdUQW4ZlDvNXb0GwMF2Y6HI+hVpPbGNmFKCwR7vXRtc=
-github.com/kong/go-kong v0.66.2-0.20250624172857-72863432614c/go.mod h1:P/LnAoHdlF+GGMjov3G/lb4vHNRZmLHE5wcQx5+Z1pE=
+github.com/kong/go-kong v0.67.0 h1:54zXKc58IZpZdlJCv8p95SJjejTxT+cwbWXw97icCak=
+github.com/kong/go-kong v0.67.0/go.mod h1:J0vGB3wsZ2i99zly1zTRe3v7rOKpkhQZRwbcTFP76qM=
 github.com/kong/kubernetes-configuration v1.4.1-0.20250623142530-403ef6b96f0b h1:IbKRfbeP3bchAoPI9LsOwNRjkKLUF8qKGXykN2UqvR4=
 github.com/kong/kubernetes-configuration v1.4.1-0.20250623142530-403ef6b96f0b/go.mod h1:Pqm6hhgk4CvHpw+OIhlVqdpfrNo0B6Z4zkiI9O7V1jM=
 github.com/kong/kubernetes-telemetry v0.1.10 h1:V+/Lco8VFY/CzoELwOPcGTyg0zbj/HAvoFkH50UsKYs=

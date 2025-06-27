@@ -25,6 +25,8 @@ type TelemetryServer struct {
 	started bool
 	// Function to cancel the server's context.
 	cancel context.CancelFunc
+	// WaitGroup to track handlers.
+	wg sync.WaitGroup
 }
 
 // NewTelemetryServer creates and configures a new TelemetryServer instance.
@@ -82,12 +84,11 @@ func (ts *TelemetryServer) Start(ctx context.Context, t *testing.T) {
 	t.Logf("Starting telemetry server")
 	go func() {
 		// Main loop to accept and handle incoming connections.
-		var wg sync.WaitGroup
 		for {
 			select {
 			case <-ctx.Done():
 				t.Logf("Context cancelled, stopping telemetry server")
-				wg.Wait()
+				ts.wg.Wait()
 				close(ts.reportChan)
 				t.Logf("Telemetry server stopped")
 				return
@@ -99,8 +100,8 @@ func (ts *TelemetryServer) Start(ctx context.Context, t *testing.T) {
 				if !assert.NoError(t, err) {
 					break
 				}
-				wg.Add(1)
-				go handleConnection(ctx, t, conn, &wg)
+				ts.wg.Add(1)
+				go handleConnection(ctx, t, conn, &ts.wg)
 			}
 		}
 	}()
@@ -125,5 +126,7 @@ func (ts *TelemetryServer) Stop(t *testing.T) {
 	t.Log("Stopping telemetry server")
 	ts.cancel()
 	assert.NoError(t, ts.listener.Close())
+	ts.wg.Wait()
+	t.Log("Telemetry server stopped")
 	ts.started = false
 }

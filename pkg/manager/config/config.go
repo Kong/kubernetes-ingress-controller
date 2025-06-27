@@ -9,6 +9,8 @@ import (
 	"github.com/samber/mo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/telemetry/types"
 )
 
 // Hash computes a hash of the given config.
@@ -151,6 +153,8 @@ type Config struct {
 
 	Konnect KonnectConfig
 
+	// AnonymousReportsFixedPayloadCustomizer allows customization of anonymous telemetry reports sent by the controller.
+	AnonymousReportsFixedPayloadCustomizer types.PayloadCustomizer
 	// Override default telemetry settings (e.g. for testing). They aren't exposed in the CLI.
 	SplunkEndpoint                   string
 	SplunkEndpointInsecureSkipVerify bool

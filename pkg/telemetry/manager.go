@@ -10,7 +10,6 @@ import (
 	"github.com/kong/kubernetes-telemetry/pkg/provider"
 	"github.com/kong/kubernetes-telemetry/pkg/serializers"
 	"github.com/kong/kubernetes-telemetry/pkg/telemetry"
-	"github.com/kong/kubernetes-telemetry/pkg/types"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
@@ -18,6 +17,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/telemetry/types"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/telemetry/workflows"
 )
 
@@ -26,8 +26,6 @@ const (
 	SignalStart = prefix + "-start"
 	SignalPing  = prefix + "-ping"
 )
-
-type Payload = types.ProviderReport
 
 type ReportValues struct {
 	FeatureGates                   map[string]bool
@@ -42,7 +40,7 @@ func CreateManager(
 	logger logr.Logger,
 	restConfig *rest.Config,
 	gatewaysCounter workflows.DiscoveredGatewaysCounter,
-	fixedPayload Payload,
+	fixedPayload types.Payload,
 	reportCfg ReportConfig,
 ) (telemetry.Manager, error) {
 	k, err := kubernetes.NewForConfig(restConfig)
@@ -83,7 +81,7 @@ func createManager(
 	dyn dynamic.Interface,
 	cl client.Client,
 	gatewaysCounter workflows.DiscoveredGatewaysCounter,
-	fixedPayload Payload,
+	fixedPayload types.Payload,
 	rv ReportValues,
 	opts ...telemetry.OptManager,
 ) (telemetry.Manager, error) {
@@ -155,7 +153,7 @@ func createManager(
 			w.AddProvider(p)
 		}
 		{
-			p, err := provider.NewFixedValueProvider("feature-flags", types.ProviderReport{
+			p, err := provider.NewFixedValueProvider("feature-flags", types.Payload{
 				"feature-konnect-sync":              rv.KonnectSyncEnabled,
 				"feature-gateway-service-discovery": rv.GatewayServiceDiscoveryEnabled,
 			})
@@ -179,11 +177,11 @@ func createManager(
 	return m, nil
 }
 
-func featureGatesToTelemetryPayload(featureGates map[string]bool) types.ProviderReport {
-	report := make(types.ProviderReport)
+func featureGatesToTelemetryPayload(featureGates map[string]bool) types.Payload {
+	report := make(types.Payload)
 	for k, v := range featureGates {
 		key := fmt.Sprintf("feature-%s", strings.ToLower(k))
-		report[types.ProviderReportKey(key)] = v
+		report[types.PayloadKey(key)] = v
 	}
 	return report
 }

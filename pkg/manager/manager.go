@@ -11,6 +11,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 	managerinternal "github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/telemetry"
 )
 
 // Manager is an object representing an instance of the Kong Ingress Controller.
@@ -39,6 +40,40 @@ func NewManager(ctx context.Context, id ID, logger logr.Logger, cfg managercfg.C
 // Run starts the Kong Ingress Controller. It blocks until the context is cancelled.
 // It should be called only once per Manager instance.
 func (m *Manager) Run(ctx context.Context) error {
+	// Enable anonymous reporting if enabled.
+	if m.cfg.AnonymousReports {
+		stopAnonymousReports, err := telemetry.SetupAnonymousReports(
+			ctx,
+			m.GetKubeconfig(),
+			m.GetClientsManager(),
+			telemetry.ReportConfig{
+				SplunkEndpoint:                   m.cfg.SplunkEndpoint,
+				SplunkEndpointInsecureSkipVerify: m.cfg.SplunkEndpointInsecureSkipVerify,
+				TelemetryPeriod:                  m.cfg.TelemetryPeriod,
+				ReportValues: telemetry.ReportValues{
+					PublishServiceNN:               m.cfg.PublishService.OrEmpty(),
+					FeatureGates:                   m.cfg.FeatureGates,
+					MeshDetection:                  len(m.cfg.WatchNamespaces) == 0,
+					KonnectSyncEnabled:             m.cfg.Konnect.ConfigSynchronizationEnabled,
+					GatewayServiceDiscoveryEnabled: m.cfg.KongAdminSvc.IsPresent(),
+				},
+			},
+			m.id,
+			m.cfg.AnonymousReportsFixedPayloadCustomizer,
+		)
+		if err != nil {
+			m.logger.Error(err, "Failed setting up anonymous reports, continuing without telemetry")
+		} else {
+			go func() {
+				<-ctx.Done()
+				m.logger.Info("Stopping anonymous reports")
+				stopAnonymousReports()
+			}()
+		}
+	} else {
+		m.logger.Info("Anonymous reports disabled, skipping")
+	}
+
 	return m.manager.Run(ctx)
 }
 

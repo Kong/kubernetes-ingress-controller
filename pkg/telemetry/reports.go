@@ -12,6 +12,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils/kongconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/metadata"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/telemetry/types"
 )
 
 // GatewayClientsProvider is an interface that provides clients for the currently discovered Gateway instances.
@@ -43,6 +44,7 @@ func SetupAnonymousReports(
 	clientsProvider GatewayClientsProvider,
 	reportCfg ReportConfig,
 	instanceID interface{ String() string },
+	fixedPayloadCustomizer types.PayloadCustomizer,
 ) (func(), error) {
 	logger := ctrl.LoggerFrom(ctx).WithName("telemetry")
 
@@ -79,12 +81,18 @@ func SetupAnonymousReports(
 		return nil, err
 	}
 
-	fixedPayload := Payload{
+	fixedPayload := types.Payload{
 		"v":  metadata.Release,
 		"kv": kongVersion,
 		"db": kongDB,
 		"rf": routerFlavor,
 		"id": instanceID.String(), // Universal unique identifier for this system.
+	}
+
+	if fixedPayloadCustomizer != nil {
+		if customizedPayload := fixedPayloadCustomizer(fixedPayload); customizedPayload != nil {
+			fixedPayload = customizedPayload
+		}
 	}
 
 	// Use defaults when not specified.

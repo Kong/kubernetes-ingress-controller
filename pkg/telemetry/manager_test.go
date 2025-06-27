@@ -11,7 +11,6 @@ import (
 	"github.com/kong/kubernetes-telemetry/pkg/forwarders"
 	"github.com/kong/kubernetes-telemetry/pkg/serializers"
 	"github.com/kong/kubernetes-telemetry/pkg/telemetry"
-	"github.com/kong/kubernetes-telemetry/pkg/types"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -25,6 +24,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/telemetry/types"
 )
 
 const (
@@ -44,7 +45,7 @@ func (m mockGatewaysCounter) GatewayClientsCount() int {
 
 func TestCreateManager(t *testing.T) {
 	var (
-		payload = types.ProviderReport{
+		payload = types.Payload{
 			"db": "off",
 			"kv": "3.1.1",
 		}
@@ -187,7 +188,7 @@ func TestCreateManager_GatewayDiscoverySpecifics(t *testing.T) {
 				dyn,
 				ctrlClient,
 				mockGatewaysCounter(5),
-				Payload{},
+				types.Payload{},
 				ReportValues{
 					GatewayServiceDiscoveryEnabled: tc.gatewayServiceDiscoveryEnabled,
 				},
@@ -214,7 +215,7 @@ func runManagerTest(
 	dyn *testdynclient.FakeDynamicClient,
 	ctrlClient client.Client,
 	gatewaysCounter mockGatewaysCounter,
-	payload Payload,
+	payload types.Payload,
 	reportValues ReportValues,
 
 	// testFn is a function that will be called with the actual report string.

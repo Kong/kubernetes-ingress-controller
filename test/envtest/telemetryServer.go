@@ -51,6 +51,10 @@ func NewTelemetryServer(t *testing.T) *TelemetryServer {
 // It does not block.
 func (ts *TelemetryServer) Start(ctx context.Context, t *testing.T) {
 	t.Helper()
+	if ts.started {
+		t.Log("telemetry server already started, failing")
+		t.FailNow()
+	}
 	ctx, cancelFunc := context.WithCancel(ctx)
 
 	// handleConnection processes incoming telemetry data from a single connection.
@@ -123,6 +127,10 @@ func (ts *TelemetryServer) ReportChan() <-chan []byte {
 // Stop shuts down the telemetry server, closing the listener and canceling the context.
 func (ts *TelemetryServer) Stop(t *testing.T) {
 	t.Helper()
+	if !ts.started {
+		t.Log("telemetry server already stopped, doing nothing")
+		return
+	}
 	t.Log("Stopping telemetry server")
 	ts.cancel()
 	assert.NoError(t, ts.listener.Close())

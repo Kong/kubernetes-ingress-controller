@@ -48,13 +48,7 @@ linters:
         # https://staticcheck.dev/docs/checks/#ST1005
         - -ST1005
     depguard:
-      rules:
-        deprecated-local-apis:
-          deny:
-            - pkg: github.com/kong/kubernetes-ingress-controller/v3/pkg/clientset
-              desc: github.com/kong/kubernetes-ingress-controller/v3 clientset is deprecated. Use github.com/kong/kubernetes-configuration/pkg/clientset instead.
-            - pkg: github.com/kong/kubernetes-ingress-controller/v3/pkg/apis
-              desc: github.com/kong/kubernetes-ingress-controller/v3 apis are deprecated. Use github.com/kong/kubernetes-configuration/api instead.
+      rules:  
         do-not-use-internal-manager-package:
           files:
             - "!**/internal/manager/**/*.go"

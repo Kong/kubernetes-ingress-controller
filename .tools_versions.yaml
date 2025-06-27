@@ -1,5 +1,3 @@
-# renovate: datasource=github-tags depName=kubernetes/code-generator
-kube-code-generator: "0.33.1"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-tools
 controller-tools: "0.18.0"
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize

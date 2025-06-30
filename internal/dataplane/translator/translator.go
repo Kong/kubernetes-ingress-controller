@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -97,6 +98,7 @@ type Translator struct {
 	storer        store.Storer
 	workspace     string
 	licenseGetter license.Getter
+	kongVersion   semver.Version
 	featureFlags  FeatureFlags
 
 	// schemaServiceProvider provides the schema service required for fetching schemas of custom entities.
@@ -125,6 +127,7 @@ func NewTranslator(
 	logger logr.Logger,
 	storer store.Storer,
 	workspace string,
+	kongVersion semver.Version,
 	featureFlags FeatureFlags,
 	schemaServiceProvider SchemaServiceProvider,
 	config Config,
@@ -141,6 +144,7 @@ func NewTranslator(
 		logger:                     logger,
 		storer:                     storer,
 		workspace:                  workspace,
+		kongVersion:                kongVersion,
 		featureFlags:               featureFlags,
 		schemaServiceProvider:      schemaServiceProvider,
 		failuresCollector:          failuresCollector,
@@ -211,7 +215,7 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 	}
 
 	// merge KongIngress with Routes, Services and Upstream
-	result.FillOverrides(t.logger, t.storer, t.failuresCollector)
+	result.FillOverrides(t.logger, t.storer, t.failuresCollector, t.kongVersion)
 
 	// generate consumers and credentials
 	result.FillConsumersAndCredentials(t.logger, t.storer, t.failuresCollector)

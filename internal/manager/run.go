@@ -216,7 +216,7 @@ func New(
 	cache := store.NewCacheStores()
 	storer := store.New(cache, c.IngressClassName, logger)
 
-	configTranslator, err := translator.NewTranslator(logger, storer, c.KongWorkspace, translatorFeatureFlags, NewSchemaServiceGetter(clientsManager),
+	configTranslator, err := translator.NewTranslator(logger, storer, c.KongWorkspace, kongSemVersion, translatorFeatureFlags, NewSchemaServiceGetter(clientsManager),
 		translator.Config{
 			ClusterDomain:      c.ClusterDomain,
 			EnableDrainSupport: c.EnableDrainSupport,

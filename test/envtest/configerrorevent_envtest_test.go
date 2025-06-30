@@ -20,10 +20,10 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
@@ -38,8 +38,10 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
-	restConfig := Setup(t, scheme.Scheme)
-	ctrlClient := NewControllerClient(t, scheme.Scheme, restConfig)
+	scheme := Scheme(t, WithKong, WithGatewayAPI)
+
+	restConfig := Setup(t, scheme)
+	ctrlClient := NewControllerClient(t, scheme, restConfig)
 
 	ns := CreateNamespace(ctx, t, ctrlClient)
 	ingressClassName := "kongenvtest"
@@ -55,12 +57,36 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 	deployment.Namespace = ns.Name
 	require.NoError(t, ctrlClient.Create(ctx, deployment))
 
+	t.Log("creating a KongUpstreamPolicy with sticky sessions configuration")
+	upstreamPolicy := &configurationv1beta1.KongUpstreamPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "echo-drain-policy",
+			Namespace: ns.Name,
+			Annotations: map[string]string{
+				annotations.IngressClassKey: ingressClassName,
+			},
+		},
+		Spec: configurationv1beta1.KongUpstreamPolicySpec{
+			Algorithm: lo.ToPtr("sticky-sessions"),
+			Slots:     lo.ToPtr(100),
+			HashOn: &configurationv1beta1.KongUpstreamHash{
+				Input: lo.ToPtr(configurationv1beta1.HashInput("none")),
+			},
+			StickySessions: &configurationv1beta1.KongUpstreamStickySessions{
+				Cookie:     "session-id",
+				CookiePath: lo.ToPtr("/"),
+			},
+		},
+	}
+	require.NoError(t, ctrlClient.Create(ctx, upstreamPolicy))
+
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
 	service.Annotations = map[string]string{
 		// TCP services cannot have paths, and we don't catch this as a translation error
-		"konghq.com/protocol": "tcp",
-		"konghq.com/path":     "/aitmatov",
+		"konghq.com/protocol":        "tcp",
+		"konghq.com/path":            "/aitmatov",
+		"konghq.com/upstream-policy": upstreamPolicy.Name,
 		// Referencing non-existent KongPlugins.
 		"konghq.com/plugins": "foo,bar,n1:p1",
 	}
@@ -86,10 +112,11 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 		),
 		WithPublishService(ns.Name),
 		WithIngressClass(ingressClassName),
+		WithKongUpstreamPolicyEnabled(),
 		WithProxySyncSeconds(0.1),
 	)
 
-	const numberOfExpectedEvents = 12
+	const numberOfExpectedEvents = 13
 	collectedEvents := collectGeneratedEvents(
 		ctx, t, ctrlClient, ns, t.Name(), numberOfExpectedEvents,
 	)
@@ -107,6 +134,9 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 		predicate(corev1.EventTypeWarning, dataplane.KongConfigurationTranslationFailedEventReason, "Service", service.Name, `^no grant found to referenced "n1:p1" plugin in the requested remote KongPlugin bind$`),
 		predicate(corev1.EventTypeWarning, dataplane.FallbackKongConfigurationApplyFailedEventReason, "Service", service.Name, `^invalid service:httpbin\.httpbin\.80: failed conditional validation given value of field 'protocol'$`),
 		predicate(corev1.EventTypeWarning, dataplane.FallbackKongConfigurationApplyFailedEventReason, "Pod", podName, `failed to apply fallback Kong configuration to http://[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+: HTTP status 400 \(message: "failed posting new config to /config"\)`),
+		// TODO: Remove this event once we start using Kong Gateway >= 3.11.0, because sticky sessions type is supported there.
+		// Adjust also numberOfExpectedEvents constant above.
+		predicate(corev1.EventTypeWarning, dataplane.KongConfigurationTranslationFailedEventReason, "Service", service.Name, `^sticky sessions algorithm specified in KongUpstreamPolicy 'echo-drain-policy' is not supported with Kong Gateway versions < 3\.11\.0$`),
 	}
 
 	assertExpectedEvents(t, predicatesToCheck, collectedEvents)
@@ -176,6 +206,92 @@ func TestConfigErrorEventGenerationDBMode(t *testing.T) {
 	assertExpectedEvents(t, predicatesToCheck, collectedEvents)
 }
 
+func TestStickySessionsNotSupportedEventGeneration(t *testing.T) {
+	// Can't be run in parallel because we're using t.Setenv() below which doesn't allow it.
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	scheme := Scheme(t, WithKong)
+	restConfig := Setup(t, scheme)
+	ctrlClientGlobal := NewControllerClient(t, scheme, restConfig)
+	ns := CreateNamespace(ctx, t, ctrlClientGlobal)
+	ctrlClient := client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
+
+	ingressClassName := "kongenvtest"
+	deployIngressClass(ctx, t, ingressClassName, ctrlClient)
+
+	const podName = "kong-ingress-controller-tyjh1"
+	t.Setenv("POD_NAMESPACE", ns.Name)
+	t.Setenv("POD_NAME", podName)
+
+	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment.Namespace = ns.Name
+	require.NoError(t, ctrlClient.Create(ctx, deployment))
+
+	t.Log("creating a KongUpstreamPolicy with sticky sessions configuration")
+	upstreamPolicy := &configurationv1beta1.KongUpstreamPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "echo-drain-policy",
+			Namespace: ns.Name,
+			Annotations: map[string]string{
+				annotations.IngressClassKey: ingressClassName,
+			},
+		},
+		Spec: configurationv1beta1.KongUpstreamPolicySpec{
+			Algorithm: lo.ToPtr("sticky-sessions"),
+			Slots:     lo.ToPtr(100),
+			HashOn: &configurationv1beta1.KongUpstreamHash{
+				Input: lo.ToPtr(configurationv1beta1.HashInput("none")),
+			},
+			StickySessions: &configurationv1beta1.KongUpstreamStickySessions{
+				Cookie:     "session-id",
+				CookiePath: lo.ToPtr("/"),
+			},
+		},
+	}
+	require.NoError(t, ctrlClient.Create(ctx, upstreamPolicy))
+
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	service.Annotations = map[string]string{
+		"konghq.com/upstream-policy": upstreamPolicy.Name,
+	}
+	service.Namespace = ns.Name
+	require.NoError(t, ctrlClient.Create(ctx, service))
+
+	t.Logf("creating an ingress for service %s with invalid configuration", service.Name)
+	ingress := generators.NewIngressForService("/bar", nil, service)
+	ingress.Spec.IngressClassName = lo.ToPtr(ingressClassName)
+	ingress.Namespace = ns.Name
+	t.Logf("deploying ingress %s", ingress.Name)
+	require.NoError(t, ctrlClient.Create(ctx, ingress))
+
+	kongContainer := runKongGatewayWithoutStickySessionsSupport(ctx, t)
+	RunManager(ctx, t, restConfig,
+		AdminAPIOptFns(),
+		WithPublishService(ns.Name),
+		WithIngressClass(ingressClassName),
+		WithKongServiceFacadeFeatureEnabled(),
+		WithProxySyncSeconds(0.1),
+		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
+	)
+
+	const numberOfExpectedEvents = 2
+	collectedEvents := collectGeneratedEvents(
+		ctx, t, ctrlClient, ns, t.Name(), numberOfExpectedEvents,
+	)
+
+	predicatesToCheck := []func(e corev1.Event) bool{
+		predicate(corev1.EventTypeNormal, dataplane.KongConfigurationApplySucceededEventReason, "Pod", podName, `successfully applied Kong configuration to http://([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+|localhost:[0-9]+)`),
+		predicate(corev1.EventTypeWarning, dataplane.KongConfigurationTranslationFailedEventReason, "Service", service.Name, `^sticky sessions algorithm specified in KongUpstreamPolicy 'echo-drain-policy' is not supported with Kong Gateway versions < 3\.11\.0$`),
+	}
+
+	assertExpectedEvents(t, predicatesToCheck, collectedEvents)
+}
+
 func predicate(eventType, eventReason, invObjKind, invObjName, msgToMatch string) func(e corev1.Event) bool {
 	return func(e corev1.Event) bool {
 		ok, err := regexp.MatchString(msgToMatch, e.Message)
@@ -204,12 +320,13 @@ func collectGeneratedEvents(
 		collectedEvents = lo.Filter(events.Items, func(e corev1.Event, _ int) bool {
 			return e.Annotations[consts.InstanceIDAnnotationKey] == expectedInstanceID
 		})
-		require.Len(c, collectedEvents, numberOfExpectedEvents)
+		require.Len(c, collectedEvents, numberOfExpectedEvents, "number of events mismatch")
 	}, waitTime, tickTime)
 	return collectedEvents
 }
 
 func assertExpectedEvents(t *testing.T, predicatesToCheck []func(e corev1.Event) bool, collectedEvents []corev1.Event) {
+	t.Helper()
 	for pi, predicate := range predicatesToCheck {
 		lenBefore := len(collectedEvents)
 		collectedEvents = lo.Reject(collectedEvents, func(e corev1.Event, _ int) bool {
@@ -223,7 +340,7 @@ func assertExpectedEvents(t *testing.T, predicatesToCheck []func(e corev1.Event)
 	if !assert.Equal(t, 0, len(collectedEvents), "expected all warning events to match test predicates, but some were left") {
 		t.Logf("remaining events %d:", len(collectedEvents))
 		for _, e := range collectedEvents {
-			t.Logf("  - %s %s %s: %s", e.InvolvedObject.Kind, e.InvolvedObject.Name, e.Reason, e.Message)
+			t.Logf("  - %s | %s | %s | %s | %s", e.Type, e.Reason, e.InvolvedObject.Kind, e.InvolvedObject.Name, e.Message)
 		}
 	}
 }
@@ -370,5 +487,5 @@ func formatDBRootResponse(version string) []byte {
 			]
 		}
 	}`
-	return []byte(fmt.Sprintf(defaultDBLessRootResponse, version))
+	return fmt.Appendf(nil, defaultDBLessRootResponse, version)
 }

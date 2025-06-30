@@ -159,6 +159,12 @@ func WithKongServiceFacadeFeatureEnabled() func(cfg *managercfg.Config) {
 	}
 }
 
+func WithKongUpstreamPolicyEnabled() func(cfg *managercfg.Config) {
+	return func(cfg *managercfg.Config) {
+		cfg.KongUpstreamPolicyEnabled = true
+	}
+}
+
 func WithKongAdminURLs(urls ...string) func(cfg *managercfg.Config) {
 	return func(cfg *managercfg.Config) {
 		cfg.KongAdminURLs = urls

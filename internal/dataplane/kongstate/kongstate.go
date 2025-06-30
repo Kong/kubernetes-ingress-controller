@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -30,6 +31,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/rels"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 )
 
 // KongState holds the configuration that should be applied to Kong.
@@ -250,6 +252,7 @@ func (ks *KongState) FillOverrides(
 	logger logr.Logger,
 	s store.Storer,
 	failuresCollector *failures.ResourceFailuresCollector,
+	kongVersion semver.Version,
 ) {
 	for i := 0; i < len(ks.Services); i++ {
 		// Services
@@ -271,13 +274,14 @@ func (ks *KongState) FillOverrides(
 		}
 	}
 
-	ks.FillUpstreamOverrides(s, logger, failuresCollector)
+	ks.FillUpstreamOverrides(s, logger, failuresCollector, kongVersion)
 }
 
 func (ks *KongState) FillUpstreamOverrides(
 	s store.Storer,
 	logger logr.Logger,
 	failuresCollector *failures.ResourceFailuresCollector,
+	kongVersion semver.Version,
 ) {
 	for i := 0; i < len(ks.Upstreams); i++ {
 		servicesGroup := lo.Values(ks.Upstreams[i].Service.K8sServices)
@@ -298,6 +302,17 @@ func (ks *KongState) FillUpstreamOverrides(
 		if err != nil {
 			failuresCollector.PushResourceFailure(err.Error(), lo.Map(servicesGroup, servicesAsObjects)...)
 		} else if kongUpstreamPolicy != nil {
+			if kongUpstreamPolicy.Spec.Algorithm != nil && *kongUpstreamPolicy.Spec.Algorithm == "sticky-sessions" &&
+				kongVersion.LT(versions.KongStickySessionsCutoff) {
+				failuresCollector.PushResourceFailure(
+					fmt.Sprintf(
+						"sticky sessions algorithm specified in KongUpstreamPolicy '%s' is not supported with Kong Gateway versions < %s",
+						kongUpstreamPolicy.Name, versions.KongStickySessionsCutoff,
+					),
+					lo.Map(servicesGroup, servicesAsObjects)...,
+				)
+				continue
+			}
 			ks.Upstreams[i].overrideByKongUpstreamPolicy(kongUpstreamPolicy)
 		}
 	}

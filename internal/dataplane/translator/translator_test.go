@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -5430,12 +5431,14 @@ func (p fakeSchemaServiceProvier) GetSchemaService() kong.AbstractSchemaService 
 func mustNewTranslator(t *testing.T, storer store.Storer) *Translator {
 	logger := zapr.NewLogger(zap.NewNop())
 	p, err := NewTranslator(logger, storer, "",
+		semver.MustParse("3.9.1"),
 		FeatureFlags{
 			// We'll assume these are true for all tests.
 			FillIDs:                           true,
 			ReportConfiguredKubernetesObjects: true,
 			KongServiceFacade:                 true,
 		},
+
 		fakeSchemaServiceProvier{},
 		Config{
 			EnableDrainSupport: consts.DefaultEnableDrainSupport,

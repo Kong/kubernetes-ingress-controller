@@ -2865,6 +2865,10 @@ spec:
             is set.
           rule: 'has(self.spec.stickySessions) ? has(self.spec.stickySessions.cookie)
             : true'
+        - message: spec.algorithm must be set to 'sticky-sessions' when spec.stickySessions
+            is set.
+          rule: 'has(self.spec.stickySessions) ? (has(self.spec.algorithm) && self.spec.algorithm
+            == "sticky-sessions") : true'
     served: true
     storage: true
     subresources:

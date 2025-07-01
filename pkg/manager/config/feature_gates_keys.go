@@ -26,10 +26,6 @@ const (
 	// for configuring custom Kong entities that KIC does not support yet.
 	// Requires feature gate `FillIDs` to be enabled.
 	KongCustomEntityFeature = "KongCustomEntity"
-
-	// CombinedServicesFromDifferentHTTPRoutesFeature is the name of the feature gate that enables combining rules sharing the same backendRefs
-	// from different HTTPRoutes in the same namespace into one Kong gateway service to reduce total number of Kong gateway services.
-	CombinedServicesFromDifferentHTTPRoutesFeature = "CombinedServicesFromDifferentHTTPRoutes"
 )
 
 // GetFeatureGatesDefaults returns the default values for all feature gates.
@@ -37,13 +33,12 @@ const (
 // NOTE: if you're adding a new feature gate, it needs to be added here.
 func GetFeatureGatesDefaults() FeatureGates {
 	return map[string]bool{
-		GatewayAlphaFeature:                            false,
-		FillIDsFeature:                                 true,
-		RewriteURIsFeature:                             false,
-		KongServiceFacadeFeature:                       false,
-		SanitizeKonnectConfigDumpsFeature:              true,
-		FallbackConfigurationFeature:                   false,
-		KongCustomEntityFeature:                        true,
-		CombinedServicesFromDifferentHTTPRoutesFeature: false,
+		GatewayAlphaFeature:               false,
+		FillIDsFeature:                    true,
+		RewriteURIsFeature:                false,
+		KongServiceFacadeFeature:          false,
+		SanitizeKonnectConfigDumpsFeature: true,
+		FallbackConfigurationFeature:      false,
+		KongCustomEntityFeature:           true,
 	}
 }

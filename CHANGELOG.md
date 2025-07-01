@@ -132,7 +132,11 @@ Adding a new version? You'll need three changes:
    deprecated since version [3.4.0](#340). They are available in a dedicated [repository][kconf].
    If you depend on them, please update your dependencies to use the new repository.
    [#7540](https://github.com/Kong/kubernetes-ingress-controller/pull/7540)
-   
+ - Removed feature gate `CombinedServicesFromDifferentHTTPRoutes` (it's always available now),
+   introduce CLI flag `--combined-services-from-different-httproutes` (default `false`)
+   to enable this feature.
+   [#7569](https://github.com/Kong/kubernetes-ingress-controller/pull/7569)
+
 ### Fixed
 
 - When synchronization of license with Konnect is enabled 

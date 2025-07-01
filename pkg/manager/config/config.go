@@ -142,6 +142,10 @@ type Config struct {
 	// with weight=0 for graceful connection draining
 	EnableDrainSupport bool
 
+	// CombinedServicesFromDifferentHTTPRoutes controls whether we should combine rules from different HTTPRoutes
+	// that are sharing the same combination of backends to one Kong service.
+	CombinedServicesFromDifferentHTTPRoutes bool
+
 	// Feature Gates
 	FeatureGates FeatureGates
 

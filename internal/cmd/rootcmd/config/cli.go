@@ -192,6 +192,9 @@ func (c *CLIConfig) bindFlagSet() {
 	// Drain support
 	flagSet.BoolVar(&c.EnableDrainSupport, "enable-drain-support", consts.DefaultEnableDrainSupport, "Include terminating endpoints in Kong upstreams with weight=0 for graceful connection draining.")
 
+	// Combined services from different HTTPRoutes
+	flagSet.BoolVar(&c.CombinedServicesFromDifferentHTTPRoutes, "combined-services-from-different-httproutes", false, "Combine rules from different HTTPRoutes that are sharing the same combination of backends to one Kong service to reduce total number of Kong services.")
+
 	// Feature Gates (see FEATURE_GATES.md).
 	flagSet.Var(flags.NewMapStringBoolForFeatureGatesWithDefaults(&c.FeatureGates), "feature-gates", "A set of comma separated key=value pairs that describe feature gates for alpha/beta/experimental features. "+
 		fmt.Sprintf("See the Feature Gates documentation for information and available options: %s.", managercfg.DocsURL))

@@ -4077,6 +4077,13 @@ spec:
           value: expressions
         image: kong/kong-gateway:3.10
         lifecycle:
+          postStart:
+            exec:
+              command:
+              - bash
+              - -c
+              - nofilelimit=$(prlimit --nofile --noheadings -oSOFT); if [ $nofilelimit
+                -lt 4096 ]; then prlimit --nofile=4096 --pid=1; fi
           preStop:
             exec:
               command:

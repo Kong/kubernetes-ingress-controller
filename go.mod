@@ -61,14 +61,15 @@ require (
 	sigs.k8s.io/controller-runtime v0.21.0
 	sigs.k8s.io/e2e-framework v0.6.0
 	sigs.k8s.io/gateway-api v1.3.0
-	sigs.k8s.io/kustomize/api v0.19.0
-	sigs.k8s.io/kustomize/kyaml v0.19.0
+	sigs.k8s.io/kustomize/api v0.20.0
+	sigs.k8s.io/kustomize/kyaml v0.20.0
 	sigs.k8s.io/yaml v1.5.0
 )
 
 require (
 	cel.dev/expr v0.23.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.0 // indirect
+	github.com/carapace-sh/carapace-shlex v1.0.1 // indirect
 	github.com/containerd/errdefs v1.0.0 // indirect
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/ebitengine/purego v0.8.2 // indirect
@@ -141,7 +142,6 @@ require (
 	github.com/google/go-github/v48 v48.2.0 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/s2a-go v0.1.9 // indirect
-	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.6 // indirect
 	github.com/googleapis/gax-go/v2 v2.14.2 // indirect
 	github.com/gorilla/websocket v1.5.4-0.20250319132907-e064f32e3674 // indirect

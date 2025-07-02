@@ -4015,6 +4015,13 @@ spec:
           value: expressions
         image: kong:3.9
         lifecycle:
+          postStart:
+            exec:
+              command:
+              - bash
+              - -c
+              - nofilelimit=$(prlimit --nofile --noheadings -oSOFT); if [ $nofilelimit
+                -lt 4096 ]; then prlimit --nofile=4096 --pid=1; fi
           preStop:
             exec:
               command:

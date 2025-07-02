@@ -71,6 +71,7 @@ func NewFeatureFlags(
 	updateStatusFlag bool,
 	enterpriseEdition bool,
 	supportRedirectPlugin bool,
+	combinedServicesFromDifferentHTTPRoutes bool,
 ) FeatureFlags {
 	return FeatureFlags{
 		ReportConfiguredKubernetesObjects:       updateStatusFlag,
@@ -80,7 +81,7 @@ func NewFeatureFlags(
 		RewriteURIs:                             featureGates.Enabled(managercfg.RewriteURIsFeature),
 		KongServiceFacade:                       featureGates.Enabled(managercfg.KongServiceFacadeFeature),
 		KongCustomEntity:                        featureGates.Enabled(managercfg.KongCustomEntityFeature),
-		CombinedServicesFromDifferentHTTPRoutes: featureGates.Enabled(managercfg.CombinedServicesFromDifferentHTTPRoutesFeature),
+		CombinedServicesFromDifferentHTTPRoutes: combinedServicesFromDifferentHTTPRoutes,
 		SupportRedirectPlugin:                   supportRedirectPlugin,
 	}
 }

@@ -5075,12 +5075,13 @@ func TestNewFeatureFlags(t *testing.T) {
 	testCases := []struct {
 		name string
 
-		featureGates          map[string]bool
-		routerFlavor          dpconf.RouterFlavor
-		updateStatusFlag      bool
-		enterpriseEdition     bool
-		supportRedirectPlugin bool
-		expectedFeatureFlags  FeatureFlags
+		featureGates                            map[string]bool
+		routerFlavor                            dpconf.RouterFlavor
+		updateStatusFlag                        bool
+		enterpriseEdition                       bool
+		supportRedirectPlugin                   bool
+		combinedServicesFromDifferentHTTPRoutes bool
+		expectedFeatureFlags                    FeatureFlags
 	}{
 		{
 			name:         "traditional compatible router and update status enabled",
@@ -5110,11 +5111,19 @@ func TestNewFeatureFlags(t *testing.T) {
 				KongServiceFacade: true,
 			},
 		},
+		{
+			name:                                    "combined services from different HTTPRoutes enabled",
+			featureGates:                            map[string]bool{},
+			combinedServicesFromDifferentHTTPRoutes: true,
+			expectedFeatureFlags: FeatureFlags{
+				CombinedServicesFromDifferentHTTPRoutes: true,
+			},
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			actualFlags := NewFeatureFlags(tc.featureGates, tc.routerFlavor, tc.updateStatusFlag, tc.enterpriseEdition, tc.supportRedirectPlugin)
+			actualFlags := NewFeatureFlags(tc.featureGates, tc.routerFlavor, tc.updateStatusFlag, tc.enterpriseEdition, tc.supportRedirectPlugin, tc.combinedServicesFromDifferentHTTPRoutes)
 
 			require.Equal(t, tc.expectedFeatureFlags, actualFlags)
 		})

@@ -121,11 +121,16 @@ func New(
 		return nil, fmt.Errorf("failed to create admin apis discoverer: %w", err)
 	}
 
+	statusAPIsDiscoverer, err := adminapi.NewDiscoverer(sets.New(c.KongStatusSvcPortNames...))
+	if err != nil {
+		return nil, fmt.Errorf("failed to create status apis discoverer: %w", err)
+	}
+
 	if err = c.Resolve(); err != nil {
 		return nil, fmt.Errorf("failed to resolve configuration: %w", err)
 	}
 
-	adminAPIClientsFactory := adminapi.NewClientFactoryForWorkspace(logger, c.KongWorkspace, c.KongAdminAPIConfig, c.KongAdminToken)
+	adminAPIClientsFactory := adminapi.NewClientFactoryForWorkspaceWithStatusDiscoverer(logger, c.KongWorkspace, c.KongAdminAPIConfig, c.KongAdminToken, statusAPIsDiscoverer)
 
 	setupLog.Info("Getting the kong admin api client configuration")
 	initialKongClients, err := adminAPIClients(
@@ -193,6 +198,7 @@ func New(
 	}
 
 	readinessChecker := clients.NewDefaultReadinessChecker(adminAPIClientsFactory, c.GatewayDiscoveryReadinessCheckTimeout, setupLog.WithName("readiness-checker"))
+
 	clientsManager, err := clients.NewAdminAPIClientsManager(
 		ctx,
 		initialKongClients,

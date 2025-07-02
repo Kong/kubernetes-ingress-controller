@@ -160,6 +160,11 @@ Adding a new version? You'll need three changes:
 
  > Release date: 2025-06-06
 
+### Added
+
+- Move the gateway healthchecks from admin api port (8444) to dedicated
+  status port (8100). Reduces unnecessary access_logs and improves performance.
+
  ### Fixed
 
  - Keep the plugin's ID unchanged if there is already the same plugin exists

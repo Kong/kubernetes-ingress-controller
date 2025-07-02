@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.5.0](#350)
  - [3.4.7](#347)
  - [3.4.6](#346)
  - [3.4.5](#345)
@@ -107,9 +108,18 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
- ## Unreleased
+## [3.5.0]
 
- ### Added
+> Release date: 2025-07-02
+
+### Deprecations
+
+- The `KongIngress`, `TCPIngress`, and `UDPIngress` resources have been deprecated and will be removed in a future release.
+  We recommend migrating to Gateway API resources as a replacement.
+  For more details, see the migration guides for [KongIngress](https://developer.konghq.com/kubernetes-ingress-controller/migrate/kongingress/) and [TCPIngress/UDPIngress](https://developer.konghq.com/kubernetes-ingress-controller/migrate/ingress-to-gateway/).
+  [#7573](https://github.com/Kong/kubernetes-ingress-controller/pull/7573)
+
+### Added
 
 - Added support for drain support functionality.
   It can be enabled by setting the flag `--enable-drain-support` to `true`.
@@ -126,16 +136,16 @@ Adding a new version? You'll need three changes:
   can set `--konnect-license-storage-enabled` to `false` to disable it.
   [#7488](https://github.com/Kong/kubernetes-ingress-controller/pull/7488)
 
-  ### Changed
+### Changed
 
- - Removed CRD type bindings under `/pkg` and clientsets under `/pkg/clientset`. They're
-   deprecated since version [3.4.0](#340). They are available in a dedicated [repository][kconf].
-   If you depend on them, please update your dependencies to use the new repository.
-   [#7540](https://github.com/Kong/kubernetes-ingress-controller/pull/7540)
- - Removed feature gate `CombinedServicesFromDifferentHTTPRoutes` (it's always available now),
-   introduce CLI flag `--combined-services-from-different-httproutes` (default `false`)
-   to enable this feature.
-   [#7569](https://github.com/Kong/kubernetes-ingress-controller/pull/7569)
+- Removed CRD type bindings under `/pkg` and clientsets under `/pkg/clientset`. They're
+  deprecated since version [3.4.0](#340). They are available in a dedicated [repository][kconf].
+  If you depend on them, please update your dependencies to use the new repository.
+  [#7540](https://github.com/Kong/kubernetes-ingress-controller/pull/7540)
+- Removed feature gate `CombinedServicesFromDifferentHTTPRoutes` (it's always available now),
+  introduce CLI flag `--combined-services-from-different-httproutes` (default `false`)
+  to enable this feature.
+  [#7569](https://github.com/Kong/kubernetes-ingress-controller/pull/7569)
 
 ### Fixed
 
@@ -144,7 +154,6 @@ Adding a new version? You'll need three changes:
   until there is an available license fetched from Konnect or stored in the
   `Secret`.
   [#7520](https://github.com/Kong/kubernetes-ingress-controller/pull/7520)
-
 
 ## [3.4.7]
 
@@ -156,17 +165,17 @@ Adding a new version? You'll need three changes:
   with multiple parent references.
   [#7517](https://github.com/Kong/kubernetes-ingress-controller/pull/7517)
 
- ## [3.4.6]
+## [3.4.6]
 
- > Release date: 2025-06-06
+> Release date: 2025-06-06
 
- ### Fixed
+### Fixed
 
- - Keep the plugin's ID unchanged if there is already the same plugin exists
-   when working with DB backed Kong gateways. "Same" plugin is identified by the
-   combination of plugin name, and ID of attached service, route, consumer and
-   consumer group. This prevents the conflicts in upgrading KIC.
-   [#7446](https://github.com/Kong/kubernetes-ingress-controller/pull/7446)
+- Keep the plugin's ID unchanged if there is already the same plugin exists
+  when working with DB backed Kong gateways. "Same" plugin is identified by the
+  combination of plugin name, and ID of attached service, route, consumer and
+  consumer group. This prevents the conflicts in upgrading KIC.
+  [#7446](https://github.com/Kong/kubernetes-ingress-controller/pull/7446)
 
 ## [3.4.5]
 

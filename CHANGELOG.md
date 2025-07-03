@@ -154,6 +154,10 @@ Adding a new version? You'll need three changes:
   until there is an available license fetched from Konnect or stored in the
   `Secret`.
   [#7520](https://github.com/Kong/kubernetes-ingress-controller/pull/7520)
+- Reject `HTTPRoute` with filters that have unsupported types in validating
+  webhook. This fixed the issue where an `HTTPRoute` with `CORS` filter is
+  accepted by the validating webhook.
+  [#7582](https://github.com/Kong/kubernetes-ingress-controller/pull/7582) 
 
 ## [3.4.7]
 

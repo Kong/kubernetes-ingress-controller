@@ -323,6 +323,21 @@ func TestCRDValidations(t *testing.T) {
 			},
 		},
 		{
+			name: "KongUpstreamPolicy - spec.hashOn.uri_capture can be used with spec.hashOnFallback.header",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
+					Algorithm: lo.ToPtr("consistent-hashing"),
+					HashOn: &configurationv1beta1.KongUpstreamHash{
+						URICapture: lo.ToPtr("uri-capture-name"),
+					},
+					HashOnFallback: &configurationv1beta1.KongUpstreamHash{
+						Header: lo.ToPtr("header-name"),
+					},
+				})
+				require.NoError(t, err)
+			},
+		},
+		{
 			name: "KongUpstreamPolicy - healthchecks.active.healthy.httpStatuses contains invalid HTTP status code",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
 				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{

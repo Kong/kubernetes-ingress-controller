@@ -32,7 +32,7 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/go-database-reconciler v1.24.2
 	github.com/kong/go-kong v0.67.0
-	github.com/kong/kubernetes-configuration v1.5.1
+	github.com/kong/kubernetes-configuration v1.5.2-0.20250703130217-be1d520ac78b
 	github.com/kong/kubernetes-telemetry v0.1.10
 	github.com/kong/kubernetes-testing-framework v0.47.2
 	github.com/lithammer/dedent v1.1.0

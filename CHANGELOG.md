@@ -149,7 +149,7 @@ Adding a new version? You'll need three changes:
 
 ### Fixed
 
-- When synchronization of license with Konnect is enabled 
+- When synchronization of license with Konnect is enabled
   (`--konnect-licensing-enabled` is `true`), do not mark the pod as ready
   until there is an available license fetched from Konnect or stored in the
   `Secret`.
@@ -157,7 +157,11 @@ Adding a new version? You'll need three changes:
 - Reject `HTTPRoute` with filters that have unsupported types in validating
   webhook. This fixed the issue where an `HTTPRoute` with `CORS` filter is
   accepted by the validating webhook.
-  [#7582](https://github.com/Kong/kubernetes-ingress-controller/pull/7582) 
+  [#7582](https://github.com/Kong/kubernetes-ingress-controller/pull/7582)
+- Fix `KongUpstreamPolicy` hash on fallback configuration so that cookie hashing
+  can be used for both hash_on (always) and hash_fallack (when primary hashing
+  source is different than cookie).
+ [#7582](https://github.com/Kong/kubernetes-ingress-controller/pull/7582)
 
 ## [3.4.7]
 
@@ -520,7 +524,7 @@ Please use [3.4.1] or later instead.
 - It is now possible to disable synchronization of consumers to Konnect through the
   flag `--konnect-disable-consumers-sync`.
   [#6313](https://github.com/Kong/kubernetes-ingress-controller/pull/6313)
-- Allow `KongCustomEntity` to refer to plugins in another namespace via 
+- Allow `KongCustomEntity` to refer to plugins in another namespace via
   `spec.parentRef.namespace`. The reference is allowed only when there is a
   `ReferenceGrant` in the namespace of the `KongPlugin` to grant permissions
   to `KongCustomEntity` of referring to `KongPlugin`.
@@ -781,7 +785,7 @@ Please use [3.4.1] or later instead.
 - Do not generate invalid duplicate upstream targets when routes use multiple
   Services with the same endpoints.
   [#5817](https://github.com/Kong/kubernetes-ingress-controller/pull/5817)
-- Remove the constraint of items of `parentRefs` can only be empty or 
+- Remove the constraint of items of `parentRefs` can only be empty or
   `gateway.network.k8s.io/Gateway` in validating `HTTPRoute`s. If an item in
   `parentRefs`'s group/kind is not `gateway.network.k8s.io/Gateway`, the item
   is seen as a parent other than the controller and ignored in parentRef check.
@@ -826,7 +830,6 @@ Please use [3.4.1] or later instead.
   and route or service. Previously, these incorrectly generated plugins
   attached to the route or service only.
   [#6132](https://github.com/Kong/kubernetes-ingress-controller/pull/6132)
-
 
 ## [3.1.5]
 
@@ -992,7 +995,7 @@ Please use [3.4.1] or later instead.
   [#5312](https://github.com/Kong/kubernetes-ingress-controller/pull/5312)
 - Added functionality to the `KongUpstreamPolicy` controller to properly set and
   enforce `KongUpstreamPolicy` status. 
-  The controller will set an ancestor status in `KongUpstreamPolicy` status for 
+  The controller will set an ancestor status in `KongUpstreamPolicy` status for
   each of its ancestors (i.e. `Service` or `KongServiceFacade`) with the `Accepted`
   and `Programmed` condition.
   [#5185](https://github.com/Kong/kubernetes-ingress-controller/pull/5185)

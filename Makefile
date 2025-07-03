@@ -781,9 +781,11 @@ uninstall-gateway-api-crds: go-mod-download-gateway-api kustomize
 	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_LOCAL_PATH) | kubectl delete -f -
 	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_LOCAL_PATH)/experimental | kubectl delete -f -
 
-# Install CRDs into the K8s cluster specified in $KUBECONFIG.
 .PHONY: install
-install: manifests install-gateway-api-crds
+install: manifests install-gateway-api-crds install.crds.kubernetes-configuration
+
+.PHONY: install.crds.kubernetes-configuration
+install.crds.kubernetes-configuration: kustomize
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
 # Uninstall CRDs from the K8s cluster specified in $KUBECONFIG.

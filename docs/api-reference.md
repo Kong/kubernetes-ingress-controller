@@ -747,7 +747,7 @@ Only one of the fields must be set.
 
 | Field | Description |
 | --- | --- |
-| `input` _[HashInput](#hashinput)_ | Input allows using one of the predefined inputs (ip, consumer, path, none). Set this to `none` if you want to use sticky sessions. For other parametrized inputs, use one of the fields below. |
+| `input` _[HashInput](#hashinput)_ | Input allows using one of the predefined inputs (ip, consumer, path, none). Set this to `none` if you want to use sticky sessions. For other parameterized inputs, use one of the fields below. |
 | `header` _string_ | Header is the name of the header to use as hash input. |
 | `cookie` _string_ | Cookie is the name of the cookie to use as hash input. |
 | `cookiePath` _string_ | CookiePath is cookie path to set in the response headers. |

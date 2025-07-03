@@ -133,18 +133,23 @@ func ensureHTTPRouteIsManagedByController(ctx context.Context, httproute *gatewa
 // HTTPRoute implementation and validates that the provided object is not using
 // any of those unsupported features.
 func validateHTTPRouteFeatures(httproute *gatewayapi.HTTPRoute, translatorFeatures translator.FeatureFlags) error {
-	unsupportedFilterMap := map[gatewayapi.HTTPRouteFilterType]struct{}{
-		gatewayapi.HTTPRouteFilterRequestMirror: {},
+	// list of filters currently supported.
+	supportedFilterMap := map[gatewayapi.HTTPRouteFilterType]struct{}{
+		gatewayapi.HTTPRouteFilterRequestHeaderModifier:  {},
+		gatewayapi.HTTPRouteFilterResponseHeaderModifier: {},
+		gatewayapi.HTTPRouteFilterRequestRedirect:        {},
+		gatewayapi.HTTPRouteFilterURLRewrite:             {},
+		gatewayapi.HTTPRouteFilterExtensionRef:           {},
 	}
 	const (
 		KindService = gatewayapi.Kind("Service")
 	)
 
 	for ruleIndex, rule := range httproute.Spec.Rules {
-		// Filter RequestMirror is not supported.
+		// Filters not listed in supportedFilterMap are not supported.
 
 		for filterIndex, filter := range rule.Filters {
-			if _, unsupported := unsupportedFilterMap[filter.Type]; unsupported {
+			if _, supported := supportedFilterMap[filter.Type]; !supported {
 				return fmt.Errorf("rules[%d].filters[%d]: filter type %s is unsupported",
 					ruleIndex, filterIndex, filter.Type)
 			}

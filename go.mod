@@ -17,7 +17,7 @@ go 1.24.3
 
 require (
 	cloud.google.com/go/container v1.43.0
-	github.com/Kong/sdk-konnect-go v0.2.22
+	github.com/Kong/sdk-konnect-go v0.2.26
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/avast/retry-go/v4 v4.6.1
 	github.com/blang/semver/v4 v4.0.0
@@ -31,7 +31,7 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/go-database-reconciler v1.23.0
 	github.com/kong/go-kong v0.66.1
-	github.com/kong/kubernetes-configuration v1.3.1
+	github.com/kong/kubernetes-configuration v1.3.3
 	github.com/kong/kubernetes-telemetry v0.1.9
 	github.com/kong/kubernetes-testing-framework v0.47.2
 	github.com/lithammer/dedent v1.1.0

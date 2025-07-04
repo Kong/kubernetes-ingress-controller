@@ -194,6 +194,109 @@ func TestTranslateKongUpstreamPolicy(t *testing.T) {
 			},
 		},
 		{
+			name: "KongUpstreamPolicySpec with hash-on header and hash-on fallback cookie",
+			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
+				HashOn: &configurationv1beta1.KongUpstreamHash{
+					Header: lo.ToPtr("foo"),
+				},
+				HashOnFallback: &configurationv1beta1.KongUpstreamHash{
+					Cookie:     lo.ToPtr("cookie-name"),
+					CookiePath: lo.ToPtr("/cookie-path"),
+				},
+			},
+			expectedUpstream: &kong.Upstream{
+				HashOn:           lo.ToPtr("header"),
+				HashOnHeader:     lo.ToPtr("foo"),
+				HashFallback:     lo.ToPtr("cookie"),
+				HashOnCookie:     lo.ToPtr("cookie-name"),
+				HashOnCookiePath: lo.ToPtr("/cookie-path"),
+			},
+		},
+		{
+			name: "KongUpstreamPolicySpec with hash-on query-arg and hash-on fallback cookie",
+			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
+				HashOn: &configurationv1beta1.KongUpstreamHash{
+					QueryArg: lo.ToPtr("foo"),
+				},
+				HashOnFallback: &configurationv1beta1.KongUpstreamHash{
+					Cookie:     lo.ToPtr("cookie-name"),
+					CookiePath: lo.ToPtr("/cookie-path"),
+				},
+			},
+			expectedUpstream: &kong.Upstream{
+				HashOn:           lo.ToPtr("query_arg"),
+				HashOnQueryArg:   lo.ToPtr("foo"),
+				HashFallback:     lo.ToPtr("cookie"),
+				HashOnCookie:     lo.ToPtr("cookie-name"),
+				HashOnCookiePath: lo.ToPtr("/cookie-path"),
+			},
+		},
+		{
+			name: "KongUpstreamPolicySpec with hash-on uri-capture and hash-on fallback cookie",
+			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
+				HashOn: &configurationv1beta1.KongUpstreamHash{
+					URICapture: lo.ToPtr("foo"),
+				},
+				HashOnFallback: &configurationv1beta1.KongUpstreamHash{
+					Cookie:     lo.ToPtr("cookie-name"),
+					CookiePath: lo.ToPtr("/cookie-path"),
+				},
+			},
+			expectedUpstream: &kong.Upstream{
+				HashOn:           lo.ToPtr("uri_capture"),
+				HashOnURICapture: lo.ToPtr("foo"),
+				HashFallback:     lo.ToPtr("cookie"),
+				HashOnCookie:     lo.ToPtr("cookie-name"),
+				HashOnCookiePath: lo.ToPtr("/cookie-path"),
+			},
+		},
+		{
+			// This will be blocked by CRD validation rules because according to
+			// https://developer.konghq.com/gateway/entities/upstream/#consistent-hashing
+			// if the primary hash_on is set to cookie, the hash_fallback is invalid
+			// and cannot be used.
+			name: "KongUpstreamPolicySpec with hash-on cookie and hash-on fallback cookie is incorrect and should not happen",
+			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
+				HashOn: &configurationv1beta1.KongUpstreamHash{
+					Cookie:     lo.ToPtr("cookie-name"),
+					CookiePath: lo.ToPtr("/cookie-path"),
+				},
+				HashOnFallback: &configurationv1beta1.KongUpstreamHash{
+					Cookie:     lo.ToPtr("cookie-name-2"),
+					CookiePath: lo.ToPtr("/cookie-path-2"),
+				},
+			},
+			expectedUpstream: &kong.Upstream{
+				HashOn:           lo.ToPtr("cookie"),
+				HashOnCookie:     lo.ToPtr("cookie-name"),
+				HashOnCookiePath: lo.ToPtr("/cookie-path"),
+				HashFallback:     lo.ToPtr("cookie"),
+			},
+		},
+		{
+			// This will be blocked by CRD validation rules because according to
+			// https://developer.konghq.com/gateway/entities/upstream/#consistent-hashing
+			// if the primary hash_on is set to cookie, the hash_fallback is invalid
+			// and cannot be used.
+			name: "KongUpstreamPolicySpec with hash-on cookie and hash-on fallback header is incorrect and should not happen",
+			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
+				HashOn: &configurationv1beta1.KongUpstreamHash{
+					Cookie:     lo.ToPtr("cookie-name"),
+					CookiePath: lo.ToPtr("/cookie-path"),
+				},
+				HashOnFallback: &configurationv1beta1.KongUpstreamHash{
+					Header: lo.ToPtr("header-name"),
+				},
+			},
+			expectedUpstream: &kong.Upstream{
+				HashOn:             lo.ToPtr("cookie"),
+				HashOnCookie:       lo.ToPtr("cookie-name"),
+				HashOnCookiePath:   lo.ToPtr("/cookie-path"),
+				HashFallback:       lo.ToPtr("header"),
+				HashFallbackHeader: lo.ToPtr("header-name"),
+			},
+		},
+		{
 			name: "KongUpstreamPolicySpec with hash-on cookie",
 			policySpec: configurationv1beta1.KongUpstreamPolicySpec{
 				HashOn: &configurationv1beta1.KongUpstreamHash{

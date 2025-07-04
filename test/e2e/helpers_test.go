@@ -929,8 +929,18 @@ func deployLimaCharlieSensorIfEnabled(ctx context.Context, t *testing.T, env env
 
 	// deploy limacharlie daemonset.
 	if lcInstallationKey := os.Getenv("LIMACHARLIE_INSTALLATION_KEY"); lcInstallationKey != "" {
+		_, err := env.Cluster().Client().CoreV1().Namespaces().Get(ctx, namespace, metav1.GetOptions{})
+		if err != nil && apierrors.IsNotFound(err) {
+			t.Log("Creating namespace", namespace)
+			_, err = env.Cluster().Client().CoreV1().Namespaces().Create(ctx, &corev1.Namespace{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: namespace,
+				},
+			}, metav1.CreateOptions{})
+			require.NoError(t, err)
+		}
 		t.Log("Deploying limacharlie sensor for running faraday cage")
-		_, err := env.Cluster().Client().CoreV1().Secrets(namespace).Get(ctx, "limacharlie-secret", metav1.GetOptions{})
+		_, err = env.Cluster().Client().CoreV1().Secrets(namespace).Get(ctx, "limacharlie-secret", metav1.GetOptions{})
 		if err != nil && apierrors.IsNotFound(err) {
 			t.Log("Creating secret for limacharlie installation key")
 			secret := &corev1.Secret{

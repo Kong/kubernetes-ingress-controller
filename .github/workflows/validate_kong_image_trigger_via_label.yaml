@@ -20,6 +20,10 @@ jobs:
       ISSUE_NUMBER: ${{ github.event.issue.number }}
       GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        with:
+          egress-policy: audit
       - name: checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: "Remove the label ci/run-validate-kong-image if exist"
@@ -38,6 +42,10 @@ jobs:
       kong_image_major_version: ${{ steps.semver_parser.outputs.major }}
       kong_image_minor_version: ${{ steps.semver_parser.outputs.minor }}
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        with:
+          egress-policy: audit
       # The body of testing request issue created from the template has the following format:
 
       # ### What component needs testing with KIC?
@@ -98,6 +106,10 @@ jobs:
       kic_branch: ${{ steps.choose_kic_branch.outputs.KIC_BRANCH }}
       kic_image_tag: ${{ steps.choose_kic_branch.outputs.KIC_IMAGE_TAG }}
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        with:
+          egress-policy: audit
       - name: checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - name: Choose KIC image and branch
@@ -134,6 +146,10 @@ jobs:
       KIC_BRANCH: ${{ needs.decide-kic-branch-and-image.outputs.kic_branch }}
       KIC_IMAGE_TAG: ${{ needs.decide-kic-branch-and-image.outputs.kic_image_tag }} 
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        with:
+          egress-policy: audit
       - name: checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 

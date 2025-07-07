@@ -25,7 +25,7 @@ import (
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/k8s"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
 )
 
@@ -43,7 +43,7 @@ func TestTelemetry(t *testing.T) {
 		WithDefaultEnvTestsConfig(envcfg),
 	)
 	require.NoError(t, err)
-	c, err := utils.GetKubeconfig(cfg)
+	c, err := k8s.GetKubeconfig(cfg)
 	require.NoError(t, err)
 	createK8sObjectsForTelemetryTest(t.Context(), t, c)
 

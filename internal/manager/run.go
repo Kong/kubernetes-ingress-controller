@@ -34,12 +34,12 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/k8s"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/nodes"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils/kongconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/kongconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -109,7 +109,7 @@ func New(
 		m.kubeconfig = c.KubeRestConfig
 	} else {
 		setupLog.Info("Using Kubeconfig based on fields from configuration")
-		kubeconfigConstructed, err := utils.GetKubeconfig(c)
+		kubeconfigConstructed, err := k8s.GetKubeconfig(c)
 		if err != nil {
 			return nil, fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
 		}

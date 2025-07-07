@@ -33,10 +33,10 @@ import (
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/k8s"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	konnectLicense "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -298,7 +298,7 @@ func adminAPIClients(
 	// If kong-admin-svc flag has been specified then use it to get the list
 	// of Kong Admin API endpoints.
 	if kongAdminSvc, ok := c.KongAdminSvc.Get(); ok {
-		kubeClient, err := utils.GetKubeClient(c)
+		kubeClient, err := k8s.GetKubeClient(c)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get kubernetes client: %w", err)
 		}

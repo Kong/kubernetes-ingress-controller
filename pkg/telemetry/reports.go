@@ -10,7 +10,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils/kongconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/kongconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/metadata"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/telemetry/types"
 )

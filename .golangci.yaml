@@ -48,7 +48,7 @@ linters:
         # https://staticcheck.dev/docs/checks/#ST1005
         - -ST1005
     depguard:
-      rules:  
+      rules:
         do-not-use-internal-manager-package:
           files:
             - "!**/internal/manager/**/*.go"
@@ -210,6 +210,11 @@ linters:
           - revive
         path: \.go
         text: "var-declaration: should drop = 0 from declaration of var .*; it is the zero value"
+      - linters:
+          - revive
+        # TODO: refactor the offending packages and remove this exclusion
+        path: test/util/.*\.go|pkg/telemetry/types/.*\.go|internal/util/.*\.go|internal/controllers/utils/.*\.go
+        text: "var-naming: avoid meaningless package names"
       - linters:
           - gosec
         text: "G115: integer overflow conversion"

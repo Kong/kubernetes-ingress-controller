@@ -193,7 +193,8 @@ func TestCRDValidations(t *testing.T) {
 				for i, invalidHashOn := range generateInvalidHashOns() {
 					t.Run(fmt.Sprintf("invalidHashOn[%d]", i), func(t *testing.T) {
 						err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
-							HashOn: &invalidHashOn,
+							HashOn:    &invalidHashOn,
+							Algorithm: lo.ToPtr("consistent-hashing"),
 						})
 						require.ErrorContains(t, err, "Only one of spec.hashOn.(input|cookie|header|uriCapture|queryArg) can be set.")
 					})
@@ -255,25 +256,85 @@ func TestCRDValidations(t *testing.T) {
 			},
 		},
 		{
-			name: "KongUpstreamPolicy - spec.hashOnFallback.cookie must not be set",
+			name: "KongUpstreamPolicy - spec.hashOnFallback.cookie can be set when spec.hashOn uses header",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
 				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
+					Algorithm: lo.ToPtr("consistent-hashing"),
+					HashOn: &configurationv1beta1.KongUpstreamHash{
+						Header: lo.ToPtr("header-name"),
+					},
 					HashOnFallback: &configurationv1beta1.KongUpstreamHash{
+						Cookie:     lo.ToPtr("cookie-name"),
 						CookiePath: lo.ToPtr("/"),
 					},
 				})
-				require.ErrorContains(t, err, "spec.hashOnFallback.cookiePath must not be set.")
+				require.NoError(t, err)
 			},
 		},
 		{
-			name: "KongUpstreamPolicy - spec.hashOnFallback.cookiePath must not be set",
+			name: "KongUpstreamPolicy - spec.hashOnFallback.cookie can be set when spec.hashOn uses queryArg",
 			scenario: func(ctx context.Context, t *testing.T, ns string) {
 				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
+					Algorithm: lo.ToPtr("consistent-hashing"),
+					HashOn: &configurationv1beta1.KongUpstreamHash{
+						QueryArg: lo.ToPtr("query-arg-name"),
+					},
 					HashOnFallback: &configurationv1beta1.KongUpstreamHash{
+						Cookie:     lo.ToPtr("cookie-name"),
 						CookiePath: lo.ToPtr("/"),
 					},
 				})
-				require.ErrorContains(t, err, "spec.hashOnFallback.cookiePath must not be set.")
+				require.NoError(t, err)
+			},
+		},
+		{
+			name: "KongUpstreamPolicy - spec.hashOnFallback.cookie can be set when spec.hashOn uses uriCapture",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
+					Algorithm: lo.ToPtr("consistent-hashing"),
+					HashOn: &configurationv1beta1.KongUpstreamHash{
+						URICapture: lo.ToPtr("uri-capture-name"),
+					},
+					HashOnFallback: &configurationv1beta1.KongUpstreamHash{
+						Cookie:     lo.ToPtr("cookie-name"),
+						CookiePath: lo.ToPtr("/"),
+					},
+				})
+				require.NoError(t, err)
+			},
+		},
+		{
+			// Ref: https://developer.konghq.com/gateway/entities/upstream/#consistent-hashing
+			// > The hash_fallback setting is invalid and can’t be used if cookie is the primary hashing mechanism.
+			name: "KongUpstreamPolicy - spec.hashOnFallback.cookie can't be set when spec.hashOn uses cookie",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
+					Algorithm: lo.ToPtr("consistent-hashing"),
+					HashOn: &configurationv1beta1.KongUpstreamHash{
+						Cookie:     lo.ToPtr("cookie-name"),
+						CookiePath: lo.ToPtr("/cookie"),
+					},
+					HashOnFallback: &configurationv1beta1.KongUpstreamHash{
+						Cookie:     lo.ToPtr("cookie-name-2"),
+						CookiePath: lo.ToPtr("/cookie-2"),
+					},
+				})
+				require.ErrorContains(t, err, "spec.hashOnFallback must not be set when spec.hashOn.cookie is set.")
+			},
+		},
+		{
+			name: "KongUpstreamPolicy - spec.hashOn.uri_capture can be used with spec.hashOnFallback.header",
+			scenario: func(ctx context.Context, t *testing.T, ns string) {
+				err := createKongUpstreamPolicy(ctx, ctrlClient, ns, configurationv1beta1.KongUpstreamPolicySpec{
+					Algorithm: lo.ToPtr("consistent-hashing"),
+					HashOn: &configurationv1beta1.KongUpstreamHash{
+						URICapture: lo.ToPtr("uri-capture-name"),
+					},
+					HashOnFallback: &configurationv1beta1.KongUpstreamHash{
+						Header: lo.ToPtr("header-name"),
+					},
+				})
+				require.NoError(t, err)
 			},
 		},
 		{

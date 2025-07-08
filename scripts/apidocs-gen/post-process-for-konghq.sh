@@ -10,8 +10,8 @@ set -o nounset
 set -o pipefail
 
 SCRIPT_ROOT="$(dirname "${BASH_SOURCE[0]}")/../.."
-CRD_REF_DOC="${SCRIPT_ROOT}/docs/api-reference.md"
 POST_PROCESSED_DOC="${1}"
+SOURCE_DOC="${2:-${SCRIPT_ROOT}/docs/api-reference.md}"
 
 # Add a title and turn the vale linter off
 echo "---
@@ -42,7 +42,7 @@ related_resources:
 " > "${POST_PROCESSED_DOC}"
 
 # Add the generated doc content
-cat "${CRD_REF_DOC}" >> "${POST_PROCESSED_DOC}"
+cat "${SOURCE_DOC}" >> "${POST_PROCESSED_DOC}"
 
 # Turn the linter back on
 echo "<!-- vale on -->" >> "${POST_PROCESSED_DOC}"

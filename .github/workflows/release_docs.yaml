@@ -35,15 +35,10 @@ jobs:
           path: developer.konghq.com
           fetch-depth: 0
 
-      - name: Generate CRDs reference
+      - name: Update reference docs
         run: |
-          ./scripts/apidocs-gen/post-process-for-konghq.sh \
-          developer.konghq.com/app/kubernetes-ingress-controller/reference/custom-resources.md
-
-      - name: Generate flags reference
-        run: |
-          ./scripts/cli-arguments-docs-gen/post-process-for-konghq.sh \
-          developer.konghq.com/app/kubernetes-ingress-controller/reference/configuration-options.md
+          cp ./docs/api-reference.md developer.konghq.com/app/kubernetes-ingress-controller/reference/custom-resources.md
+          cp ./docs/cli-arguments.md developer.konghq.com/app/kubernetes-ingress-controller/reference/configuration-options.md         
 
       - name: Detect changes
         id: detect-changes

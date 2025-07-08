@@ -11,8 +11,8 @@ set -o nounset
 set -o pipefail
 
 SCRIPT_ROOT="$(dirname "${BASH_SOURCE[0]}")/../.."
-CRD_REF_DOC="${SCRIPT_ROOT}/docs/cli-arguments.md"
 POST_PROCESSED_DOC="${1}"
+SOURCE_DOC="${2:-${SCRIPT_ROOT}/docs/cli-arguments.md}"
 
 # Add a title and turn the vale linter off
 echo '---
@@ -60,7 +60,7 @@ and not CLI flags.
 ' > "${POST_PROCESSED_DOC}"
 
 # Add the generated doc content
-cat "${CRD_REF_DOC}" >> "${POST_PROCESSED_DOC}"
+cat "${SOURCE_DOC}" >> "${POST_PROCESSED_DOC}"
 
 # Turn the linter back on. Add a newline first, otherwise parsing breaks.
 echo "" >> "${POST_PROCESSED_DOC}"

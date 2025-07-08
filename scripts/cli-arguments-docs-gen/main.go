@@ -9,7 +9,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/cmd/rootcmd/config"
 )
 
-// mustWrite writes to a strings.Builder and panics if there's an error
+// mustWrite writes to a strings.Builder and panics if there's an error.
 func mustWrite(b *strings.Builder, s string) {
 	_, err := b.WriteString(s)
 	if err != nil {

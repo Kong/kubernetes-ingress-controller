@@ -299,10 +299,15 @@ generate.docs: generate.apidocs generate.cli-arguments-docs
 .PHONY: generate.apidocs
 generate.apidocs: crd-ref-docs
 	./scripts/apidocs-gen/generate.sh $(CRD_REF_DOCS)
+	mv ./docs/api-reference.md ./docs/api-reference-temp.md
+	./scripts/apidocs-gen/post-process-for-konghq.sh ./docs/api-reference.md ./docs/api-reference-temp.md
+	rm -f ./docs/api-reference-temp.md
 
 .PHONY: generate.cli-arguments
 generate.cli-arguments-docs:
-	go run ./scripts/cli-arguments-docs-gen/main.go > ./docs/cli-arguments.md
+	go run ./scripts/cli-arguments-docs-gen/main.go > ./docs/cli-arguments-temp.md
+	./scripts/cli-arguments-docs-gen/post-process-for-konghq.sh ./docs/cli-arguments.md ./docs/cli-arguments-temp.md
+	rm -f ./docs/cli-arguments-temp.md
 
 .PHONY: generate.go
 generate.go:

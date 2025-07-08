@@ -15,8 +15,29 @@ POST_PROCESSED_DOC="${1}"
 
 # Add a title and turn the vale linter off
 echo "---
-title: Custom Resource Definitions API Reference
+title: Custom Resource (CRD) API Reference
+
+description: |
+  See the generated CRD structure containing all possible resource fields and descriptions for each property.
+
+content_type: reference
+layout: reference
+tags:
+  - crd
+search_aliases: 
+  - kic CRD
+products:
+  - kic
+breadcrumbs:
+  - /kubernetes-ingress-controller/
+works_on:
+  - on-prem
+  - konnect
+related_resources:
+  - text: Gateway API
+    url: /kubernetes-ingress-controller/gateway-api/
 ---
+
 <!-- vale off -->
 " > "${POST_PROCESSED_DOC}"
 

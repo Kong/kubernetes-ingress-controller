@@ -58,9 +58,10 @@ func main() {
 			panic(fmt.Sprintf("flag's: %s description must end with a period: %s", flag.Name, description))
 		}
 
-		defaultValue := ""
+		// Display empty quotes without backticks for empty string.
+		defaultValue := "\"\""
 		if flag.DefValue != "" {
-			defaultValue = fmt.Sprintf("`%s`", flag.DefValue)
+			defaultValue = fmt.Sprintf("'`%s`'", flag.DefValue)
 		}
 
 		mustWrite(&markdown, fmt.Sprintf("  - flag: '%s'\n", name))

@@ -15,7 +15,7 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
 
-	ctrllicense "github.com/kong/kubernetes-ingress-controller/v3/controllers/license"
+	ctrllicense "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/license"
 )
 
 func TestKongLicenseController(t *testing.T) {

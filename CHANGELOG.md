@@ -8,6 +8,7 @@ Adding a new version? You'll need three changes:
   This is all the way at the bottom. It's the thing we always forget.
 --->
  - [3.5.0](#350)
+ - [3.4.8](#348)
  - [3.4.7](#347)
  - [3.4.6](#346)
  - [3.4.5](#345)

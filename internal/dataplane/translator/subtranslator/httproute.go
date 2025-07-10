@@ -1244,10 +1244,10 @@ type transformerPlugin struct {
 	// Type is the type of the transformer plugin (request-transformer or response-transformer).
 	Type transformerPluginType `json:"-"`
 
-	Replace TransformerPluginReplaceConfig `json:"replace,omitempty"`
-	Add     TransformerPluginConfig        `json:"add,omitempty"`
-	Append  TransformerPluginConfig        `json:"append,omitempty"`
-	Remove  TransformerPluginConfig        `json:"remove,omitempty"`
+	Replace TransformerPluginReplaceConfig `json:"replace"`
+	Add     TransformerPluginConfig        `json:"add"`
+	Append  TransformerPluginConfig        `json:"append"`
+	Remove  TransformerPluginConfig        `json:"remove"`
 }
 
 // Header represents a header as a string "key:value" or just "key". This is the format accepted

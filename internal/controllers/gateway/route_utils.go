@@ -86,7 +86,7 @@ func parentRefsForRoute[T gatewayapi.RouteT](route T) ([]gatewayapi.ParentRefere
 	}
 
 	var refs []gatewayapi.ParentReference
-	switch r := (interface{})(route).(type) {
+	switch r := (any)(route).(type) {
 	case *gatewayapi.HTTPRoute:
 		refs = r.Spec.ParentRefs
 	case *gatewayapi.UDPRoute:
@@ -106,7 +106,7 @@ func parentRefsForRoute[T gatewayapi.RouteT](route T) ([]gatewayapi.ParentRefere
 		}
 	}
 
-	switch r := (interface{})(route).(type) {
+	switch r := (any)(route).(type) {
 	case *gatewayapi.HTTPRoute:
 		return r.Spec.ParentRefs, nil
 	case *gatewayapi.UDPRoute:

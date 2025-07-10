@@ -354,7 +354,7 @@ func TestAdminAPIClientsManager_ConcurrentNotify(t *testing.T) {
 	}()
 
 	go func() {
-		for i := 0; i < 100; i++ {
+		for range 100 {
 			go m.Notify(ctx, []adminapi.DiscoveredAdminAPI{testDiscoveredAdminAPI(testURL1)})
 		}
 	}()

@@ -85,7 +85,7 @@ func TestDiagnosticsServer_Diffs(t *testing.T) {
 	configDiffs := map[string]ConfigDiff{}
 	var first, last string
 	init := sync.Once{}
-	for i := 0; i < configDumpsToWrite; i++ {
+	for range configDumpsToWrite {
 		diff := testConfigDiff()
 		configDiffs[diff.Hash] = diff
 		init.Do(func() { first = diff.Hash })
@@ -110,7 +110,7 @@ func TestDiagnosticsServer_Diffs(t *testing.T) {
 
 	// Having gotten a response, check that its available list contains all the diffs we've sent, and that we have the
 	// expected number of diffs.
-	actual := map[string]interface{}{}
+	actual := map[string]any{}
 	for _, available := range got.Available {
 		actual[available.ConfigHash] = nil
 	}

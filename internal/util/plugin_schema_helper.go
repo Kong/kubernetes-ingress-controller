@@ -10,21 +10,21 @@ import (
 // PluginSchemaStore retrives a schema of a Plugin from Kong.
 type PluginSchemaStore struct {
 	client  *kong.Client
-	schemas map[string]map[string]interface{}
+	schemas map[string]map[string]any
 }
 
 // NewPluginSchemaStore creates a PluginSchemaStore.
 func NewPluginSchemaStore(client *kong.Client) *PluginSchemaStore {
 	return &PluginSchemaStore{
 		client:  client,
-		schemas: make(map[string]map[string]interface{}),
+		schemas: make(map[string]map[string]any),
 	}
 }
 
 // Schema retrives schema of a plugin.
 // A cache is used to save the responses and subsequent queries are served from
 // the cache.
-func (p *PluginSchemaStore) Schema(ctx context.Context, pluginName string) (map[string]interface{}, error) {
+func (p *PluginSchemaStore) Schema(ctx context.Context, pluginName string) (map[string]any, error) {
 	if pluginName == "" {
 		return nil, fmt.Errorf("pluginName can not be empty")
 	}

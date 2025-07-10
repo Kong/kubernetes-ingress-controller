@@ -3531,8 +3531,8 @@ func TestPluginAnnotations(t *testing.T) {
 			Protocols: kong.StringSlice("grpc"),
 			Config: kong.Configuration{
 				"foo": "bar",
-				"add": map[string]interface{}{
-					"headers": []interface{}{
+				"add": map[string]any{
+					"headers": []any{
 						"header1:value1",
 						"header2:value2",
 					},

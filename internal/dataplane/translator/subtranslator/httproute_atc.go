@@ -411,13 +411,11 @@ func assignRoutePriorityToSplitHTTPRouteMatches(
 		})
 
 		for i, match := range matches {
-			relativeOrderBits := defaultRelativeOrderPriorityBits - RoutePriorityType(i)
-			// Although it is very unlikely that there are 2^12 = 4096 HTTPRoutes
-			// should be given priority by their relative order, here we limit the
-			// relativeOrderBits to be at least 0.
-			if relativeOrderBits <= 0 {
-				relativeOrderBits = 0
-			}
+			relativeOrderBits := max(
+				// Although it is very unlikely that there are 2^12 = 4096 HTTPRoutes
+				// should be given priority by their relative order, here we limit the
+				// relativeOrderBits to be at least 0.
+				defaultRelativeOrderPriorityBits-RoutePriorityType(i), 0)
 			httpRouteMatchesToPriorities = append(httpRouteMatchesToPriorities, SplitHTTPRouteMatchToKongRoutePriority{
 				Match:    match,
 				Priority: priority + relativeOrderBits,

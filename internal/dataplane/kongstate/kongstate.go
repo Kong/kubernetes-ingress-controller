@@ -135,7 +135,7 @@ func (ks *KongState) FillConsumersAndCredentials(
 				pushCredentialResourceFailures(fmt.Sprintf("Failed to fetch secret: %v", err))
 				continue
 			}
-			credConfig := map[string]interface{}{}
+			credConfig := map[string]any{}
 			// try the label first. if it's present, no need to check the field
 			credType, err := util.ExtractKongCredentialType(secret)
 			if err != nil {
@@ -629,7 +629,7 @@ func globalKongClusterPlugins(logger logr.Logger, s store.Storer) ([]Plugin, err
 	if err != nil {
 		return nil, fmt.Errorf("error listing global KongClusterPlugins: %w", err)
 	}
-	for i := 0; i < len(globalClusterPlugins); i++ {
+	for i := range globalClusterPlugins {
 		k8sPlugin := *globalClusterPlugins[i]
 		pluginName := k8sPlugin.PluginName
 		// empty pluginName skip it

@@ -39,16 +39,16 @@ func TestExtractEntityFieldDefinitions(t *testing.T) {
 	}{
 		{
 			name: "absent fields should have a nil value",
-			schema: map[string]interface{}{
-				"fields": []interface{}{
-					map[string]interface{}{
-						"foo": map[string]interface{}{
+			schema: map[string]any{
+				"fields": []any{
+					map[string]any{
+						"foo": map[string]any{
 							"type":     "string",
 							"required": true,
 						},
 					},
-					map[string]interface{}{
-						"bar": map[string]interface{}{
+					map[string]any{
+						"bar": map[string]any{
 							"type":      "foreign",
 							"required":  true,
 							"reference": "service",
@@ -74,16 +74,16 @@ func TestExtractEntityFieldDefinitions(t *testing.T) {
 		},
 		{
 			name: "irrelevant fields should be safely ignored",
-			schema: map[string]interface{}{
-				"fields": []interface{}{
-					map[string]interface{}{
-						"protocol": map[string]interface{}{
+			schema: map[string]any{
+				"fields": []any{
+					map[string]any{
+						"protocol": map[string]any{
 							"type":     "string",
 							"required": true,
 							"default":  "http",
 							"one_of":   []string{"http", "https"},
 						},
-						"port": map[string]interface{}{
+						"port": map[string]any{
 							"type":     "integer",
 							"required": true,
 							"default":  80,
@@ -637,9 +637,9 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 			},
 			schemas: map[string]kong.Schema{
 				"sessions": {
-					"fields": []interface{}{
-						map[string]interface{}{
-							"name": map[string]interface{}{
+					"fields": []any{
+						map[string]any{
+							"name": map[string]any{
 								"type":     "string",
 								"required": true,
 							},
@@ -730,9 +730,9 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 			},
 			schemas: map[string]kong.Schema{
 				"sessions": {
-					"fields": []interface{}{
-						map[string]interface{}{
-							"name": map[string]interface{}{
+					"fields": []any{
+						map[string]any{
+							"name": map[string]any{
 								"type":     "string",
 								"required": true,
 							},
@@ -795,15 +795,15 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 			},
 			schemas: map[string]kong.Schema{
 				"degraphql_routes": {
-					"fields": []interface{}{
-						map[string]interface{}{
-							"uri": map[string]interface{}{
+					"fields": []any{
+						map[string]any{
+							"uri": map[string]any{
 								"type":     "string",
 								"required": true,
 							},
 						},
-						map[string]interface{}{
-							"service": map[string]interface{}{
+						map[string]any{
+							"service": map[string]any{
 								"type":      "foreign",
 								"reference": "services",
 							},
@@ -815,7 +815,7 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 				"degraphql_routes": {
 					{
 						"uri": "/api/me",
-						"service": map[string]interface{}{
+						"service": map[string]any{
 							// ID of Kong service "service1" in workspace "".
 							"id": "service1",
 						},
@@ -863,15 +863,15 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 			},
 			schemas: map[string]kong.Schema{
 				"degraphql_routes": {
-					"fields": []interface{}{
-						map[string]interface{}{
-							"uri": map[string]interface{}{
+					"fields": []any{
+						map[string]any{
+							"uri": map[string]any{
 								"type":     "string",
 								"required": true,
 							},
 						},
-						map[string]interface{}{
-							"service": map[string]interface{}{
+						map[string]any{
+							"service": map[string]any{
 								"type":      "foreign",
 								"reference": "services",
 							},
@@ -883,14 +883,14 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 				"degraphql_routes": {
 					{
 						"uri": "/api/me",
-						"service": map[string]interface{}{
+						"service": map[string]any{
 							// ID of Kong service "service1" in workspace "".
 							"id": "service1",
 						},
 					},
 					{
 						"uri": "/api/me",
-						"service": map[string]interface{}{
+						"service": map[string]any{
 							// ID of Kong service "service2" in workspace "".
 							"id": "service2",
 						},
@@ -954,15 +954,15 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 			},
 			schemas: map[string]kong.Schema{
 				"degraphql_routes": {
-					"fields": []interface{}{
-						map[string]interface{}{
-							"uri": map[string]interface{}{
+					"fields": []any{
+						map[string]any{
+							"uri": map[string]any{
 								"type":     "string",
 								"required": true,
 							},
 						},
-						map[string]interface{}{
-							"route": map[string]interface{}{
+						map[string]any{
+							"route": map[string]any{
 								"type":      "foreign",
 								"reference": "routes",
 							},
@@ -974,7 +974,7 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 				"degraphql_routes": {
 					{
 						"uri": "/api/me",
-						"route": map[string]interface{}{
+						"route": map[string]any{
 							// ID of Kong route "route1".
 							"id": "route1",
 						},
@@ -1039,21 +1039,21 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 			},
 			schemas: map[string]kong.Schema{
 				"fake_entities": {
-					"fields": []interface{}{
-						map[string]interface{}{
-							"foo": map[string]interface{}{
+					"fields": []any{
+						map[string]any{
+							"foo": map[string]any{
 								"type":     "string",
 								"required": true,
 							},
 						},
-						map[string]interface{}{
-							"service": map[string]interface{}{
+						map[string]any{
+							"service": map[string]any{
 								"type":      "foreign",
 								"reference": "services",
 							},
 						},
-						map[string]interface{}{
-							"consumer": map[string]interface{}{
+						map[string]any{
+							"consumer": map[string]any{
 								"type":      "foreign",
 								"reference": "consumers",
 							},
@@ -1065,22 +1065,22 @@ func TestKongState_FillCustomEntities(t *testing.T) {
 				"fake_entities": {
 					{
 						"foo": "bar",
-						"service": map[string]interface{}{
+						"service": map[string]any{
 							// ID of Kong service "service1".
 							"id": "service1",
 						},
-						"consumer": map[string]interface{}{
+						"consumer": map[string]any{
 							// ID of Kong consumer "consumer1".
 							"id": "consumer1",
 						},
 					},
 					{
 						"foo": "bar",
-						"service": map[string]interface{}{
+						"service": map[string]any{
 							// ID of Kong service "service2".
 							"id": "service2",
 						},
-						"consumer": map[string]interface{}{
+						"consumer": map[string]any{
 							// ID of Kong consumer "consumer1".
 							"id": "consumer1",
 						},

@@ -76,13 +76,13 @@ func TestFillPlugin(t *testing.T) {
 				},
 			},
 			schemas: &mockPluginSchemaStore{
-				map[string]interface{}{
-					"fields": []interface{}{
-						map[string]interface{}{
-							"protocols": map[string]interface{}{
-								"elements": map[string]interface{}{
+				map[string]any{
+					"fields": []any{
+						map[string]any{
+							"protocols": map[string]any{
+								"elements": map[string]any{
 									"type": "string",
-									"one_of": []interface{}{
+									"one_of": []any{
 										"grpc",
 										"grpcs",
 										"http",
@@ -91,7 +91,7 @@ func TestFillPlugin(t *testing.T) {
 								},
 								"description": "A set of strings representing HTTP protocols.",
 								"type":        "set",
-								"default": []interface{}{
+								"default": []any{
 									"grpc",
 									"grpcs",
 									"http",
@@ -100,12 +100,12 @@ func TestFillPlugin(t *testing.T) {
 								"required": true,
 							},
 						},
-						map[string]interface{}{
-							"config": map[string]interface{}{
+						map[string]any{
+							"config": map[string]any{
 								"type": "record",
-								"fields": []interface{}{
-									map[string]interface{}{
-										"endpoint": map[string]interface{}{
+								"fields": []any{
+									map[string]any{
+										"endpoint": map[string]any{
 											"type":          "string",
 											"required":      true,
 											"description":   "A string representing a URL, such as https://example.com/path/to/resource?q=search.",
@@ -142,13 +142,13 @@ func TestFillPlugin(t *testing.T) {
 				},
 			},
 			schemas: &mockPluginSchemaStore{
-				map[string]interface{}{
-					"fields": []interface{}{
-						map[string]interface{}{
-							"protocols": map[string]interface{}{
-								"elements": map[string]interface{}{
+				map[string]any{
+					"fields": []any{
+						map[string]any{
+							"protocols": map[string]any{
+								"elements": map[string]any{
 									"type": "string",
-									"one_of": []interface{}{
+									"one_of": []any{
 										"grpc",
 										"grpcs",
 										"http",
@@ -157,7 +157,7 @@ func TestFillPlugin(t *testing.T) {
 								},
 								"description": "A set of strings representing HTTP protocols.",
 								"type":        "set",
-								"default": []interface{}{
+								"default": []any{
 									"grpc",
 									"grpcs",
 									"http",
@@ -166,12 +166,12 @@ func TestFillPlugin(t *testing.T) {
 								"required": true,
 							},
 						},
-						map[string]interface{}{
-							"config": map[string]interface{}{
+						map[string]any{
+							"config": map[string]any{
 								"type": "record",
-								"fields": []interface{}{
-									map[string]interface{}{
-										"endpoint": map[string]interface{}{
+								"fields": []any{
+									map[string]any{
+										"endpoint": map[string]any{
 											"type":          "string",
 											"required":      true,
 											"description":   "A string representing a URL, such as https://example.com/path/to/resource?q=search.",
@@ -209,13 +209,13 @@ func TestFillPlugin(t *testing.T) {
 				},
 			},
 			schemas: &mockPluginSchemaStore{
-				schema: map[string]interface{}{
-					"fields": []interface{}{
-						map[string]interface{}{
-							"protocols": map[string]interface{}{
-								"elements": map[string]interface{}{
+				schema: map[string]any{
+					"fields": []any{
+						map[string]any{
+							"protocols": map[string]any{
+								"elements": map[string]any{
 									"type": "string",
-									"one_of": []interface{}{
+									"one_of": []any{
 										"grpc",
 										"grpcs",
 										"http",
@@ -224,7 +224,7 @@ func TestFillPlugin(t *testing.T) {
 								},
 								"description": "A set of strings representing HTTP protocols.",
 								"type":        "set",
-								"default": []interface{}{
+								"default": []any{
 									"grpc",
 									"grpcs",
 									"http",
@@ -233,54 +233,54 @@ func TestFillPlugin(t *testing.T) {
 								"required": true,
 							},
 						},
-						map[string]interface{}{
-							"config": map[string]interface{}{
+						map[string]any{
+							"config": map[string]any{
 								"type": "record",
-								"fields": []interface{}{
-									map[string]interface{}{
-										"endpoint": map[string]interface{}{
+								"fields": []any{
+									map[string]any{
+										"endpoint": map[string]any{
 											"type":          "string",
 											"required":      true,
 											"description":   "A string representing a URL, such as https://example.com/path/to/resource?q=search.",
 											"referenceable": true,
 										},
 									},
-									map[string]interface{}{
-										"headers": map[string]interface{}{
+									map[string]any{
+										"headers": map[string]any{
 											"description": "The custom headers to be added in the HTTP request sent to the OTLP server. This setting is useful for adding the authentication headers (token) for the APM backend.",
 											"type":        "map",
-											"values": map[string]interface{}{
+											"values": map[string]any{
 												"type":          "string",
 												"referenceable": true,
 											},
-											"keys": map[string]interface{}{
+											"keys": map[string]any{
 												"type":        "string",
 												"description": "A string representing an HTTP header name.",
 											},
 										},
 									},
-									map[string]interface{}{
-										"resource_attributes": map[string]interface{}{
+									map[string]any{
+										"resource_attributes": map[string]any{
 											"type": "map",
-											"keys": map[string]interface{}{
+											"keys": map[string]any{
 												"type":     "string",
 												"required": true,
 											},
-											"values": map[string]interface{}{
+											"values": map[string]any{
 												"type":     "string",
 												"required": true,
 											},
 											"description": "Attributes to add to the OpenTelemetry resource object, following the spec for Semantic Attributes. \nThe following attributes are automatically added:\n- \"service.name\": The name of the service (default:'kong').\n-'service.version': The version of Kong Gateway.\n-'service.instance.id': The node ID of Kong Gateway.\n\nYou can use this property to override default attribute values. For example, to override the default for'service.name', you can specify'{ \"service.name\": \"my-service\" }'.",
 										},
 									},
-									map[string]interface{}{
-										"queue": map[string]interface{}{
+									map[string]any{
+										"queue": map[string]any{
 											"type": "record",
-											"fields": []interface{}{
-												map[string]interface{}{
-													"max_batch_size": map[string]interface{}{
+											"fields": []any{
+												map[string]any{
+													"max_batch_size": map[string]any{
 														"type": "integer",
-														"between": []interface{}{
+														"between": []any{
 															1,
 															1000000,
 														},
@@ -288,10 +288,10 @@ func TestFillPlugin(t *testing.T) {
 														"description": "Maximum number of entries that can be processed at a time.",
 													},
 												},
-												map[string]interface{}{
-													"max_coalescing_delay": map[string]interface{}{
+												map[string]any{
+													"max_coalescing_delay": map[string]any{
 														"type": "number",
-														"between": []interface{}{
+														"between": []any{
 															0,
 															3600,
 														},
@@ -299,10 +299,10 @@ func TestFillPlugin(t *testing.T) {
 														"description": "Maximum number of (fractional) seconds to elapse after the first entry was queued before the queue starts calling the handler.",
 													},
 												},
-												map[string]interface{}{
-													"max_entries": map[string]interface{}{
+												map[string]any{
+													"max_entries": map[string]any{
 														"type": "integer",
-														"between": []interface{}{
+														"between": []any{
 															1,
 															1000000,
 														},
@@ -310,23 +310,23 @@ func TestFillPlugin(t *testing.T) {
 														"description": "Maximum number of entries that can be waiting on the queue.",
 													},
 												},
-												map[string]interface{}{
-													"max_bytes": map[string]interface{}{
+												map[string]any{
+													"max_bytes": map[string]any{
 														"type":        "integer",
 														"description": "Maximum number of bytes that can be waiting on a queue, requires string content.",
 													},
 												},
-												map[string]interface{}{
-													"max_retry_time": map[string]interface{}{
+												map[string]any{
+													"max_retry_time": map[string]any{
 														"type":        "number",
 														"default":     60,
 														"description": "Time in seconds before the queue gives up calling a failed handler for a batch.",
 													},
 												},
-												map[string]interface{}{
-													"initial_retry_delay": map[string]interface{}{
+												map[string]any{
+													"initial_retry_delay": map[string]any{
 														"type": "number",
-														"between": []interface{}{
+														"between": []any{
 															0.001,
 															1000000,
 														},
@@ -334,10 +334,10 @@ func TestFillPlugin(t *testing.T) {
 														"description": "Time in seconds before the initial retry is made for a failing batch.",
 													},
 												},
-												map[string]interface{}{
-													"max_retry_delay": map[string]interface{}{
+												map[string]any{
+													"max_retry_delay": map[string]any{
 														"type": "number",
-														"between": []interface{}{
+														"between": []any{
 															0.001,
 															1000000,
 														},
@@ -346,81 +346,81 @@ func TestFillPlugin(t *testing.T) {
 													},
 												},
 											},
-											"default": map[string]interface{}{
+											"default": map[string]any{
 												"max_batch_size": 200,
 											},
 											"required": true,
 										},
 									},
-									map[string]interface{}{
-										"batch_span_count": map[string]interface{}{
+									map[string]any{
+										"batch_span_count": map[string]any{
 											"description": "The number of spans to be sent in a single batch.",
 											"type":        "integer",
-											"deprecation": map[string]interface{}{
+											"deprecation": map[string]any{
 												"old_default":        200,
 												"removal_in_version": "4.0",
 												"message":            "opentelemetry: config.batch_span_count is deprecated, please use config.queue.max_batch_size instead",
 											},
 										},
 									},
-									map[string]interface{}{
-										"batch_flush_delay": map[string]interface{}{
+									map[string]any{
+										"batch_flush_delay": map[string]any{
 											"description": "The delay, in seconds, between two consecutive batches.",
 											"type":        "integer",
-											"deprecation": map[string]interface{}{
+											"deprecation": map[string]any{
 												"old_default":        3,
 												"removal_in_version": "4.0",
 												"message":            "opentelemetry: config.batch_flush_delay is deprecated, please use config.queue.max_coalescing_delay instead",
 											},
 										},
 									},
-									map[string]interface{}{
-										"connect_timeout": map[string]interface{}{
+									map[string]any{
+										"connect_timeout": map[string]any{
 											"type":        "integer",
 											"description": "An integer representing a timeout in milliseconds. Must be between 0 and 2^31-2.",
 											"default":     1000,
-											"between": []interface{}{
+											"between": []any{
 												0,
 												2147483646,
 											},
 										},
 									},
-									map[string]interface{}{
-										"send_timeout": map[string]interface{}{
+									map[string]any{
+										"send_timeout": map[string]any{
 											"type":        "integer",
 											"description": "An integer representing a timeout in milliseconds. Must be between 0 and 2^31-2.",
 											"default":     5000,
-											"between": []interface{}{
+											"between": []any{
 												0,
 												2147483646,
 											},
 										},
 									},
-									map[string]interface{}{
-										"read_timeout": map[string]interface{}{
+									map[string]any{
+										"read_timeout": map[string]any{
 											"type":        "integer",
 											"description": "An integer representing a timeout in milliseconds. Must be between 0 and 2^31-2.",
 											"default":     5000,
-											"between": []interface{}{
+											"between": []any{
 												0,
 												2147483646,
 											},
 										},
 									},
-									map[string]interface{}{
-										"http_response_header_for_traceid": map[string]interface{}{
+									map[string]any{
+										"http_response_header_for_traceid": map[string]any{
 											"description": "Specifies a custom header for the'trace_id'. If set, the plugin sets the corresponding header in the response.",
 											"type":        "string",
 										},
 									},
-									map[string]interface{}{
-										"header_type": map[string]interface{}{
-											"deprecation": map[string]interface{}{
+									map[string]any{
+										"header_type": map[string]any{
+											"deprecation": map[string]any{
 												"old_default":        "preserve",
 												"removal_in_version": "4.0",
 												"message":            "opentelemetry: config.header_type is deprecated, please use config.propagation options instead",
 											},
-											"one_of": []interface{}{
+											"one_of": []any{
 												"preserve",
 												"ignore",
 												"b3",
@@ -438,9 +438,9 @@ func TestFillPlugin(t *testing.T) {
 											"required":    false,
 										},
 									},
-									map[string]interface{}{
-										"sampling_rate": map[string]interface{}{
-											"between": []interface{}{
+									map[string]any{
+										"sampling_rate": map[string]any{
+											"between": []any{
 												0,
 												1,
 											},
@@ -449,17 +449,17 @@ func TestFillPlugin(t *testing.T) {
 											"required":    false,
 										},
 									},
-									map[string]interface{}{
-										"propagation": map[string]interface{}{
+									map[string]any{
+										"propagation": map[string]any{
 											"type": "record",
-											"fields": []interface{}{
-												map[string]interface{}{
-													"extract": map[string]interface{}{
+											"fields": []any{
+												map[string]any{
+													"extract": map[string]any{
 														"description": "Header formats used to extract tracing context from incoming requests. If multiple values are specified, the first one found will be used for extraction. If left empty, Kong will not extract any tracing context information from incoming requests and generate a trace with no parent and a new trace ID.",
 														"type":        "array",
-														"elements": map[string]interface{}{
+														"elements": map[string]any{
 															"type": "string",
-															"one_of": []interface{}{
+															"one_of": []any{
 																"ot",
 																"w3c",
 																"datadog",
@@ -471,22 +471,22 @@ func TestFillPlugin(t *testing.T) {
 														},
 													},
 												},
-												map[string]interface{}{
-													"clear": map[string]interface{}{
+												map[string]any{
+													"clear": map[string]any{
 														"description": "Header names to clear after context extraction. This allows to extract the context from a certain header and then remove it from the request, useful when extraction and injection are performed on different header formats and the original header should not be sent to the upstream. If left empty, no headers are cleared.",
 														"type":        "array",
-														"elements": map[string]interface{}{
+														"elements": map[string]any{
 															"type": "string",
 														},
 													},
 												},
-												map[string]interface{}{
-													"inject": map[string]interface{}{
+												map[string]any{
+													"inject": map[string]any{
 														"description": "Header formats used to inject tracing context. The value 'preserve' will use the same header format as the incoming request. If multiple values are specified, all of them will be used during injection. If left empty, Kong will not inject any tracing context information in outgoing requests.",
 														"type":        "array",
-														"elements": map[string]interface{}{
+														"elements": map[string]any{
 															"type": "string",
-															"one_of": []interface{}{
+															"one_of": []any{
 																"preserve",
 																"ot",
 																"w3c",
@@ -500,10 +500,10 @@ func TestFillPlugin(t *testing.T) {
 														},
 													},
 												},
-												map[string]interface{}{
-													"default_format": map[string]interface{}{
+												map[string]any{
+													"default_format": map[string]any{
 														"description": "The default header format to use when extractors did not match any format in the incoming headers and'inject' is configured with the value:'preserve'. This can happen when no tracing header was found in the request, or the incoming tracing header formats were not included in'extract'.",
-														"one_of": []interface{}{
+														"one_of": []any{
 															"ot",
 															"w3c",
 															"datadog",
@@ -518,7 +518,7 @@ func TestFillPlugin(t *testing.T) {
 													},
 												},
 											},
-											"default": map[string]interface{}{
+											"default": map[string]any{
 												"default_format": "w3c",
 											},
 											"required": true,
@@ -529,7 +529,7 @@ func TestFillPlugin(t *testing.T) {
 							},
 						},
 					},
-					"entity_checks": []interface{}{},
+					"entity_checks": []any{},
 				},
 			},
 			expected: &file.FPlugin{
@@ -550,13 +550,13 @@ func TestFillPlugin(t *testing.T) {
 						"header_type":                      "preserve",
 						"headers":                          nil,
 						"http_response_header_for_traceid": nil,
-						"propagation": map[string]interface{}{
+						"propagation": map[string]any{
 							"clear":          nil,
 							"default_format": "w3c",
 							"extract":        nil,
 							"inject":         nil,
 						},
-						"queue": map[string]interface{}{
+						"queue": map[string]any{
 							"initial_retry_delay":  float64(0.01),
 							"max_batch_size":       float64(200),
 							"max_bytes":            nil,
@@ -590,9 +590,9 @@ func TestFillPlugin(t *testing.T) {
 }
 
 type mockPluginSchemaStore struct {
-	schema map[string]interface{}
+	schema map[string]any
 }
 
-func (m *mockPluginSchemaStore) Schema(_ context.Context, _ string) (map[string]interface{}, error) {
+func (m *mockPluginSchemaStore) Schema(_ context.Context, _ string) (map[string]any, error) {
 	return m.schema, nil
 }

@@ -92,7 +92,7 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 	}
 	expectedMessage := "invalid path: value must be null"
 	expectedRawErrBody := []byte(`{"code":14,"name":"invalid declarative configuration","fields":{},"message":"declarative config is invalid: {}","flattened_errors":[{"entity_type":"service","entity_name":"test-service","entity_tags":["k8s-name:test-service","k8s-namespace:default","k8s-kind:Service","k8s-uid:a3b8afcc-9f19-42e4-aa8f-5866168c2ad3","k8s-group:","k8s-version:v1"],"errors":[{"type":"field","message":"value must be null","field":"path"},{"type":"entity","message":"failed conditional validation given value of field 'protocol'"}],"entity":{"path":"/test","name":"test-service","protocol":"grpc","tags":["k8s-name:test-service","k8s-namespace:default","k8s-kind:Service","k8s-uid:a3b8afcc-9f19-42e4-aa8f-5866168c2ad3","k8s-group:","k8s-version:v1"],"host":"konghq.com","port":80}}]}`)
-	expectedBody := map[string]interface{}{}
+	expectedBody := map[string]any{}
 	require.NoError(t, json.Unmarshal(expectedRawErrBody, &expectedBody))
 
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
@@ -131,7 +131,7 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 		if diff := cmp.Diff(expectedCausingObjects, resourceErr.CausingObjects()); !assert.Empty(t, diff) {
 			return
 		}
-		actualBody := map[string]interface{}{}
+		actualBody := map[string]any{}
 		err = json.Unmarshal(updateError.RawResponseBody(), &actualBody)
 		if !assert.NoError(t, err) {
 			return

@@ -32,7 +32,7 @@ func TestValidateProtocol(t *testing.T) {
 }
 
 func BenchmarkValidateProtocol(b *testing.B) {
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		_ = ValidateProtocol("https")
 		_ = ValidateProtocol("tcp")
 		_ = ValidateProtocol("tls")

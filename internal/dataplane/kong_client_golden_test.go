@@ -388,9 +388,9 @@ func (f fakeSchemaService) Get(_ context.Context, entityType string) (kong.Schem
 	switch entityType {
 	case "degraphql_routes":
 		return kong.Schema{
-			"fields": []interface{}{
-				map[string]interface{}{
-					"service": map[string]interface{}{
+			"fields": []any{
+				map[string]any{
+					"service": map[string]any{
 						"type":      "foreign",
 						"reference": "services",
 					},
@@ -416,5 +416,5 @@ func buildPostConfigErrorResponseWithBrokenObjects(brokenObjects []client.Object
 		flattenedErrors = append(flattenedErrors, flattenedError)
 	}
 
-	return []byte(fmt.Sprintf(`{"flattened_errors": [%s]}`, strings.Join(flattenedErrors, ",")))
+	return fmt.Appendf(nil, `{"flattened_errors": [%s]}`, strings.Join(flattenedErrors, ","))
 }

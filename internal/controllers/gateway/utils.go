@@ -12,8 +12,8 @@ import (
 // -----------------------------------------------------------------------------
 
 // debug is an alias for the longer log.V(util.DebugLevel).Info for convenience.
-func debug(log logr.Logger, obj client.Object, msg string, keysAndValues ...interface{}) {
-	keysAndValues = append([]interface{}{
+func debug(log logr.Logger, obj client.Object, msg string, keysAndValues ...any) {
+	keysAndValues = append([]any{
 		"namespace", obj.GetNamespace(),
 		"name", obj.GetName(),
 	}, keysAndValues...)
@@ -21,8 +21,8 @@ func debug(log logr.Logger, obj client.Object, msg string, keysAndValues ...inte
 }
 
 // info is an alias for the longer log.V(util.InfoLevel).Info for convenience.
-func info(log logr.Logger, obj client.Object, msg string, keysAndValues ...interface{}) { //nolint:unparam
-	keysAndValues = append([]interface{}{
+func info(log logr.Logger, obj client.Object, msg string, keysAndValues ...any) { //nolint:unparam
+	keysAndValues = append([]any{
 		"namespace", obj.GetNamespace(),
 		"name", obj.GetName(),
 	}, keysAndValues...)

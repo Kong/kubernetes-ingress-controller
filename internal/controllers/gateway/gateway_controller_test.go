@@ -186,21 +186,21 @@ func TestIsGatewayMarkedAsAccepted(t *testing.T) {
 func TestPruneStatusConditions(t *testing.T) {
 	t.Log("verifying that a gateway with minimal status conditions is not pruned")
 	gateway := &gatewayapi.Gateway{}
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		gateway.Status.Conditions = append(gateway.Status.Conditions, metav1.Condition{Type: "fake", ObservedGeneration: int64(i)})
 	}
 	assert.Len(t, pruneGatewayStatusConds(gateway).Status.Conditions, 4)
 	assert.Len(t, gateway.Status.Conditions, 4)
 
 	t.Log("verifying that a gateway with the maximum allowed number of conditions is note pruned")
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		gateway.Status.Conditions = append(gateway.Status.Conditions, metav1.Condition{Type: "fake", ObservedGeneration: int64(i) + 4})
 	}
 	assert.Len(t, pruneGatewayStatusConds(gateway).Status.Conditions, 8)
 	assert.Len(t, gateway.Status.Conditions, 8)
 
 	t.Log("verifying that a gateway with too many status conditions is pruned")
-	for i := 0; i < 4; i++ {
+	for i := range 4 {
 		gateway.Status.Conditions = append(gateway.Status.Conditions, metav1.Condition{Type: "fake", ObservedGeneration: int64(i) + 8})
 	}
 	assert.Len(t, pruneGatewayStatusConds(gateway).Status.Conditions, 8)

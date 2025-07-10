@@ -293,8 +293,7 @@ func ExtractHeaders(anns map[string]string) (map[string][]string, bool) {
 		separator = ","
 	}
 	for key, val := range anns {
-		if after, ok0 := strings.CutPrefix(key, prefix); ok0 {
-			header := after
+		if header, ok0 := strings.CutPrefix(key, prefix); ok0 {
 			if len(header) == 0 || len(val) == 0 {
 				continue
 			}

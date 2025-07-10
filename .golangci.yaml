@@ -158,7 +158,7 @@ linters:
           alias: konnect${1}
         - pkg: github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config
           alias: dpconf
-        - pkg: github.com/kong/kubernetes-ingress-controller/v3/controllers/license
+        - pkg: github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/license
           alias: ctrllicense
         - pkg: github.com/Kong/sdk-konnect-go/models/components
           alias: sdkkonnectcomp

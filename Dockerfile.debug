@@ -25,7 +25,6 @@ RUN --mount=type=cache,target=$GOPATH/pkg/mod \
     --mount=type=bind,source=go.mod,target=go.mod \
     go mod download -x
 
-COPY controllers/ controllers/
 COPY pkg/ pkg/
 COPY internal/ internal/
 COPY Makefile .

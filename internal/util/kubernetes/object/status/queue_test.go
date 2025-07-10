@@ -100,13 +100,13 @@ func TestQueue(t *testing.T) {
 	assert.Len(t, udpCH, 6)
 
 	t.Log("verifying that all objects can be consumed and the queue can be drained")
-	for i := 0; i < 4; i++ {
+	for range 4 {
 		assert.Equal(t, ingGVK, (<-ingCH).Object.GetObjectKind().GroupVersionKind())
 	}
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		assert.Equal(t, event.GenericEvent{Object: tcp}, <-tcpCH)
 	}
-	for i := 0; i < 6; i++ {
+	for range 6 {
 		assert.Equal(t, event.GenericEvent{Object: udp}, <-udpCH)
 	}
 	assert.Len(t, q.subscriptions, 3)
@@ -178,7 +178,7 @@ func TestQueuePublish(t *testing.T) {
 
 		shouldCompleteAlmostImmediately(t, func() {
 			// Publish more events than the buffer size and expect no block.
-			for i := 0; i < testBufferSize+1; i++ {
+			for range testBufferSize + 1 {
 				q.Publish(testObj)
 			}
 		})
@@ -191,7 +191,7 @@ func TestQueuePublish(t *testing.T) {
 		shouldCompleteAlmostImmediately(t, func() {
 			// Publish exactly the number of events that fit in the buffer. Expect no block.
 			// This is to ensure that the buffer is full.
-			for i := 0; i < testBufferSize; i++ {
+			for range testBufferSize {
 				q.Publish(testObj)
 			}
 		})

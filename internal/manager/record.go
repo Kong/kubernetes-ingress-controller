@@ -27,7 +27,7 @@ type eventRecorderWithID struct {
 }
 
 func (e *eventRecorderWithID) AnnotatedEventf(
-	object runtime.Object, annotations map[string]string, eventtype string, reason string, messageFmt string, args ...interface{},
+	object runtime.Object, annotations map[string]string, eventtype string, reason string, messageFmt string, args ...any,
 ) {
 	e.eventRecorder.AnnotatedEventf(object, lo.Assign(e.idAnnotation, annotations), eventtype, reason, messageFmt, args...)
 }
@@ -36,6 +36,6 @@ func (e *eventRecorderWithID) Event(object runtime.Object, eventtype string, rea
 	e.eventRecorder.AnnotatedEventf(object, e.idAnnotation, eventtype, reason, message)
 }
 
-func (e *eventRecorderWithID) Eventf(object runtime.Object, eventtype string, reason string, messageFmt string, args ...interface{}) {
+func (e *eventRecorderWithID) Eventf(object runtime.Object, eventtype string, reason string, messageFmt string, args ...any) {
 	e.eventRecorder.AnnotatedEventf(object, e.idAnnotation, eventtype, reason, messageFmt, args...)
 }

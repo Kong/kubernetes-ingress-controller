@@ -261,7 +261,7 @@ func TestGetCombinations(t *testing.T) {
 
 func BenchmarkGetCombinations(b *testing.B) {
 	b.Run("consumer groups", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			relations := ForeignRelations{
 				Route:         []FR{{Identifier: "r1"}, {Identifier: "r2"}},
 				Service:       []FR{{Identifier: "s1"}, {Identifier: "s2"}},
@@ -273,7 +273,7 @@ func BenchmarkGetCombinations(b *testing.B) {
 		}
 	})
 	b.Run("consumers", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			relations := ForeignRelations{
 				Route:    []FR{{Identifier: "r1"}, {Identifier: "r2"}},
 				Service:  []FR{{Identifier: "s1"}, {Identifier: "s2"}},

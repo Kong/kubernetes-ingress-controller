@@ -112,7 +112,7 @@ func isValidHostname(hostname string) error {
 	}
 
 	var invalid bool
-	for _, label := range strings.Split(hostname, ".") {
+	for label := range strings.SplitSeq(hostname, ".") {
 		if len(utilvalidation.IsDNS1123Label(label)) > 0 {
 			invalid = true
 		}

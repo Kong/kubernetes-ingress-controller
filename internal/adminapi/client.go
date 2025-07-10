@@ -134,7 +134,7 @@ func (c *Client) GetKongVersion(ctx context.Context) (string, error) {
 	return version, nil
 }
 
-func extractStringFromRoot(data map[string]interface{}, key string) (string, error) {
+func extractStringFromRoot(data map[string]any, key string) (string, error) {
 	val, ok := data[key]
 	if !ok {
 		return "", fmt.Errorf("%q key not found", key)

@@ -154,6 +154,13 @@ download.shellcheck: mise yq ## Download shellcheck locally if necessary.
 	@$(MISE) plugin install --yes -q shellcheck
 	@$(MISE) install -q shellcheck@$(SHELLCHECK_VERSION)
 
+MODERNIZE_VERSION = $(shell $(YQ) -r '.modernize' < $(TOOLS_VERSIONS_FILE))
+MODERNIZE = $(PROJECT_DIR)/bin/modernize
+.PHONY: modernize
+modernize: yq
+	GOBIN=$(PROJECT_DIR)/bin go install -v \
+		golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@$(MODERNIZE_VERSION)
+
 # ------------------------------------------------------------------------------
 # Build
 # ------------------------------------------------------------------------------
@@ -203,8 +210,13 @@ _build.template.debug:
 fmt:
 	go fmt ./...
 
+
+.PHONY: lint.modernize
+lint.modernize: modernize
+	$(MODERNIZE) ./...
+
 .PHONY: lint
-lint: verify.tidy golangci-lint staticcheck
+lint: verify.tidy golangci-lint lint.modernize staticcheck
 
 .PHONY: lint.actions
 lint.actions: download.actionlint download.shellcheck

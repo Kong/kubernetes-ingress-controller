@@ -6,6 +6,7 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/kong/go-kong/kong"
@@ -113,12 +114,7 @@ func getPluginsAssociatedWithCACertSecret(secretID string, storer store.Storer) 
 			return false
 		}
 
-		for _, reference := range cfg.CACertificates {
-			if reference == secretID {
-				return true
-			}
-		}
-		return false
+		return slices.Contains(cfg.CACertificates, secretID)
 	}
 
 	var affectedPlugins []client.Object

@@ -393,13 +393,11 @@ func AssignRoutePriorityToSplitGRPCRouteMatches(
 		})
 
 		for i, match := range matches {
-			relativeOrderBits := defaultRelativeOrderPriorityBits - RoutePriorityType(i)
-			// Although it is very unlikely that there are 2^8 = 256 GRPCRoutes
-			// should be given priority by their relative order, here we limit the
-			// relativeOrderBits to be at least 0.
-			if relativeOrderBits <= 0 {
-				relativeOrderBits = 0
-			}
+			relativeOrderBits := max(
+				// Although it is very unlikely that there are 2^8 = 256 GRPCRoutes
+				// should be given priority by their relative order, here we limit the
+				// relativeOrderBits to be at least 0.
+				defaultRelativeOrderPriorityBits-RoutePriorityType(i), 0)
 			splitGRPCRoutesToPriority = append(splitGRPCRoutesToPriority, SplitGRPCRouteMatchToPriority{
 				Match:    match,
 				Priority: priority + relativeOrderBits,

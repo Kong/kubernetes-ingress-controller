@@ -121,7 +121,7 @@ func NewLicenseCache() cache.Store {
 	return cache.NewStore(kongLicenseKeyFunc)
 }
 
-func kongLicenseKeyFunc(obj interface{}) (string, error) {
+func kongLicenseKeyFunc(obj any) (string, error) {
 	l, ok := obj.(*configurationv1alpha1.KongLicense)
 	if !ok {
 		return "", fmt.Errorf("object is type %T, not KongLicense", obj)

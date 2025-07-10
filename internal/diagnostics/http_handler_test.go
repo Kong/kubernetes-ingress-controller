@@ -213,7 +213,7 @@ func TestHTTPHandler(t *testing.T) {
 				body, err := io.ReadAll(resp.Body)
 				require.NoError(t, err)
 
-				dummy := map[string]interface{}{}
+				dummy := map[string]any{}
 				if err := json.Unmarshal(body, &dummy); err == nil {
 					// If the expected response is JSON, we can use JSONEq to compare.
 					require.JSONEq(t, tc.expectedResponse, string(body))

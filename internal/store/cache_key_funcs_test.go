@@ -9,7 +9,7 @@ import (
 
 func TestKeyFunc(t *testing.T) {
 	type args struct {
-		obj interface{}
+		obj any
 	}
 
 	type F struct {

@@ -176,8 +176,8 @@ func headerMatcherFromHeaders(headers map[string][]string) atc.Matcher {
 		singleHeaderMatcher := atc.Or()
 		for _, val := range values {
 			// generate a predicate using regex match if value starts with the special prefix "~*".
-			if strings.HasPrefix(val, headerAnnotationRegexPrefix) {
-				regex := strings.TrimPrefix(val, headerAnnotationRegexPrefix)
+			if after, ok := strings.CutPrefix(val, headerAnnotationRegexPrefix); ok {
+				regex := after
 				singleHeaderMatcher.Or(atc.NewPredicateHTTPHeader(headerName, atc.OpRegexMatch, regex))
 			} else {
 				// otherwise, genereate a predicate using exact match.

@@ -1013,7 +1013,7 @@ func TestBuildPolicyStatus(t *testing.T) {
 			name: "more ancestors than allowed - keeps only maxNAncestors oldest ones",
 			ancestorsStatuses: func() []ancestorStatus {
 				var ancestors []ancestorStatus
-				for i := 0; i < maxNAncestors+2; i++ {
+				for i := range maxNAncestors + 2 {
 					ancestors = append(ancestors, serviceStatus(fmt.Sprintf("svc-%d", i), now.Add(time.Duration(i)*time.Second)))
 				}
 				return ancestors
@@ -1021,7 +1021,7 @@ func TestBuildPolicyStatus(t *testing.T) {
 			expected: gatewayapi.PolicyStatus{
 				Ancestors: func() []gatewayapi.PolicyAncestorStatus {
 					var ancestors []gatewayapi.PolicyAncestorStatus
-					for i := 0; i < maxNAncestors; i++ {
+					for i := range maxNAncestors {
 						ancestors = append(ancestors, serviceExpectedPolicyAncestorStatus(fmt.Sprintf("svc-%d", i)))
 					}
 					return ancestors

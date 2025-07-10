@@ -1,6 +1,6 @@
 ### Standard binary
 # Build the manager binary
-FROM --platform=$BUILDPLATFORM golang:1.24.3@sha256:86b4cff66e04d41821a17cea30c1031ed53e2635e2be99ae0b4a7d69336b5063 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.24.5@sha256:a9219eb99cd2951b042985dbec09d508b3ddc20c4da52a3a55b275b3779e4a05 AS builder
 
 ARG GOPATH
 ARG GOCACHE
@@ -80,7 +80,7 @@ ARG REPO_INFO
 RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on make _build.fips
 
 ### distroless FIPS 140-2
-FROM gcr.io/distroless/static:nonroot@sha256:c0f429e16b13e583da7e5a6ec20dd656d325d88e6819cafe0adb0828976529dc AS distroless-fips
+FROM gcr.io/distroless/static:nonroot@sha256:627d6c5a23ad24e6bdff827f16c7b60e0289029b0c79e9f7ccd54ae3279fb45f AS distroless-fips
 WORKDIR /
 COPY --from=builder-fips /workspace/manager .
 USER 1000:1000
@@ -90,7 +90,7 @@ ENTRYPOINT ["/manager"]
 ### Distroless/default
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot@sha256:c0f429e16b13e583da7e5a6ec20dd656d325d88e6819cafe0adb0828976529dc AS distroless
+FROM gcr.io/distroless/static:nonroot@sha256:627d6c5a23ad24e6bdff827f16c7b60e0289029b0c79e9f7ccd54ae3279fb45f AS distroless
 ARG TAG
 ARG TARGETPLATFORM
 ARG TARGETOS

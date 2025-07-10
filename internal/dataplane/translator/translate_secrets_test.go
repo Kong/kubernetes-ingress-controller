@@ -22,7 +22,7 @@ func TestGetPluginsAssociatedWithCACertSecret(t *testing.T) {
 				Name: name,
 			},
 			Config: apiextensionsv1.JSON{
-				Raw: []byte(fmt.Sprintf(`{"ca_certificates": ["%s"]}`, secretID)),
+				Raw: fmt.Appendf(nil, `{"ca_certificates": ["%s"]}`, secretID),
 			},
 		}
 	}
@@ -33,7 +33,7 @@ func TestGetPluginsAssociatedWithCACertSecret(t *testing.T) {
 				Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
 			},
 			Config: apiextensionsv1.JSON{
-				Raw: []byte(fmt.Sprintf(`{"ca_certificates": ["%s"]}`, secretID)),
+				Raw: fmt.Appendf(nil, `{"ca_certificates": ["%s"]}`, secretID),
 			},
 		}
 	}

@@ -12,12 +12,20 @@ const (
 	// ValidateKey is the key used to indicate a Secret contains plugin configuration.
 	ValidateKey = "/validate"
 
+	// ManagedByKey is the key to indicate the contoller that manages the object.
+	ManagedByKey = "/managed-by"
+
 	// CredentialTypeLabel is the label used to indicate a Secret's credential type.
 	CredentialTypeLabel = LabelPrefix + CredentialKey
 
 	// ValidateLabel is applied to plugins used for plugin configuration to allow the admission webhook to check
 	// updates to them.
 	ValidateLabel = LabelPrefix + ValidateKey
+
+	// ManagedByLabel is the label key to mark that the object is managed by a specific controller.
+	ManagedByLabel = LabelPrefix + ManagedByKey
+	// ManagedByLabelValueIngressController is the label value that marks the object is managed byu KIC.
+	ManagedByLabelValueIngressController = LabelPrefix + "/ingress-controller"
 )
 
 // ValidateType indicates the type of validation applied to a Secret.

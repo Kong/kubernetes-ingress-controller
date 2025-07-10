@@ -3,6 +3,7 @@ package deckerrors
 import (
 	"errors"
 	"net/http"
+	"slices"
 
 	deckutils "github.com/kong/go-database-reconciler/pkg/utils"
 	"github.com/kong/go-kong/kong"
@@ -36,10 +37,8 @@ func IsConflictErr(err error) bool {
 
 	var deckErrArray deckutils.ErrArray
 	if errors.As(err, &deckErrArray) {
-		for _, err := range deckErrArray.Errors {
-			if IsConflictErr(err) {
-				return true
-			}
+		if slices.ContainsFunc(deckErrArray.Errors, IsConflictErr) {
+			return true
 		}
 	}
 

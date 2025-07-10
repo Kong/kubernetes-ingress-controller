@@ -48,7 +48,7 @@ func NewRefCheckerForKongPlugin[T BackendRefT](log logr.Logger, target client.Ob
 func (rc RefChecker[T]) IsRefAllowedByGrant(
 	allowedRefs map[Namespace][]ReferenceGrantTo,
 ) bool {
-	switch br := (interface{})(rc.backendRef).(type) {
+	switch br := (any)(rc.backendRef).(type) {
 	case BackendRef:
 		// NOTE https://github.com/Kong/kubernetes-ingress-controller/issues/6000
 		// This is a catch-all that the plugins technically won't need as-is because they have their own

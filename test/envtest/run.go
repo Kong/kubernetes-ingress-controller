@@ -20,7 +20,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/health"
 	"github.com/kong/kubernetes-ingress-controller/v3/pkg/manager"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
-	"github.com/kong/kubernetes-ingress-controller/v3/pkg/telemetry"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/mocks"
 )
 
@@ -160,6 +159,12 @@ func WithKongServiceFacadeFeatureEnabled() func(cfg *managercfg.Config) {
 	}
 }
 
+func WithKongUpstreamPolicyEnabled() func(cfg *managercfg.Config) {
+	return func(cfg *managercfg.Config) {
+		cfg.KongUpstreamPolicyEnabled = true
+	}
+}
+
 func WithKongAdminURLs(urls ...string) func(cfg *managercfg.Config) {
 	return func(cfg *managercfg.Config) {
 		cfg.KongAdminURLs = urls
@@ -244,36 +249,6 @@ func SetupManager(
 		health.NewHealthCheckServer(
 			healthz.Ping, health.NewHealthCheckerFromFunc(mgr.IsReady),
 		).Start(ctx, cfg.ProbeAddr, logger.WithName("health-check"))
-	}
-	if cfg.AnonymousReports {
-		stopAnonymousReports, err := telemetry.SetupAnonymousReports(
-			ctx,
-			mgr.GetKubeconfig(),
-			mgr.GetClientsManager(),
-			telemetry.ReportConfig{
-				SplunkEndpoint:                   cfg.SplunkEndpoint,
-				SplunkEndpointInsecureSkipVerify: cfg.SplunkEndpointInsecureSkipVerify,
-				TelemetryPeriod:                  cfg.TelemetryPeriod,
-				ReportValues: telemetry.ReportValues{
-					PublishServiceNN:               cfg.PublishService.OrEmpty(),
-					FeatureGates:                   cfg.FeatureGates,
-					MeshDetection:                  len(cfg.WatchNamespaces) == 0,
-					KonnectSyncEnabled:             cfg.Konnect.ConfigSynchronizationEnabled,
-					GatewayServiceDiscoveryEnabled: cfg.KongAdminSvc.IsPresent(),
-				},
-			},
-			mgrID,
-		)
-		// TODO: it's not closed properly (should be called after Run(...) returns), but for test it's fine for now.
-		// It will leak only in case of running it with telemetry enabled.
-		_ = stopAnonymousReports
-		if err != nil {
-			logger.Error(err, "Failed setting up anonymous reports, continuing without telemetry")
-		} else {
-			logger.Info("Anonymous reports enabled")
-		}
-	} else {
-		logger.Info("Anonymous reports disabled, skipping")
 	}
 
 	return mgr

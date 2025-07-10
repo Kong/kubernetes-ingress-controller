@@ -5,9 +5,20 @@ import (
 	"os"
 	"time"
 
+	"github.com/cnf/structhash"
 	"github.com/samber/mo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/telemetry/types"
 )
+
+// Hash computes a hash of the given config.
+func Hash(cfg Config) (string, error) {
+	// Use structhash to compute a hash of the config.
+	// This is used to detect changes in the config of the manager instances.
+	return structhash.Hash(cfg, 1)
+}
 
 // OptionalNamespacedName is a type that represents a NamespacedName that can be omitted in config.
 type OptionalNamespacedName = mo.Option[k8stypes.NamespacedName]
@@ -54,6 +65,11 @@ type Config struct {
 	ProxySyncSeconds                       float32
 	InitCacheSyncDuration                  time.Duration
 	ProxyTimeoutSeconds                    float32
+
+	// KubeRestConfig takes precedence over any fields related to what it configures,
+	// such as APIServerHost, APIServerQPS, etc. It's intended to be used when the controller
+	// is run as a part of Kong Operator. It bypass the mechanism of constructing this config.
+	KubeRestConfig *rest.Config
 
 	// Kubernetes configurations
 	KubeconfigPath           string
@@ -122,6 +138,14 @@ type Config struct {
 	// instead of this toggle, move the server out of the internal.Manager
 	DisableRunningDiagnosticsServer bool
 
+	// EnableDrainSupport controls whether to include terminating endpoints in Kong upstreams
+	// with weight=0 for graceful connection draining
+	EnableDrainSupport bool
+
+	// CombinedServicesFromDifferentHTTPRoutes controls whether we should combine rules from different HTTPRoutes
+	// that are sharing the same combination of backends to one Kong service.
+	CombinedServicesFromDifferentHTTPRoutes bool
+
 	// Feature Gates
 	FeatureGates FeatureGates
 
@@ -133,6 +157,8 @@ type Config struct {
 
 	Konnect KonnectConfig
 
+	// AnonymousReportsFixedPayloadCustomizer allows customization of anonymous telemetry reports sent by the controller.
+	AnonymousReportsFixedPayloadCustomizer types.PayloadCustomizer
 	// Override default telemetry settings (e.g. for testing). They aren't exposed in the CLI.
 	SplunkEndpoint                   string
 	SplunkEndpointInsecureSkipVerify bool

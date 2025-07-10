@@ -83,7 +83,7 @@ func (c CacheStores) TakeSnapshotIfChanged(previousSnapshotHash SnapshotHash) (
 		// Underlying store is implemented a thread-safe map so for method List() it doesn't maintain order of items.
 		// To successfully calculate hash we need to sort the items.
 		var capturedErr error
-		valuesForHashComputation := lo.Map(store.List(), func(item interface{}, _ int) string {
+		valuesForHashComputation := lo.Map(store.List(), func(item any, _ int) string {
 			obj, ok := item.(runtime.Object)
 			if !ok {
 				capturedErr = fmt.Errorf("expected runtime.Object, got %T", item)

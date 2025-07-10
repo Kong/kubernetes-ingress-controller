@@ -75,14 +75,17 @@ func TranslateKongUpstreamPolicy(policy configurationv1beta1.KongUpstreamPolicyS
 		HashOn:           translateHashOn(policy.HashOn),
 		HashOnHeader:     translateHashOnHeader(policy.HashOn),
 		HashOnURICapture: translateHashOnURICapture(policy.HashOn),
-		HashOnCookie:     translateHashOnCookie(policy.HashOn),
-		HashOnCookiePath: translateHashOnCookiePath(policy.HashOn),
+		HashOnCookie:     translateHashOnCookie(policy.HashOn, policy.HashOnFallback),
+		HashOnCookiePath: translateHashOnCookiePath(policy.HashOn, policy.HashOnFallback),
 		HashOnQueryArg:   translateHashOnQueryArg(policy.HashOn),
 
 		HashFallback:           translateHashOn(policy.HashOnFallback),
 		HashFallbackHeader:     translateHashOnHeader(policy.HashOnFallback),
 		HashFallbackURICapture: translateHashOnURICapture(policy.HashOnFallback),
 		HashFallbackQueryArg:   translateHashOnQueryArg(policy.HashOnFallback),
+
+		StickySessionsCookie:     translateStickySessionsCookie(policy.StickySessions),
+		StickySessionsCookiePath: translateStickySessionsCookiePath(policy.StickySessions),
 	}
 }
 
@@ -90,7 +93,10 @@ func translateHashOn(hashOn *configurationv1beta1.KongUpstreamHash) *string {
 	if hashOn == nil {
 		return nil
 	}
-	// CRD validations will ensure only one of hashOn fields can be set, therefore the order doesn't matter.
+
+	// CRD validations will ensure only one of hashOn fields can be set, therefore
+	// the order in which we check these doesn't matter.
+
 	switch {
 	case hashOn.Input != nil:
 		return lo.ToPtr(string(*hashOn.Input))
@@ -114,11 +120,20 @@ func translateHashOnHeader(hashOn *configurationv1beta1.KongUpstreamHash) *strin
 	return hashOn.Header
 }
 
-func translateHashOnCookie(hashOn *configurationv1beta1.KongUpstreamHash) *string {
-	if hashOn == nil {
+func translateHashOnCookie(hashOn, hashOnFallback *configurationv1beta1.KongUpstreamHash) *string {
+	if hashOn == nil && hashOnFallback == nil {
 		return nil
 	}
-	return hashOn.Cookie
+
+	if hashOn != nil && hashOn.Cookie != nil {
+		return hashOn.Cookie
+	}
+	if hashOnFallback != nil && hashOnFallback.Cookie != nil {
+		return hashOnFallback.Cookie
+	}
+
+	// This should not happen as this should be prevented by the CRD validation.
+	return nil
 }
 
 func translateHashOnQueryArg(hashOn *configurationv1beta1.KongUpstreamHash) *string {
@@ -135,11 +150,20 @@ func translateHashOnURICapture(hashOn *configurationv1beta1.KongUpstreamHash) *s
 	return hashOn.URICapture
 }
 
-func translateHashOnCookiePath(hashOn *configurationv1beta1.KongUpstreamHash) *string {
-	if hashOn == nil {
+func translateHashOnCookiePath(hashOn, hashOnFallback *configurationv1beta1.KongUpstreamHash) *string {
+	if hashOn == nil && hashOnFallback == nil {
 		return nil
 	}
-	return hashOn.CookiePath
+
+	if hashOn != nil && hashOn.CookiePath != nil {
+		return hashOn.CookiePath
+	}
+	if hashOnFallback != nil && hashOnFallback.CookiePath != nil {
+		return hashOnFallback.CookiePath
+	}
+
+	// This should not happen as this should be prevented by the CRD validation.
+	return nil
 }
 
 func translateHealthchecks(healthchecks *configurationv1beta1.KongUpstreamHealthcheck) *kong.Healthcheck {
@@ -211,4 +235,18 @@ func translateHTTPStatuses(statuses []configurationv1beta1.HTTPStatus) []int {
 	// Using lo.Map only in case healthy.HTTPStatuses is not nil, because lo.Map creates a non-nil slice even
 	// if the input slice is nil.
 	return lo.Map(statuses, func(s configurationv1beta1.HTTPStatus, _ int) int { return int(s) })
+}
+
+func translateStickySessionsCookie(stickySessions *configurationv1beta1.KongUpstreamStickySessions) *string {
+	if stickySessions == nil {
+		return nil
+	}
+	return &stickySessions.Cookie
+}
+
+func translateStickySessionsCookiePath(stickySessions *configurationv1beta1.KongUpstreamStickySessions) *string {
+	if stickySessions == nil {
+		return nil
+	}
+	return stickySessions.CookiePath
 }

@@ -383,7 +383,7 @@ func (s Store) ListBackendTLSPoliciesByTargetService(service k8stypes.Namespaced
 func (s Store) ListTCPIngresses() ([]*configurationv1beta1.TCPIngress, error) {
 	var ingresses []*configurationv1beta1.TCPIngress
 	err := cache.ListAll(s.stores.TCPIngress, labels.NewSelector(),
-		func(ob interface{}) {
+		func(ob any) {
 			ing, ok := ob.(*configurationv1beta1.TCPIngress)
 			if ok && s.isValidIngressClass(&ing.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
 				ingresses = append(ingresses, ing)
@@ -408,7 +408,7 @@ func (s Store) ListUDPIngresses() ([]*configurationv1beta1.UDPIngress, error) {
 	}
 
 	err := cache.ListAll(s.stores.UDPIngress, labels.NewSelector(),
-		func(ob interface{}) {
+		func(ob any) {
 			ing, ok := ob.(*configurationv1beta1.UDPIngress)
 			if ok && s.isValidIngressClass(&ing.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
 				ingresses = append(ingresses, ing)
@@ -432,7 +432,7 @@ func (s Store) GetEndpointSlicesForService(namespace, name string) ([]*discovery
 	var endpointSlices []*discoveryv1.EndpointSlice
 	if err := cache.ListAll(
 		s.stores.EndpointSlice, labels.NewSelector().Add(*req),
-		func(obj interface{}) {
+		func(obj any) {
 			// Ensure the EndpointSlice is for the Service from the requested namespace.
 			if eps, ok := obj.(*discoveryv1.EndpointSlice); ok && eps.Namespace == namespace {
 				endpointSlices = append(endpointSlices, eps)
@@ -671,7 +671,7 @@ func (s Store) ListGlobalKongClusterPlugins() ([]*configurationv1.KongClusterPlu
 	}
 	err = cache.ListAll(s.stores.ClusterPlugin,
 		labels.NewSelector().Add(*req),
-		func(ob interface{}) {
+		func(ob any) {
 			p, ok := ob.(*configurationv1.KongClusterPlugin)
 			if ok && s.isValidIngressClass(&p.ObjectMeta, annotations.IngressClassKey, s.getIngressClassHandling()) {
 				plugins = append(plugins, p)
@@ -718,7 +718,7 @@ func (s Store) ListCACerts() ([]*corev1.Secret, []*corev1.ConfigMap, error) {
 	}
 	err = cache.ListAll(s.stores.Secret,
 		labels.NewSelector().Add(*req),
-		func(ob interface{}) {
+		func(ob any) {
 			if p, ok := ob.(*corev1.Secret); ok {
 				secrets = append(secrets, p)
 			}
@@ -728,7 +728,7 @@ func (s Store) ListCACerts() ([]*corev1.Secret, []*corev1.ConfigMap, error) {
 	}
 	err = cache.ListAll(s.stores.ConfigMap,
 		labels.NewSelector().Add(*req),
-		func(ob interface{}) {
+		func(ob any) {
 			if p, ok := ob.(*corev1.ConfigMap); ok {
 				configMaps = append(configMaps, p)
 			}

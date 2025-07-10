@@ -20,10 +20,10 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane"
@@ -35,16 +35,13 @@ import (
 func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 	// Can't be run in parallel because we're using t.Setenv() below which doesn't allow it.
 
-	const (
-		waitTime = time.Minute
-		tickTime = 100 * time.Millisecond
-	)
-
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
-	restConfig := Setup(t, scheme.Scheme)
-	ctrlClient := NewControllerClient(t, scheme.Scheme, restConfig)
+	scheme := Scheme(t, WithKong, WithGatewayAPI)
+
+	restConfig := Setup(t, scheme)
+	ctrlClient := NewControllerClient(t, scheme, restConfig)
 
 	ns := CreateNamespace(ctx, t, ctrlClient)
 	ingressClassName := "kongenvtest"
@@ -60,12 +57,36 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 	deployment.Namespace = ns.Name
 	require.NoError(t, ctrlClient.Create(ctx, deployment))
 
+	t.Log("creating a KongUpstreamPolicy with sticky sessions configuration")
+	upstreamPolicy := &configurationv1beta1.KongUpstreamPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "echo-drain-policy",
+			Namespace: ns.Name,
+			Annotations: map[string]string{
+				annotations.IngressClassKey: ingressClassName,
+			},
+		},
+		Spec: configurationv1beta1.KongUpstreamPolicySpec{
+			Algorithm: lo.ToPtr("sticky-sessions"),
+			Slots:     lo.ToPtr(100),
+			HashOn: &configurationv1beta1.KongUpstreamHash{
+				Input: lo.ToPtr(configurationv1beta1.HashInput("none")),
+			},
+			StickySessions: &configurationv1beta1.KongUpstreamStickySessions{
+				Cookie:     "session-id",
+				CookiePath: lo.ToPtr("/"),
+			},
+		},
+	}
+	require.NoError(t, ctrlClient.Create(ctx, upstreamPolicy))
+
 	t.Logf("exposing deployment %s via service", deployment.Name)
 	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
 	service.Annotations = map[string]string{
 		// TCP services cannot have paths, and we don't catch this as a translation error
-		"konghq.com/protocol": "tcp",
-		"konghq.com/path":     "/aitmatov",
+		"konghq.com/protocol":        "tcp",
+		"konghq.com/path":            "/aitmatov",
+		"konghq.com/upstream-policy": upstreamPolicy.Name,
 		// Referencing non-existent KongPlugins.
 		"konghq.com/plugins": "foo,bar,n1:p1",
 	}
@@ -91,95 +112,237 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 		),
 		WithPublishService(ns.Name),
 		WithIngressClass(ingressClassName),
+		WithKongUpstreamPolicyEnabled(),
 		WithProxySyncSeconds(0.1),
 	)
 
-	t.Log("checking ingress and service event creation")
-	require.Eventually(t, func() bool {
+	const numberOfExpectedEvents = 13
+	collectedEvents := collectGeneratedEvents(
+		ctx, t, ctrlClient, ns, t.Name(), numberOfExpectedEvents,
+	)
+
+	predicatesToCheck := []func(e corev1.Event) bool{
+		predicate(corev1.EventTypeWarning, dataplane.KongConfigurationApplyFailedEventReason, "Ingress", ingress.Name, `^invalid methods: cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'$`),
+		predicate(corev1.EventTypeWarning, dataplane.KongConfigurationApplyFailedEventReason, "Service", service.Name, `^invalid path: value must be null$`),
+		predicate(corev1.EventTypeWarning, dataplane.FallbackKongConfigurationApplyFailedEventReason, "Ingress", ingress.Name, `^invalid methods: cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'$`),
+		predicate(corev1.EventTypeWarning, dataplane.FallbackKongConfigurationApplyFailedEventReason, "Service", service.Name, `^invalid path: value must be null$`),
+		predicate(corev1.EventTypeWarning, dataplane.KongConfigurationApplyFailedEventReason, "Service", service.Name, `^invalid service:httpbin\.httpbin\.80: failed conditional validation given value of field 'protocol'$`),
+		predicate(corev1.EventTypeWarning, dataplane.KongConfigurationApplyFailedEventReason, "Pod", podName, `failed to apply Kong configuration to http://[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+: HTTP status 400 \(message: "failed posting new config to /config"\)`),
+		predicate(corev1.EventTypeWarning, dataplane.KongConfigurationTranslationFailedEventReason, "Service", service.Name, `^referenced KongPlugin or KongClusterPlugin "foo" does not exist$`),
+		predicate(corev1.EventTypeWarning, dataplane.KongConfigurationTranslationFailedEventReason, "Service", service.Name, `^referenced KongPlugin or KongClusterPlugin "bar" does not exist$`),
+		predicate(corev1.EventTypeWarning, dataplane.KongConfigurationTranslationFailedEventReason, "Ingress", ingress.Name, `^referenced KongPlugin or KongClusterPlugin "baz" does not exist$`),
+		predicate(corev1.EventTypeWarning, dataplane.KongConfigurationTranslationFailedEventReason, "Service", service.Name, `^no grant found to referenced "n1:p1" plugin in the requested remote KongPlugin bind$`),
+		predicate(corev1.EventTypeWarning, dataplane.FallbackKongConfigurationApplyFailedEventReason, "Service", service.Name, `^invalid service:httpbin\.httpbin\.80: failed conditional validation given value of field 'protocol'$`),
+		predicate(corev1.EventTypeWarning, dataplane.FallbackKongConfigurationApplyFailedEventReason, "Pod", podName, `failed to apply fallback Kong configuration to http://[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+: HTTP status 400 \(message: "failed posting new config to /config"\)`),
+		// TODO: Remove this event once we start using Kong Gateway >= 3.11.0, because sticky sessions type is supported there.
+		// Adjust also numberOfExpectedEvents constant above.
+		predicate(corev1.EventTypeWarning, dataplane.KongConfigurationTranslationFailedEventReason, "Service", service.Name, `^sticky sessions algorithm specified in KongUpstreamPolicy 'echo-drain-policy' is not supported with Kong Gateway versions < 3\.11\.0$`),
+	}
+
+	assertExpectedEvents(t, predicatesToCheck, collectedEvents)
+}
+
+func TestConfigErrorEventGenerationDBMode(t *testing.T) {
+	// Can't be run in parallel because we're using t.Setenv() below which doesn't allow it.
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	scheme := Scheme(t, WithKong)
+	restConfig := Setup(t, scheme)
+	ctrlClientGlobal := NewControllerClient(t, scheme, restConfig)
+	ns := CreateNamespace(ctx, t, ctrlClientGlobal)
+	ctrlClient := client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
+
+	ingressClassName := "kongenvtest"
+	deployIngressClass(ctx, t, ingressClassName, ctrlClient)
+
+	const podName = "kong-ingress-controller-tyjh1"
+	t.Setenv("POD_NAMESPACE", ns.Name)
+	t.Setenv("POD_NAME", podName)
+
+	t.Logf("creating a static consumer in %s namespace which will be used to test global validation", ns.Name)
+	consumer := &configurationv1.KongConsumer{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "donenbai",
+			Annotations: map[string]string{
+				annotations.IngressClassKey: ingressClassName,
+				// Referencing non-existent KongPlugin.
+				"konghq.com/plugins": "foo, n1:p1",
+			},
+		},
+		Username: "donenbai",
+	}
+	require.NoError(t, ctrlClient.Create(ctx, consumer))
+	t.Cleanup(func() {
+		if err := ctrlClient.Delete(ctx, consumer); err != nil && !apierrors.IsNotFound(err) && !errors.Is(err, context.Canceled) {
+			assert.NoError(t, err)
+		}
+	})
+
+	RunManager(ctx, t, restConfig,
+		AdminAPIOptFns(
+			mocks.WithRoot(formatDBRootResponse("999.999.999")),
+		),
+		WithPublishService(ns.Name),
+		WithIngressClass(ingressClassName),
+		WithProxySyncSeconds(0.1),
+	)
+
+	const numberOfExpectedEvents = 6
+	collectedEvents := collectGeneratedEvents(
+		ctx, t, ctrlClient, ns, t.Name(), numberOfExpectedEvents,
+	)
+
+	predicatesToCheck := []func(e corev1.Event) bool{
+		predicate(corev1.EventTypeWarning, dataplane.KongConfigurationApplyFailedEventReason, "KongConsumer", consumer.Name, fmt.Sprintf(`^invalid consumer:%s: HTTP status 400 \(message: "2 schema violations \(at least one of these fields must be non-empty: 'custom_id', 'username'; fake: unknown field\)"\)$`, consumer.Name)),
+		predicate(corev1.EventTypeWarning, dataplane.KongConfigurationTranslationFailedEventReason, "KongConsumer", consumer.Name, `^referenced KongPlugin or KongClusterPlugin "foo" does not exist$`),
+		predicate(corev1.EventTypeWarning, dataplane.KongConfigurationTranslationFailedEventReason, "KongConsumer", consumer.Name, `^no grant found to referenced "n1:p1" plugin in the requested remote KongPlugin bind$`),
+		predicate(corev1.EventTypeNormal, dataplane.KongConfigurationApplySucceededEventReason, "Pod", podName, `successfully applied Kong configuration to http://[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+`),
+		predicate(corev1.EventTypeNormal, dataplane.FallbackKongConfigurationApplySucceededEventReason, "Pod", podName, `successfully applied fallback Kong configuration to http://[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+`),
+		predicate(corev1.EventTypeWarning, dataplane.KongConfigurationApplyFailedEventReason, "Pod", podName, `failed to apply Kong configuration to http://[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+: 1 errors occurred:\s+while processing event: Create consumer donenbai failed: HTTP status 400 \(message: "2 schema violations \(at least one of these fields must be non-empty: 'custom_id', 'username'; fake: unknown field\)\"\)`),
+	}
+	// Check that all expected events are present
+	assertExpectedEvents(t, predicatesToCheck, collectedEvents)
+}
+
+func TestStickySessionsNotSupportedEventGeneration(t *testing.T) {
+	// Can't be run in parallel because we're using t.Setenv() below which doesn't allow it.
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	scheme := Scheme(t, WithKong)
+	restConfig := Setup(t, scheme)
+	ctrlClientGlobal := NewControllerClient(t, scheme, restConfig)
+	ns := CreateNamespace(ctx, t, ctrlClientGlobal)
+	ctrlClient := client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
+
+	ingressClassName := "kongenvtest"
+	deployIngressClass(ctx, t, ingressClassName, ctrlClient)
+
+	const podName = "kong-ingress-controller-tyjh1"
+	t.Setenv("POD_NAMESPACE", ns.Name)
+	t.Setenv("POD_NAME", podName)
+
+	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment.Namespace = ns.Name
+	require.NoError(t, ctrlClient.Create(ctx, deployment))
+
+	t.Log("creating a KongUpstreamPolicy with sticky sessions configuration")
+	upstreamPolicy := &configurationv1beta1.KongUpstreamPolicy{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "echo-drain-policy",
+			Namespace: ns.Name,
+			Annotations: map[string]string{
+				annotations.IngressClassKey: ingressClassName,
+			},
+		},
+		Spec: configurationv1beta1.KongUpstreamPolicySpec{
+			Algorithm: lo.ToPtr("sticky-sessions"),
+			Slots:     lo.ToPtr(100),
+			HashOn: &configurationv1beta1.KongUpstreamHash{
+				Input: lo.ToPtr(configurationv1beta1.HashInput("none")),
+			},
+			StickySessions: &configurationv1beta1.KongUpstreamStickySessions{
+				Cookie:     "session-id",
+				CookiePath: lo.ToPtr("/"),
+			},
+		},
+	}
+	require.NoError(t, ctrlClient.Create(ctx, upstreamPolicy))
+
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	service.Annotations = map[string]string{
+		"konghq.com/upstream-policy": upstreamPolicy.Name,
+	}
+	service.Namespace = ns.Name
+	require.NoError(t, ctrlClient.Create(ctx, service))
+
+	t.Logf("creating an ingress for service %s with invalid configuration", service.Name)
+	ingress := generators.NewIngressForService("/bar", nil, service)
+	ingress.Spec.IngressClassName = lo.ToPtr(ingressClassName)
+	ingress.Namespace = ns.Name
+	t.Logf("deploying ingress %s", ingress.Name)
+	require.NoError(t, ctrlClient.Create(ctx, ingress))
+
+	kongContainer := runKongGatewayWithoutStickySessionsSupport(ctx, t)
+	RunManager(ctx, t, restConfig,
+		AdminAPIOptFns(),
+		WithPublishService(ns.Name),
+		WithIngressClass(ingressClassName),
+		WithKongServiceFacadeFeatureEnabled(),
+		WithProxySyncSeconds(0.1),
+		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
+	)
+
+	const numberOfExpectedEvents = 2
+	collectedEvents := collectGeneratedEvents(
+		ctx, t, ctrlClient, ns, t.Name(), numberOfExpectedEvents,
+	)
+
+	predicatesToCheck := []func(e corev1.Event) bool{
+		predicate(corev1.EventTypeNormal, dataplane.KongConfigurationApplySucceededEventReason, "Pod", podName, `successfully applied Kong configuration to http://([0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+|localhost:[0-9]+)`),
+		predicate(corev1.EventTypeWarning, dataplane.KongConfigurationTranslationFailedEventReason, "Service", service.Name, `^sticky sessions algorithm specified in KongUpstreamPolicy 'echo-drain-policy' is not supported with Kong Gateway versions < 3\.11\.0$`),
+	}
+
+	assertExpectedEvents(t, predicatesToCheck, collectedEvents)
+}
+
+func predicate(eventType, eventReason, invObjKind, invObjName, msgToMatch string) func(e corev1.Event) bool {
+	return func(e corev1.Event) bool {
+		ok, err := regexp.MatchString(msgToMatch, e.Message)
+		return e.Type == eventType &&
+			e.Reason == eventReason &&
+			e.InvolvedObject.Kind == invObjKind &&
+			e.InvolvedObject.Name == invObjName &&
+			ok && err == nil
+	}
+}
+
+func collectGeneratedEvents(
+	ctx context.Context, t *testing.T, ctrlClient client.Client, ns corev1.Namespace, expectedInstanceID string, numberOfExpectedEvents int,
+) []corev1.Event {
+	t.Helper()
+	t.Log("checking for events generated by the controller")
+	const (
+		waitTime = time.Minute
+		tickTime = 100 * time.Millisecond
+	)
+	var collectedEvents []corev1.Event
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		var events corev1.EventList
-		if err := ctrlClient.List(ctx, &events, &client.ListOptions{Namespace: ns.Name}); err != nil {
-			t.Logf("error listing events: %v", err)
-			return false
-		}
-		t.Logf("got %d events", len(events.Items))
-
-		const numberOfExpectedEvents = 8
-		// InstanceID of manager run for the test is the same as the test name.
-		expectedInstanceID := t.Name()
-		matches := make([]bool, numberOfExpectedEvents)
-		matches[0] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
-			return e.Type == corev1.EventTypeWarning &&
-				e.Annotations[consts.InstanceIDAnnotationKey] == expectedInstanceID &&
-				e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
-				e.InvolvedObject.Kind == "Ingress" &&
-				e.InvolvedObject.Name == ingress.Name &&
-				e.Message == "invalid methods: cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'"
+		// Filter out events that are not related to the current test instance.
+		require.NoError(c, ctrlClient.List(ctx, &events, client.InNamespace(ns.Name)))
+		collectedEvents = lo.Filter(events.Items, func(e corev1.Event, _ int) bool {
+			return e.Annotations[consts.InstanceIDAnnotationKey] == expectedInstanceID
 		})
-		matches[1] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
-			return e.Type == corev1.EventTypeWarning &&
-				e.Annotations[consts.InstanceIDAnnotationKey] == expectedInstanceID &&
-				e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
-				e.InvolvedObject.Kind == "Service" &&
-				e.InvolvedObject.Name == service.Name &&
-				e.Message == "invalid path: value must be null"
-		})
-		matches[2] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
-			return e.Type == corev1.EventTypeWarning &&
-				e.Annotations[consts.InstanceIDAnnotationKey] == expectedInstanceID &&
-				e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
-				e.InvolvedObject.Kind == "Service" &&
-				e.InvolvedObject.Name == service.Name &&
-				e.Message == "invalid service:httpbin.httpbin.80: failed conditional validation given value of field 'protocol'"
-		})
-		matches[3] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
-			ok, err := regexp.MatchString(`failed to apply Kong configuration to http://[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+:[0-9]+: HTTP status 400 \(message: "failed posting new config to /config"\)`, e.Message)
-			return e.Type == corev1.EventTypeWarning &&
-				e.Annotations[consts.InstanceIDAnnotationKey] == expectedInstanceID &&
-				e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
-				e.InvolvedObject.Kind == "Pod" &&
-				e.InvolvedObject.Name == podName &&
-				ok && err == nil
-		})
-		matches[4] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
-			return e.Type == corev1.EventTypeWarning &&
-				e.Annotations[consts.InstanceIDAnnotationKey] == expectedInstanceID &&
-				e.Reason == dataplane.KongConfigurationTranslationFailedEventReason &&
-				e.InvolvedObject.Kind == "Service" &&
-				e.InvolvedObject.Name == service.Name &&
-				e.Message == `referenced KongPlugin or KongClusterPlugin "foo" does not exist`
-		})
-		matches[5] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
-			return e.Type == corev1.EventTypeWarning &&
-				e.Annotations[consts.InstanceIDAnnotationKey] == expectedInstanceID &&
-				e.Reason == dataplane.KongConfigurationTranslationFailedEventReason &&
-				e.InvolvedObject.Kind == "Service" &&
-				e.InvolvedObject.Name == service.Name &&
-				e.Message == `referenced KongPlugin or KongClusterPlugin "bar" does not exist`
-		})
-		matches[6] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
-			return e.Type == corev1.EventTypeWarning &&
-				e.Annotations[consts.InstanceIDAnnotationKey] == expectedInstanceID &&
-				e.Reason == dataplane.KongConfigurationTranslationFailedEventReason &&
-				e.InvolvedObject.Kind == "Ingress" &&
-				e.InvolvedObject.Name == ingress.Name &&
-				e.Message == `referenced KongPlugin or KongClusterPlugin "baz" does not exist`
-		})
-		matches[7] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
-			return e.Type == corev1.EventTypeWarning &&
-				e.Annotations[consts.InstanceIDAnnotationKey] == expectedInstanceID &&
-				e.Reason == dataplane.KongConfigurationTranslationFailedEventReason &&
-				e.InvolvedObject.Kind == "Service" &&
-				e.InvolvedObject.Name == service.Name &&
-				e.Message == `no grant found to referenced "n1:p1" plugin in the requested remote KongPlugin bind`
-		})
-		if lo.Count(matches, true) != numberOfExpectedEvents {
-			t.Logf("not all events matched: %+v", matches)
-			return false
-		}
-		return true
+		require.Len(c, collectedEvents, numberOfExpectedEvents, "number of events mismatch")
 	}, waitTime, tickTime)
+	return collectedEvents
+}
 
-	t.Log("push failure events recorded successfully")
+func assertExpectedEvents(t *testing.T, predicatesToCheck []func(e corev1.Event) bool, collectedEvents []corev1.Event) {
+	t.Helper()
+	for pi, predicate := range predicatesToCheck {
+		lenBefore := len(collectedEvents)
+		collectedEvents = lo.Reject(collectedEvents, func(e corev1.Event, _ int) bool {
+			return predicate(e)
+		})
+		lenAfter := len(collectedEvents)
+		if !assert.Equalf(t, lenBefore-1, lenAfter, "expected one event to be removed, but predicate with index: %d doesn't do it", pi) {
+			break
+		}
+	}
+	if !assert.Equal(t, 0, len(collectedEvents), "expected all warning events to match test predicates, but some were left") {
+		t.Logf("remaining events %d:", len(collectedEvents))
+		for _, e := range collectedEvents {
+			t.Logf("  - %s | %s | %s | %s | %s", e.Type, e.Reason, e.InvolvedObject.Kind, e.InvolvedObject.Name, e.Message)
+		}
+	}
 }
 
 func formatErrBody(t *testing.T, namespace string, ingress *netv1.Ingress, service *corev1.Service) []byte {
@@ -298,101 +461,6 @@ func formatErrBody(t *testing.T, namespace string, ingress *netv1.Ingress, servi
 	return b.Bytes()
 }
 
-func TestConfigErrorEventGenerationDBMode(t *testing.T) {
-	// Can't be run in parallel because we're using t.Setenv() below which doesn't allow it.
-
-	const (
-		waitTime = time.Minute
-		tickTime = 100 * time.Millisecond
-	)
-
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-
-	scheme := Scheme(t, WithKong)
-	restConfig := Setup(t, scheme)
-	ctrlClientGlobal := NewControllerClient(t, scheme, restConfig)
-	ns := CreateNamespace(ctx, t, ctrlClientGlobal)
-	ctrlClient := client.NewNamespacedClient(ctrlClientGlobal, ns.Name)
-
-	ingressClassName := "kongenvtest"
-	deployIngressClass(ctx, t, ingressClassName, ctrlClient)
-
-	const podName = "kong-ingress-controller-tyjh1"
-	t.Setenv("POD_NAMESPACE", ns.Name)
-	t.Setenv("POD_NAME", podName)
-
-	t.Logf("creating a static consumer in %s namespace which will be used to test global validation", ns.Name)
-	consumer := &configurationv1.KongConsumer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "donenbai",
-			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClassName,
-				// Referencing non-existent KongPlugin.
-				"konghq.com/plugins": "foo, n1:p1",
-			},
-		},
-		Username: "donenbai",
-	}
-	require.NoError(t, ctrlClient.Create(ctx, consumer))
-	t.Cleanup(func() {
-		if err := ctrlClient.Delete(ctx, consumer); err != nil && !apierrors.IsNotFound(err) && !errors.Is(err, context.Canceled) {
-			assert.NoError(t, err)
-		}
-	})
-
-	RunManager(ctx, t, restConfig,
-		AdminAPIOptFns(
-			// TODO IDK where we're getting the version from normally but it shouldn't really matter for this.
-			mocks.WithRoot(formatDBRootResponse("999.999.999")),
-		),
-		WithPublishService(ns.Name),
-		WithIngressClass(ingressClassName),
-		WithProxySyncSeconds(0.1),
-	)
-
-	t.Log("checking kongconsumer event creation")
-	require.Eventually(t, func() bool {
-		var events corev1.EventList
-		if err := ctrlClient.List(ctx, &events, &client.ListOptions{Namespace: ns.Name}); err != nil {
-			t.Logf("error listing events: %v", err)
-			return false
-		}
-		t.Logf("got %d events", len(events.Items))
-
-		const numberOfExpectedEvents = 3
-		matches := make([]bool, numberOfExpectedEvents)
-		matches[0] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
-			return e.Type == corev1.EventTypeWarning &&
-				e.Reason == dataplane.KongConfigurationApplyFailedEventReason &&
-				e.InvolvedObject.Kind == "KongConsumer" &&
-				e.InvolvedObject.Name == consumer.Name &&
-				e.Message == fmt.Sprintf("invalid consumer:%s: HTTP status 400 (message: \"2 schema violations (at least one of these fields must be non-empty: 'custom_id', 'username'; fake: unknown field)\")", consumer.Name)
-		})
-		matches[1] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
-			return e.Type == corev1.EventTypeWarning &&
-				e.Reason == dataplane.KongConfigurationTranslationFailedEventReason &&
-				e.InvolvedObject.Kind == "KongConsumer" &&
-				e.InvolvedObject.Name == consumer.Name &&
-				e.Message == `referenced KongPlugin or KongClusterPlugin "foo" does not exist`
-		})
-		matches[2] = lo.ContainsBy(events.Items, func(e corev1.Event) bool {
-			return e.Type == corev1.EventTypeWarning &&
-				e.Reason == dataplane.KongConfigurationTranslationFailedEventReason &&
-				e.InvolvedObject.Kind == "KongConsumer" &&
-				e.InvolvedObject.Name == consumer.Name &&
-				e.Message == `no grant found to referenced "n1:p1" plugin in the requested remote KongPlugin bind`
-		})
-		if lo.Count(matches, true) != numberOfExpectedEvents {
-			t.Logf("not all events matched: %+v", matches)
-			return false
-		}
-		return true
-	}, waitTime, tickTime)
-
-	t.Log("push failure events recorded successfully")
-}
-
 func formatDBRootResponse(version string) []byte {
 	const defaultDBLessRootResponse = `{
 		"version": "%s",
@@ -419,5 +487,5 @@ func formatDBRootResponse(version string) []byte {
 			]
 		}
 	}`
-	return []byte(fmt.Sprintf(defaultDBLessRootResponse, version))
+	return fmt.Appendf(nil, defaultDBLessRootResponse, version)
 }

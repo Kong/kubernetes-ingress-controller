@@ -325,7 +325,7 @@ type authT interface {
 }
 
 func sanitizeAuth[t authT](auth t) {
-	switch a := (interface{})(auth).(type) {
+	switch a := (any)(auth).(type) {
 	case *kong.KeyAuth:
 		a.ID = nil
 		a.CreatedAt = nil

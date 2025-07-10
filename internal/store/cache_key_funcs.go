@@ -3,7 +3,7 @@ package store
 import "reflect"
 
 // namespacedKeyFunc returns a key for a namespaced object.
-func namespacedKeyFunc(obj interface{}) (string, error) {
+func namespacedKeyFunc(obj any) (string, error) {
 	v := reflect.Indirect(reflect.ValueOf(obj))
 	name := v.FieldByName("Name")
 	namespace := v.FieldByName("Namespace")
@@ -11,7 +11,7 @@ func namespacedKeyFunc(obj interface{}) (string, error) {
 }
 
 // clusterWideKeyFunc returns a key for a cluster-wide object.
-func clusterWideKeyFunc(obj interface{}) (string, error) {
+func clusterWideKeyFunc(obj any) (string, error) {
 	v := reflect.Indirect(reflect.ValueOf(obj))
 	return v.FieldByName("Name").String(), nil
 }

@@ -11,12 +11,13 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/clients"
 	managerinternal "github.com/kong/kubernetes-ingress-controller/v3/internal/manager"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/pkg/telemetry"
 )
 
 // Manager is an object representing an instance of the Kong Ingress Controller.
 type Manager struct {
 	id      ID
-	config  managercfg.Config
+	cfg     managercfg.Config
 	logger  logr.Logger
 	manager *managerinternal.Manager
 }
@@ -30,7 +31,7 @@ func NewManager(ctx context.Context, id ID, logger logr.Logger, cfg managercfg.C
 
 	return &Manager{
 		id:      id,
-		config:  cfg,
+		cfg:     cfg,
 		logger:  logger.WithValues("managerID", id.String()),
 		manager: m,
 	}, nil
@@ -39,6 +40,40 @@ func NewManager(ctx context.Context, id ID, logger logr.Logger, cfg managercfg.C
 // Run starts the Kong Ingress Controller. It blocks until the context is cancelled.
 // It should be called only once per Manager instance.
 func (m *Manager) Run(ctx context.Context) error {
+	// Enable anonymous reporting if enabled.
+	if m.cfg.AnonymousReports {
+		stopAnonymousReports, err := telemetry.SetupAnonymousReports(
+			ctx,
+			m.GetKubeconfig(),
+			m.GetClientsManager(),
+			telemetry.ReportConfig{
+				SplunkEndpoint:                   m.cfg.SplunkEndpoint,
+				SplunkEndpointInsecureSkipVerify: m.cfg.SplunkEndpointInsecureSkipVerify,
+				TelemetryPeriod:                  m.cfg.TelemetryPeriod,
+				ReportValues: telemetry.ReportValues{
+					PublishServiceNN:               m.cfg.PublishService.OrEmpty(),
+					FeatureGates:                   m.cfg.FeatureGates,
+					MeshDetection:                  len(m.cfg.WatchNamespaces) == 0,
+					KonnectSyncEnabled:             m.cfg.Konnect.ConfigSynchronizationEnabled,
+					GatewayServiceDiscoveryEnabled: m.cfg.KongAdminSvc.IsPresent(),
+				},
+			},
+			m.id,
+			m.cfg.AnonymousReportsFixedPayloadCustomizer,
+		)
+		if err != nil {
+			m.logger.Error(err, "Failed setting up anonymous reports, continuing without telemetry")
+		} else {
+			go func() {
+				<-ctx.Done()
+				m.logger.Info("Stopping anonymous reports")
+				stopAnonymousReports()
+			}()
+		}
+	} else {
+		m.logger.Info("Anonymous reports disabled, skipping")
+	}
+
 	return m.manager.Run(ctx)
 }
 
@@ -52,6 +87,11 @@ func (m *Manager) IsReady() error {
 // ID returns the unique identifier of the manager.
 func (m *Manager) ID() ID {
 	return m.id
+}
+
+// Config returns the configuration of the manager.
+func (m *Manager) Config() managercfg.Config {
+	return m.cfg
 }
 
 // GetKubeconfig returns the Kubernetes REST config object associated with the instance.

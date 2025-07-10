@@ -34,11 +34,12 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/diagnostics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/k8s"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/nodes"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/consts"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils"
-	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/utils/kongconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/kongconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -66,6 +67,7 @@ type Manager struct {
 	admissionServer      mo.Option[*admission.Server]
 	kubeconfig           *rest.Config
 	clientsManager       *clients.AdminAPIClientsManager
+	licenseGetter        mo.Option[license.Getter]
 }
 
 // New configures the controller manager call Start.
@@ -101,12 +103,18 @@ func New(
 
 	gateway.SetControllerName(gatewayapi.GatewayController(c.GatewayAPIControllerName))
 
-	setupLog.Info("Getting the kubernetes client configuration")
-	kubeconfig, err := utils.GetKubeconfig(c)
-	if err != nil {
-		return nil, fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
+	setupLog.Info("Getting the Kubernetes client configuration")
+	if c.KubeRestConfig != nil {
+		setupLog.Info("Using KubeRestConfig from configuration")
+		m.kubeconfig = c.KubeRestConfig
+	} else {
+		setupLog.Info("Using Kubeconfig based on fields from configuration")
+		kubeconfigConstructed, err := k8s.GetKubeconfig(c)
+		if err != nil {
+			return nil, fmt.Errorf("get kubeconfig from file %q: %w", c.KubeconfigPath, err)
+		}
+		m.kubeconfig = kubeconfigConstructed
 	}
-	m.kubeconfig = kubeconfig
 
 	adminAPIsDiscoverer, err := adminapi.NewDiscoverer(sets.New(c.KongAdminSvcPortNames...))
 	if err != nil {
@@ -163,7 +171,7 @@ func New(
 	setupLog.Info("Configuring and building the controller manager")
 	managerOpts := setupManagerOptions(ctx, setupLog, &c, dbMode)
 
-	mgr, err := ctrl.NewManager(kubeconfig, managerOpts)
+	mgr, err := ctrl.NewManager(m.kubeconfig, managerOpts)
 	if err != nil {
 		return nil, fmt.Errorf("unable to create controller manager: %w", err)
 	}
@@ -204,13 +212,19 @@ func New(
 		c.UpdateStatus,
 		kongStartUpConfig.Version.IsKongGatewayEnterprise(),
 		supportRedirectPlugin,
+		c.CombinedServicesFromDifferentHTTPRoutes,
 	)
 
 	referenceIndexers := ctrlref.NewCacheIndexers(setupLog.WithName("reference-indexers"))
 	cache := store.NewCacheStores()
 	storer := store.New(cache, c.IngressClassName, logger)
 
-	configTranslator, err := translator.NewTranslator(logger, storer, c.KongWorkspace, translatorFeatureFlags, NewSchemaServiceGetter(clientsManager), c.ClusterDomain)
+	configTranslator, err := translator.NewTranslator(logger, storer, c.KongWorkspace, kongSemVersion, translatorFeatureFlags, NewSchemaServiceGetter(clientsManager),
+		translator.Config{
+			ClusterDomain:      c.ClusterDomain,
+			EnableDrainSupport: c.EnableDrainSupport,
+		},
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create translator: %w", err)
 	}
@@ -347,6 +361,7 @@ func New(
 		return nil, err
 	}
 	if licenseGetter != nil {
+		m.licenseGetter = mo.Some(licenseGetter)
 		setupLog.Info("Inject license getter to config translator",
 			"license_getter_type", fmt.Sprintf("%T", licenseGetter))
 		configTranslator.InjectLicenseGetter(licenseGetter)
@@ -537,6 +552,16 @@ func (m *Manager) IsReady() error {
 	case <-m.m.Elected():
 		if !m.synchronizer.IsReady() {
 			return errors.New("synchronizer not yet configured")
+		}
+		// Do not mark the pod ready if KIC is configured to synchronize license from Konnect but no license can be found.
+		if m.cfg.Konnect.LicenseSynchronizationEnabled {
+			licenseGetter, present := m.licenseGetter.Get()
+			if !present {
+				return errors.New("Konnect license getter not present")
+			}
+			if !licenseGetter.GetLicense().IsPresent() {
+				return errors.New("No Konnect license available")
+			}
 		}
 	// If we're not the leader then just report as ready.
 	default:

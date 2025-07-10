@@ -5,6 +5,7 @@ package e2e
 import (
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -12,6 +13,7 @@ import (
 	"net/url"
 	"os"
 	"os/exec"
+	"path"
 	"strings"
 	"testing"
 	"time"
@@ -39,6 +41,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
@@ -96,7 +99,7 @@ const (
 func setupE2ETest(t *testing.T, addons ...clusters.Addon) (context.Context, environments.Environment) {
 	t.Helper()
 
-	ctx, cancel := context.WithCancel(context.Background()) //nolint:usetesting
+	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 
 	t.Log("building test cluster and environment")
@@ -110,6 +113,10 @@ func setupE2ETest(t *testing.T, addons ...clusters.Addon) (context.Context, envi
 	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), conststest.IncubatorCRDKustomizeDir))
 
 	t.Cleanup(func() {
+		output := helpers.DumpDiagnosticsIfFailed(ctx, t, env.Cluster())
+		if t.Failed() {
+			dumpKongConfiguration(ctx, t, env.Cluster(), output)
+		}
 		helpers.TeardownCluster(ctx, t, env.Cluster())
 	})
 
@@ -880,6 +887,70 @@ func scaleDeployment(ctx context.Context, t *testing.T, env environments.Environ
 		}
 		return deployment.Status.ReadyReplicas == replicas
 	}, time.Minute*3, time.Second, "deployment %s did not scale to %d replicas", deployment.Name, replicas)
+}
+
+func createGatewayAdminExposeService(ctx context.Context, t *testing.T, cluster clusters.Cluster, namespace string) *corev1.Service {
+	t.Helper()
+
+	service := &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace:    namespace,
+			GenerateName: "kong-admin-expose-",
+		},
+		Spec: corev1.ServiceSpec{
+			Type: corev1.ServiceTypeLoadBalancer,
+			Selector: map[string]string{
+				"app": "proxy-kong",
+			},
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "admin-tls",
+					Protocol:   corev1.ProtocolTCP,
+					Port:       8444,
+					TargetPort: intstr.FromInt(8444),
+				},
+			},
+		},
+	}
+
+	service, err := cluster.Client().CoreV1().Services(namespace).Create(ctx, service, metav1.CreateOptions{})
+	require.NoError(t, err)
+	return service
+}
+
+func dumpKongConfiguration(ctx context.Context, t *testing.T, cluster clusters.Cluster, outputDir string) {
+	t.Helper()
+
+	t.Log("Creating a service to expose admin APIs to dump gateway configuration")
+	adminExposeService := createGatewayAdminExposeService(ctx, t, cluster, namespace)
+	adminExposeServiceIP := ""
+	require.Eventually(t, func() bool {
+		serviceClient := cluster.Client().CoreV1().Services(namespace)
+		svc, err := serviceClient.Get(ctx, adminExposeService.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		if len(svc.Status.LoadBalancer.Ingress) > 0 {
+			adminExposeServiceIP = svc.Status.LoadBalancer.Ingress[0].IP
+			return true
+		}
+		return false
+	}, ingressWait, 5*time.Second, "Cannot get loadbalancer IP for service to expose admin APIs")
+
+	t.Logf("Dumping Kong configuration from service %s/%s", namespace, adminExposeService.Name)
+	httpClient := &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true, //nolint:gosec
+			},
+		},
+	}
+	kongClient, err := kong.NewTestClient(lo.ToPtr("https://"+adminExposeServiceIP+":8444"), httpClient)
+	require.NoError(t, err, "failed to create Kong client")
+	time.Sleep(5 * time.Second)
+	cfg, err := kongClient.Config(ctx)
+	require.NoError(t, err, "failed to dump configuration from Kong")
+	filepath := path.Join(outputDir, "kong-config.yaml")
+	err = os.WriteFile(filepath, cfg, 0o644) //nolint:gosec
+	require.NoError(t, err, "failed to write Kong configuration to "+filepath)
 }
 
 func (d Deployments) Restart(ctx context.Context, t *testing.T, env environments.Environment) {

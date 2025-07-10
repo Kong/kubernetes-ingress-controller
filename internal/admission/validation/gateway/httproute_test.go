@@ -525,6 +525,69 @@ func TestValidateHTTPRoute(t *testing.T) {
 			validationMsg: "HTTPRoute spec did not pass validation: rules[0].filters[0]: filter type RequestMirror is unsupported",
 		},
 		{
+			msg: "we do not support CORS filter",
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-httproute",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{{
+							Name: "testing-gateway",
+						}},
+					},
+					Rules: []gatewayapi.HTTPRouteRule{{
+						Matches: []gatewayapi.HTTPRouteMatch{{
+							Headers: []gatewayapi.HTTPHeaderMatch{{
+								Name:  "Content-Type",
+								Value: "audio/vorbis",
+							}},
+						}},
+						BackendRefs: []gatewayapi.HTTPBackendRef{
+							{
+								BackendRef: gatewayapi.BackendRef{
+									BackendObjectReference: gatewayapi.BackendObjectReference{
+										Name: "service1",
+									},
+								},
+							},
+						},
+						Filters: []gatewayapi.HTTPRouteFilter{
+							{
+								Type: gatewayapi.HTTPRouteFilterCORS,
+							},
+						},
+					}},
+				},
+			},
+			cachedObjects: []client.Object{
+				gatewayClass,
+				&gatewayapi.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: corev1.NamespaceDefault,
+						Name:      "testing-gateway",
+					},
+					Spec: gatewayapi.GatewaySpec{
+						GatewayClassName: gatewayClassName,
+						Listeners: []gatewayapi.Listener{{
+							Name:     "http",
+							Port:     80,
+							Protocol: (gatewayapi.HTTPProtocolType),
+							AllowedRoutes: &gatewayapi.AllowedRoutes{
+								Kinds: []gatewayapi.RouteGroupKind{{
+									Group: &group,
+									Kind:  "HTTPRoute",
+								}},
+							},
+						}},
+					},
+				},
+			},
+			valid:         false,
+			validationMsg: "HTTPRoute spec did not pass validation: rules[0].filters[0]: filter type CORS is unsupported",
+		},
+		{
 			msg: "we only support setting the timeout to the same value",
 			route: &gatewayapi.HTTPRoute{
 				ObjectMeta: metav1.ObjectMeta{

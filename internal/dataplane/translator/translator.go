@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -56,6 +57,7 @@ type FeatureFlags struct {
 	// CombinedServicesFromDifferentHTTPRoutes indicates whether we should combine rules from different HTTPRoutes
 	// that are sharing the same combination of backends to one Kong service.
 	CombinedServicesFromDifferentHTTPRoutes bool
+
 	// SupportRedirectPlugin indicates whether the Kong gateway supports the `redirect` plugin.
 	// This is supported starting with Kong 3.9.
 	// If `redirect` plugin is supported, we will translate the `requestRedirect` filter to `redirect` plugin
@@ -69,6 +71,7 @@ func NewFeatureFlags(
 	updateStatusFlag bool,
 	enterpriseEdition bool,
 	supportRedirectPlugin bool,
+	combinedServicesFromDifferentHTTPRoutes bool,
 ) FeatureFlags {
 	return FeatureFlags{
 		ReportConfiguredKubernetesObjects:       updateStatusFlag,
@@ -78,7 +81,7 @@ func NewFeatureFlags(
 		RewriteURIs:                             featureGates.Enabled(managercfg.RewriteURIsFeature),
 		KongServiceFacade:                       featureGates.Enabled(managercfg.KongServiceFacadeFeature),
 		KongCustomEntity:                        featureGates.Enabled(managercfg.KongCustomEntityFeature),
-		CombinedServicesFromDifferentHTTPRoutes: featureGates.Enabled(managercfg.CombinedServicesFromDifferentHTTPRoutesFeature),
+		CombinedServicesFromDifferentHTTPRoutes: combinedServicesFromDifferentHTTPRoutes,
 		SupportRedirectPlugin:                   supportRedirectPlugin,
 	}
 }
@@ -96,6 +99,7 @@ type Translator struct {
 	storer        store.Storer
 	workspace     string
 	licenseGetter license.Getter
+	kongVersion   semver.Version
 	featureFlags  FeatureFlags
 
 	// schemaServiceProvider provides the schema service required for fetching schemas of custom entities.
@@ -105,7 +109,17 @@ type Translator struct {
 	failuresCollector          *failures.ResourceFailuresCollector
 	translatedObjectsCollector *ObjectsCollector
 
-	clusterDomain string
+	clusterDomain      string
+	enableDrainSupport bool
+}
+
+// Config is a configuration for the Translator.
+type Config struct {
+	// EnableDrainSupport indicates whether the translator should support draining endpoints.
+	EnableDrainSupport bool
+
+	// ClusterDomain is the cluster domain used for translating Kubernetes objects.
+	ClusterDomain string
 }
 
 // NewTranslator produces a new Translator object provided a logging mechanism
@@ -114,9 +128,10 @@ func NewTranslator(
 	logger logr.Logger,
 	storer store.Storer,
 	workspace string,
+	kongVersion semver.Version,
 	featureFlags FeatureFlags,
 	schemaServiceProvider SchemaServiceProvider,
-	clusterDomain string,
+	config Config,
 ) (*Translator, error) {
 	failuresCollector := failures.NewResourceFailuresCollector(logger)
 
@@ -130,11 +145,13 @@ func NewTranslator(
 		logger:                     logger,
 		storer:                     storer,
 		workspace:                  workspace,
+		kongVersion:                kongVersion,
 		featureFlags:               featureFlags,
 		schemaServiceProvider:      schemaServiceProvider,
 		failuresCollector:          failuresCollector,
 		translatedObjectsCollector: translatedObjectsCollector,
-		clusterDomain:              clusterDomain,
+		clusterDomain:              config.ClusterDomain,
+		enableDrainSupport:         config.EnableDrainSupport,
 	}, nil
 }
 
@@ -199,7 +216,7 @@ func (t *Translator) BuildKongConfig() KongConfigBuildingResult {
 	}
 
 	// merge KongIngress with Routes, Services and Upstream
-	result.FillOverrides(t.logger, t.storer, t.failuresCollector)
+	result.FillOverrides(t.logger, t.storer, t.failuresCollector, t.kongVersion)
 
 	// generate consumers and credentials
 	result.FillConsumersAndCredentials(t.logger, t.storer, t.failuresCollector)

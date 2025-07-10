@@ -78,7 +78,12 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 				serviceMap[serviceName] = service
 
 				// get the new targets for this backend service
-				newTargets := getServiceEndpoints(t.logger, t.storer, k8sService, port, t.clusterDomain)
+				newTargets := getServiceEndpoints(
+					t.logger, t.storer,
+					k8sService, port,
+					t.clusterDomain,
+					t.enableDrainSupport,
+				)
 
 				if len(newTargets) == 0 {
 					t.logger.V(logging.InfoLevel).Info("No targets could be found for kubernetes service",
@@ -95,11 +100,18 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 					// all derived targets will receive a weight of 0.
 					targetWeight := weight
 
+					// Count non-terminating targets for weight distribution
+					nonTerminatingTargets := 0
+					for _, target := range newTargets {
+						if target.Weight == nil || *target.Weight != 0 {
+							nonTerminatingTargets++
+						}
+					}
+
 					// If the backend governing this target is not set to a weight of 0,
-					// all targets derived from the backend split the weight, therefore
-					// equally splitting the traffic load.
-					if weight != 0 {
-						targetWeight = weight / len(newTargets)
+					// distribute weight among non-terminating targets only.
+					if weight != 0 && nonTerminatingTargets > 0 {
+						targetWeight = weight / nonTerminatingTargets
 						// minimum weight of 1 if weight zero was not specifically set.
 						if targetWeight == 0 {
 							targetWeight = 1
@@ -107,6 +119,10 @@ func (t *Translator) getUpstreams(serviceMap map[string]kongstate.Service) ([]ko
 					}
 
 					for i := range newTargets {
+						// Don't override weight 0 for terminating targets
+						if newTargets[i].Weight != nil && *newTargets[i].Weight == 0 {
+							continue
+						}
 						newTargets[i].Weight = &targetWeight
 					}
 				}
@@ -186,6 +202,7 @@ func getServiceEndpoints(
 	svc *corev1.Service,
 	servicePort *corev1.ServicePort,
 	clusterDomain string,
+	enableDrainSupport bool,
 ) []kongstate.Target {
 	logger = logger.WithValues(
 		"service_name", svc.Name,
@@ -209,8 +226,13 @@ func getServiceEndpoints(
 
 	// Check all protocols for associated endpoints.
 	endpoints := []util.Endpoint{}
+	cfg := getEndpointsConfig{
+		IsSvcUpstream:      isSvcUpstream,
+		ClusterDomain:      clusterDomain,
+		EnableDrainSupport: enableDrainSupport,
+	}
 	for protocol := range protocols {
-		newEndpoints := getEndpoints(logger, svc, servicePort, protocol, s.GetEndpointSlicesForService, isSvcUpstream, clusterDomain)
+		newEndpoints := getEndpoints(logger, svc, servicePort, protocol, s.GetEndpointSlicesForService, cfg)
 		endpoints = append(endpoints, newEndpoints...)
 	}
 	if len(endpoints) == 0 {
@@ -238,6 +260,12 @@ func getIngressClassParametersOrDefault(s store.Storer) (configurationv1alpha1.I
 	return params.Spec, nil
 }
 
+type getEndpointsConfig struct {
+	IsSvcUpstream      bool
+	ClusterDomain      string
+	EnableDrainSupport bool
+}
+
 // getEndpoints returns a list of <endpoint ip>:<port> for a given service/target port combination.
 // It also checks if the service is an upstream service either by its annotations
 // of by IngressClassParameters configuration provided as a flag.
@@ -247,19 +275,18 @@ func getEndpoints(
 	port *corev1.ServicePort,
 	proto corev1.Protocol,
 	getEndpointSlices func(string, string) ([]*discoveryv1.EndpointSlice, error),
-	isSvcUpstream bool,
-	clusterDomain string,
+	cfg getEndpointsConfig,
 ) []util.Endpoint {
 	if service == nil || port == nil {
 		return []util.Endpoint{}
 	}
 
 	// If service is an upstream service...
-	if isSvcUpstream || annotations.HasServiceUpstreamAnnotation(service.Annotations) {
+	if cfg.IsSvcUpstream || annotations.HasServiceUpstreamAnnotation(service.Annotations) {
 		// ... return its address as the only endpoint.
 		svcDomainName := service.Name + "." + service.Namespace + ".svc"
-		if clusterDomain != "" {
-			svcDomainName += "." + clusterDomain
+		if cfg.ClusterDomain != "" {
+			svcDomainName += "." + cfg.ClusterDomain
 		}
 		return []util.Endpoint{
 			{
@@ -310,15 +337,26 @@ func getEndpoints(
 				// In most cases consumers should interpret this unknown state as ready.
 				// Field Ready has the same semantic as Endpoints from CoreV1 in Addresses.
 				// https://kubernetes.io/docs/concepts/services-networking/endpoint-slices/#conditions
-				if endpoint.Conditions.Ready != nil && !*endpoint.Conditions.Ready {
-					continue
+
+				isTerminating := endpoint.Conditions.Terminating != nil && *endpoint.Conditions.Terminating
+				isReady := endpoint.Conditions.Ready == nil || *endpoint.Conditions.Ready
+
+				// Skip endpoints that are not ready
+				if !isReady {
+					// Only include terminating endpoints if drain support is enabled
+					if !isTerminating || !cfg.EnableDrainSupport {
+						continue
+					}
 				}
+
 				// One address per endpoint is rather expected (allowing multiple is due to historical reasons)
 				// read more https://github.com/kubernetes/kubernetes/issues/106267#issuecomment-978770401.
 				// These are all assumed to be fungible and clients may choose to only use the first element.
 				upstreamServer := util.Endpoint{
 					Address: endpoint.Addresses[0],
 					Port:    upstreamPort,
+					// Only mark as terminating if drain support is enabled
+					Terminating: isTerminating && cfg.EnableDrainSupport,
 				}
 				if _, exists := uniqueUpstream[upstreamServer]; !exists {
 					upstreamServers = append(upstreamServers, upstreamServer)
@@ -378,6 +416,13 @@ func targetsForEndpoints(endpoints []util.Endpoint) []kongstate.Target {
 				Target: kong.String(addr + ":" + endpoint.Port),
 			},
 		}
+
+		// Set weight to 0 for terminating endpoints for drain support.
+		// This allows existing sessions to continue while preventing new traffic.
+		if endpoint.Terminating {
+			target.Weight = lo.ToPtr(0)
+		}
+
 		targets = append(targets, target)
 	}
 	return targets

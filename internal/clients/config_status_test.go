@@ -19,11 +19,11 @@ func TestChannelConfigNotifier(t *testing.T) {
 	ch := n.SubscribeGatewayConfigStatus()
 
 	// Call NotifyConfigStatus 5 times to make sure that the method is non-blocking.
-	for i := 0; i < 5; i++ {
+	for range 5 {
 		n.NotifyGatewayConfigStatus(ctx, clients.GatewayConfigApplyStatus{})
 	}
 
-	for i := 0; i < 5; i++ {
+	for i := range 5 {
 		select {
 		case <-ch:
 		case <-time.After(time.Second):

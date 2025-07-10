@@ -569,7 +569,7 @@ func TestPopulateServices(t *testing.T) {
 		k8sServices                 []*corev1.Service
 		k8sSecrets                  []*corev1.Secret
 		serviceNamesToServices      map[string]kongstate.Service
-		serviceNamesToSkip          map[string]interface{}
+		serviceNamesToSkip          map[string]any
 		servicesAssertions          map[string]func(*testing.T, *kong.Service)
 		expectedTranslationFailures []string
 	}{
@@ -640,7 +640,7 @@ func TestPopulateServices(t *testing.T) {
 					},
 				},
 			},
-			serviceNamesToSkip: map[string]interface{}{
+			serviceNamesToSkip: map[string]any{
 				"service-to-skip": nil,
 			},
 			expectedTranslationFailures: []string{
@@ -701,7 +701,7 @@ func TestPopulateServices(t *testing.T) {
 					},
 				},
 			},
-			serviceNamesToSkip: map[string]interface{}{},
+			serviceNamesToSkip: map[string]any{},
 			servicesAssertions: map[string]func(*testing.T, *kong.Service){
 				"s-1": func(t *testing.T, svc *kong.Service) {
 					require.NotEmpty(t, svc.CACertificates)
@@ -762,7 +762,7 @@ func TestPopulateServices(t *testing.T) {
 					},
 				},
 			},
-			serviceNamesToSkip: map[string]interface{}{},
+			serviceNamesToSkip: map[string]any{},
 			expectedTranslationFailures: []string{
 				"CA certificates requested for service without TLS verification enabled",
 			},
@@ -796,7 +796,7 @@ func TestPopulateServices(t *testing.T) {
 					},
 				},
 			},
-			serviceNamesToSkip: map[string]interface{}{},
+			serviceNamesToSkip: map[string]any{},
 			expectedTranslationFailures: []string{
 				"Failed to fetch secret for CA Certificate 'test-namespace/ca-not-existing': Secret test-namespace/ca-not-existing not found",
 			},
@@ -842,7 +842,7 @@ func TestPopulateServices(t *testing.T) {
 					},
 				},
 			},
-			serviceNamesToSkip: map[string]interface{}{},
+			serviceNamesToSkip: map[string]any{},
 			expectedTranslationFailures: []string{
 				"Invalid CA certificate 'test-namespace/ca-1': missing 'id' field in data",
 			},
@@ -889,7 +889,7 @@ func TestPopulateServices(t *testing.T) {
 					},
 				},
 			},
-			serviceNamesToSkip: map[string]interface{}{},
+			serviceNamesToSkip: map[string]any{},
 			expectedTranslationFailures: []string{
 				"CA certificates requested for incompatible service protocol 'grpc'",
 			},
@@ -935,7 +935,7 @@ func TestPopulateServices(t *testing.T) {
 					},
 				},
 			},
-			serviceNamesToSkip: map[string]interface{}{},
+			serviceNamesToSkip: map[string]any{},
 			expectedTranslationFailures: []string{
 				"CA certificates requested for incompatible service protocol 'http'",
 			},

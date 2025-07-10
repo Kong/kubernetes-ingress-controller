@@ -319,7 +319,7 @@ func formatDefaultDBLessRootResponse(version string) []byte {
 			]
 		}
 	}`
-	return []byte(fmt.Sprintf(defaultDBLessRootResponse, version))
+	return fmt.Appendf(nil, defaultDBLessRootResponse, version)
 }
 
 func formatDBLessStatusResponseWithConfigurationHash(hash string) []byte {
@@ -393,7 +393,7 @@ func formatDBLessStatusResponseWithConfigurationHash(hash string) []byte {
 		  "connections_active": 3
 		}
 	  }`
-	return []byte(fmt.Sprintf(defaultDBLessStatusResponseWithConfigurationHash, hash))
+	return fmt.Appendf(nil, defaultDBLessStatusResponseWithConfigurationHash, hash)
 }
 
 const defaultDBLessStatusResponseWithoutConfigurationHash = `{

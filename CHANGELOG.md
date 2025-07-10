@@ -7,6 +7,9 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.5.0](#350)
+ - [3.4.7](#347)
+ - [3.4.6](#346)
  - [3.4.5](#345)
  - [3.4.4](#344)
  - [3.4.3](#343)
@@ -30,6 +33,7 @@ Adding a new version? You'll need three changes:
  - [3.0.2](#302)
  - [3.0.1](#301)
  - [3.0.0](#300)
+ - [2.12.8](#2128)
  - [2.12.7](#2127)
  - [2.12.6](#2126)
  - [2.12.5](#2125)
@@ -104,6 +108,102 @@ Adding a new version? You'll need three changes:
  - [0.1.0](#010)
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
+
+## [3.5.0]
+
+> Release date: 2025-07-02
+
+### Deprecations
+
+- The `KongIngress`, `TCPIngress`, and `UDPIngress` resources have been deprecated and will be removed in a future release.
+  We recommend migrating to Gateway API resources as a replacement.
+  For more details, see the migration guides for [KongIngress](https://developer.konghq.com/kubernetes-ingress-controller/migrate/kongingress/) and [TCPIngress/UDPIngress](https://developer.konghq.com/kubernetes-ingress-controller/migrate/ingress-to-gateway/).
+  [#7573](https://github.com/Kong/kubernetes-ingress-controller/pull/7573)
+
+### Added
+
+- Added support for drain support functionality.
+  It can be enabled by setting the flag `--enable-drain-support` to `true`.
+  [#7466](https://github.com/Kong/kubernetes-ingress-controller/pull/7466)
+  [#7512](https://github.com/Kong/kubernetes-ingress-controller/pull/7512)
+  [#7533](https://github.com/Kong/kubernetes-ingress-controller/pull/7533)
+  [#7538](https://github.com/Kong/kubernetes-ingress-controller/pull/7538)
+- Store the license fetched from Konnect to the `Secret` named `konnect-license-<cpID>`
+  in the same namespace where KIC runs. The `cpID` is the ID of the Konnect
+  control plane. If the `Secret` does not exist, KIC will create it. However,
+  the `Secret` is not automatically cleaned up so you need to delete it manually
+  when you uninstall KIC.
+  It is enabled by default when `--konnect-licensing-enabled` is `true`. You
+  can set `--konnect-license-storage-enabled` to `false` to disable it.
+  [#7488](https://github.com/Kong/kubernetes-ingress-controller/pull/7488)
+
+### Changed
+
+- Removed CRD type bindings under `/pkg` and clientsets under `/pkg/clientset`. They're
+  deprecated since version [3.4.0](#340). They are available in a dedicated [repository][kconf].
+  If you depend on them, please update your dependencies to use the new repository.
+  [#7540](https://github.com/Kong/kubernetes-ingress-controller/pull/7540)
+- Removed feature gate `CombinedServicesFromDifferentHTTPRoutes` (it's always available now),
+  introduce CLI flag `--combined-services-from-different-httproutes` (default `false`)
+  to enable this feature.
+  [#7569](https://github.com/Kong/kubernetes-ingress-controller/pull/7569)
+
+### Fixed
+
+- When synchronization of license with Konnect is enabled
+  (`--konnect-licensing-enabled` is `true`), do not mark the pod as ready
+  until there is an available license fetched from Konnect or stored in the
+  `Secret`.
+  [#7520](https://github.com/Kong/kubernetes-ingress-controller/pull/7520)
+- Reject `HTTPRoute` with filters that have unsupported types in validating
+  webhook. This fixed the issue where an `HTTPRoute` with `CORS` filter is
+  accepted by the validating webhook.
+  [#7582](https://github.com/Kong/kubernetes-ingress-controller/pull/7582)
+- Fix `KongUpstreamPolicy` hash on fallback configuration so that cookie hashing
+  can be used for both hash_on (always) and hash_fallack (when primary hashing
+  source is different than cookie).
+ [#7582](https://github.com/Kong/kubernetes-ingress-controller/pull/7582)
+
+## [3.4.8]
+
+> Release date: 2025-07-10
+
+### Fixes
+
+- Fix `KongUpstreamPolicy` hash on translation.
+  Until this version, when users specify cookie as hash fallback the rules
+  are not translated correctly due to unusual field usage in kong upstream
+  (and `KongUpstreamPolicy`'s `KongUpstreamHash`):
+  cookie and cookie path is used both for `hash_on` and `hash_fallback` in
+  kong upstream but not in `KongUpstreamHash` `KongUpstreamPolicy` so special care
+  needs to be taken during translation.
+  This is now fixed and users can use `hash_on` and `hash_fallback` as described
+  in <https://developer.konghq.com/gateway/entities/upstream/#consistent-hashing>.
+  [#7590](https://github.com/Kong/kubernetes-ingress-controller/pull/7590)
+- Bump Go to 1.24.5
+  [#7600](https://github.com/Kong/kubernetes-ingress-controller/pull/7600)
+
+## [3.4.7]
+
+> Release date: 2025-06-20
+
+### Fixed
+
+- Count the `attachedRoutes` of a `Gateway` in the correct way in case of `HTTPRoute`s
+  with multiple parent references.
+  [#7517](https://github.com/Kong/kubernetes-ingress-controller/pull/7517)
+
+## [3.4.6]
+
+> Release date: 2025-06-06
+
+### Fixed
+
+- Keep the plugin's ID unchanged if there is already the same plugin exists
+  when working with DB backed Kong gateways. "Same" plugin is identified by the
+  combination of plugin name, and ID of attached service, route, consumer and
+  consumer group. This prevents the conflicts in upgrading KIC.
+  [#7446](https://github.com/Kong/kubernetes-ingress-controller/pull/7446)
 
 ## [3.4.5]
 
@@ -204,7 +304,7 @@ This release addresses the security advisory [GHSA-58mg-ww7q-xw3p][sec_advisory_
 > Release date: 2024-12-18
 
 **NOTE**:
-This release has been affectd by the security advisory [GHSA-58mg-ww7q-xw3p][sec_advisory_58mg].
+This release has been affected by the security advisory [GHSA-58mg-ww7q-xw3p][sec_advisory_58mg].
 The images for this release have been removed and are no longer available for use.
 Please use [3.4.1] or later instead.
 
@@ -444,7 +544,7 @@ Please use [3.4.1] or later instead.
 - It is now possible to disable synchronization of consumers to Konnect through the
   flag `--konnect-disable-consumers-sync`.
   [#6313](https://github.com/Kong/kubernetes-ingress-controller/pull/6313)
-- Allow `KongCustomEntity` to refer to plugins in another namespace via 
+- Allow `KongCustomEntity` to refer to plugins in another namespace via
   `spec.parentRef.namespace`. The reference is allowed only when there is a
   `ReferenceGrant` in the namespace of the `KongPlugin` to grant permissions
   to `KongCustomEntity` of referring to `KongPlugin`.
@@ -705,7 +805,7 @@ Please use [3.4.1] or later instead.
 - Do not generate invalid duplicate upstream targets when routes use multiple
   Services with the same endpoints.
   [#5817](https://github.com/Kong/kubernetes-ingress-controller/pull/5817)
-- Remove the constraint of items of `parentRefs` can only be empty or 
+- Remove the constraint of items of `parentRefs` can only be empty or
   `gateway.network.k8s.io/Gateway` in validating `HTTPRoute`s. If an item in
   `parentRefs`'s group/kind is not `gateway.network.k8s.io/Gateway`, the item
   is seen as a parent other than the controller and ignored in parentRef check.
@@ -750,7 +850,6 @@ Please use [3.4.1] or later instead.
   and route or service. Previously, these incorrectly generated plugins
   attached to the route or service only.
   [#6132](https://github.com/Kong/kubernetes-ingress-controller/pull/6132)
-
 
 ## [3.1.5]
 
@@ -916,7 +1015,7 @@ Please use [3.4.1] or later instead.
   [#5312](https://github.com/Kong/kubernetes-ingress-controller/pull/5312)
 - Added functionality to the `KongUpstreamPolicy` controller to properly set and
   enforce `KongUpstreamPolicy` status. 
-  The controller will set an ancestor status in `KongUpstreamPolicy` status for 
+  The controller will set an ancestor status in `KongUpstreamPolicy` status for
   each of its ancestors (i.e. `Service` or `KongServiceFacade`) with the `Accepted`
   and `Programmed` condition.
   [#5185](https://github.com/Kong/kubernetes-ingress-controller/pull/5185)
@@ -1237,13 +1336,25 @@ Please use [3.4.1] or later instead.
 [KongIngress to KongUpstreamPolicy migration guide]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/migrate/kongingress/
 [Migrate Credential Type Labels]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/migrate/credential-kongcredtype-label/
 
+## [2.12.8]
+
+> Release date: 2025-04-08
+
+### Fixed
+
+- Skip checking whether Kong gateway is ready by `/status` admin API endpoint
+  when KIC is configured to use a specific workspace. This fixes the scenario
+  where KIC is permitted to access only the given workspace but cannot access
+  `/status` endpoint.
+  [#7233](https://github.com/Kong/kubernetes-ingress-controller/pull/7233)
+
 ## [2.12.7]
 
 > Release date: 2024-11-25
 
 ### Fixed
 
-- Bump go-kong to v0.56.0 to fix [#6703](https://github.com/Kong/kubernetes-ingress-controller/issues/6703) 
+- Bump go-kong to v0.56.0 to fix [#6703](https://github.com/Kong/kubernetes-ingress-controller/issues/6703)
   This way, the OTEL plugin can work properly when the Gateway is upgraded from 3.6 to 3.7.
   Also upgraded the Go version to v1.22.
   [#6657](https://github.com/Kong/kubernetes-ingress-controller/pull/6657)
@@ -1258,8 +1369,8 @@ Please use [3.4.1] or later instead.
   there are existing `Programmed` condition.
   [#6395](https://github.com/Kong/kubernetes-ingress-controller/pull/6395)
 - Reconcile `Secret`s with `kongCredType` in data implying that the secrets are
-  used as Kong credentials.	  used as Kong credentials.
-  [#6400](https://github.com/Kong/kubernetes-ingress-controller/pull/6400)	  [#6400](https://github.com/Kong/kubernetes-ingress-controller/pull/6400)
+  used as Kong credentials.
+  [#6400](https://github.com/Kong/kubernetes-ingress-controller/pull/6400)
 
 ## [2.12.5]
 
@@ -4060,6 +4171,9 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.7...v3.5.0
+[3.4.7]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.6...v3.4.7
+[3.4.6]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.5...v3.4.6
 [3.4.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.4...v3.4.5
 [3.4.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.3...v3.4.4
 [3.4.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.2...v3.4.3
@@ -4083,6 +4197,7 @@ Please read the changelog and test in your environment.
 [3.0.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.0.1...v3.0.2
 [3.0.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.0...v3.0.0
+[2.12.8]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.7..v2.12.8
 [2.12.7]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.6..v2.12.7
 [2.12.6]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.5..v2.12.6
 [2.12.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v2.12.4...v2.12.5

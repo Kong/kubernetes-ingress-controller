@@ -396,7 +396,7 @@ func BenchmarkDefaultContentToDBLessConfigConverter_Convert(b *testing.B) {
 	}
 
 	converter := sendconfig.DefaultContentToDBLessConfigConverter{}
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		dblessConfig := converter.Convert(content)
 		_ = dblessConfig
 	}

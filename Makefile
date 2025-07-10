@@ -48,7 +48,7 @@ mise:
 	@mise -V >/dev/null || (echo "mise - https://github.com/jdx/mise - not found. Please install it." && exit 1)
 
 .PHONY: tools
-tools: controller-gen kustomize client-gen golangci-lint.download gotestsum crd-ref-docs skaffold staticcheck.download
+tools: controller-gen kustomize golangci-lint.download gotestsum crd-ref-docs skaffold staticcheck.download
 
 export MISE_DATA_DIR = $(PROJECT_DIR)/bin/
 
@@ -65,7 +65,7 @@ mise-install: mise
 
 # Do not store yq's version in .tools_versions.yaml as it is used to get tool versions.
 # renovate: datasource=github-releases depName=mikefarah/yq
-YQ_VERSION = 4.45.2
+YQ_VERSION = 4.46.1
 YQ = $(PROJECT_DIR)/bin/installs/yq/$(YQ_VERSION)/bin/yq
 .PHONY: yq
 yq: mise # Download yq locally if necessary.
@@ -85,13 +85,6 @@ KUSTOMIZE = $(PROJECT_DIR)/bin/installs/kustomize/$(KUSTOMIZE_VERSION)/bin/kusto
 kustomize: mise yq ## Download kustomize locally if necessary.
 	@$(MAKE) mise-plugin-install DEP=kustomize
 	@$(MAKE) mise-install DEP_VER=kustomize@$(KUSTOMIZE_VERSION)
-
-CLIENT_GEN_VERSION = $(shell $(YQ) -ojson -r '.kube-code-generator' < $(TOOLS_VERSIONS_FILE))
-CLIENT_GEN = $(PROJECT_DIR)/bin/installs/kube-code-generator/$(CLIENT_GEN_VERSION)/bin/client-gen
-.PHONY: client-gen
-client-gen: mise yq ## Download client-gen locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=kube-code-generator
-	@$(MAKE) mise-install DEP_VER=kube-code-generator@$(CLIENT_GEN_VERSION)
 
 GOLANGCI_LINT_VERSION = $(shell $(YQ) -ojson -r '.golangci-lint' < $(TOOLS_VERSIONS_FILE))
 GOLANGCI_LINT = $(PROJECT_DIR)/bin/installs/golangci-lint/$(GOLANGCI_LINT_VERSION)/bin/golangci-lint
@@ -161,6 +154,13 @@ download.shellcheck: mise yq ## Download shellcheck locally if necessary.
 	@$(MISE) plugin install --yes -q shellcheck
 	@$(MISE) install -q shellcheck@$(SHELLCHECK_VERSION)
 
+MODERNIZE_VERSION = $(shell $(YQ) -r '.modernize' < $(TOOLS_VERSIONS_FILE))
+MODERNIZE = $(PROJECT_DIR)/bin/modernize
+.PHONY: modernize
+modernize: yq
+	GOBIN=$(PROJECT_DIR)/bin go install -v \
+		golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@$(MODERNIZE_VERSION)
+
 # ------------------------------------------------------------------------------
 # Build
 # ------------------------------------------------------------------------------
@@ -210,8 +210,13 @@ _build.template.debug:
 fmt:
 	go fmt ./...
 
+
+.PHONY: lint.modernize
+lint.modernize: modernize
+	$(MODERNIZE) ./...
+
 .PHONY: lint
-lint: verify.tidy golangci-lint staticcheck
+lint: verify.tidy golangci-lint lint.modernize staticcheck
 
 .PHONY: lint.actions
 lint.actions: download.actionlint download.shellcheck
@@ -227,10 +232,6 @@ golangci-lint: golangci-lint.download
 # Prepare a list of packages to exclude from staticcheck.
 # This is generated code we don't want to lint.
 STATICCHECK_EXCLUDED_PACKAGES += internal/konnect/controlplanes
-# This is deprecated and staticcheck complains about it. We have depguard linter that prevents other packages from importing it.
-STATICCHECK_EXCLUDED_PACKAGES += pkg/clientset
-# This is deprecated and staticcheck complains about it. We have depguard linter that prevents other packages from importing it.
-STATICCHECK_EXCLUDED_PACKAGES += pkg/apis
 
 .PHONY: staticcheck
 staticcheck: staticcheck.download
@@ -272,7 +273,7 @@ manifests: manifests.rbac manifests.webhook manifests.single
 
 .PHONY: manifests.rbac ## Generate ClusterRole objects.
 manifests.rbac: controller-gen
-	$(CONTROLLER_GEN) rbac:roleName=kong-ingress paths="./internal/controllers/configuration/" paths="./controllers/license/"
+	$(CONTROLLER_GEN) rbac:roleName=kong-ingress paths="./internal/controllers/configuration/" paths="./controllers/license/" paths="./internal/konnect/license/"
 	$(CONTROLLER_GEN) rbac:roleName=kong-ingress-gateway paths="./internal/controllers/gateway/" output:rbac:artifacts:config=config/rbac/gateway
 	$(CONTROLLER_GEN) rbac:roleName=kong-ingress-crds paths="./internal/controllers/crds/" output:rbac:artifacts:config=config/rbac/crds
 
@@ -291,7 +292,7 @@ manifests.single: kustomize ## Compose single-file deployment manifests from bui
 # ------------------------------------------------------------------------------
 
 .PHONY: generate
-generate: generate.controllers generate.gateway-api-consts generate.crd-kustomize generate.docs generate.go fmt
+generate: generate.controllers generate.gateway-api-consts generate.crd-kustomize generate.docs generate.go fmt manifests
 
 .PHONY: generate.controllers
 generate.controllers: controller-gen
@@ -310,10 +311,15 @@ generate.docs: generate.apidocs generate.cli-arguments-docs
 .PHONY: generate.apidocs
 generate.apidocs: crd-ref-docs
 	./scripts/apidocs-gen/generate.sh $(CRD_REF_DOCS)
+	mv ./docs/api-reference.md ./docs/api-reference-temp.md
+	./scripts/apidocs-gen/post-process-for-konghq.sh ./docs/api-reference.md ./docs/api-reference-temp.md
+	rm -f ./docs/api-reference-temp.md
 
 .PHONY: generate.cli-arguments
 generate.cli-arguments-docs:
-	go run ./scripts/cli-arguments-docs-gen/main.go > ./docs/cli-arguments.md
+	go run ./scripts/cli-arguments-docs-gen/main.go > ./docs/cli-arguments-temp.md
+	./scripts/cli-arguments-docs-gen/post-process-for-konghq.sh ./docs/cli-arguments.md ./docs/cli-arguments-temp.md
+	rm -f ./docs/cli-arguments-temp.md
 
 .PHONY: generate.go
 generate.go:
@@ -792,9 +798,11 @@ uninstall-gateway-api-crds: go-mod-download-gateway-api kustomize
 	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_LOCAL_PATH) | kubectl delete -f -
 	$(KUSTOMIZE) build $(GATEWAY_API_CRDS_LOCAL_PATH)/experimental | kubectl delete -f -
 
-# Install CRDs into the K8s cluster specified in $KUBECONFIG.
 .PHONY: install
-install: manifests install-gateway-api-crds
+install: manifests install-gateway-api-crds install.crds.kubernetes-configuration
+
+.PHONY: install.crds.kubernetes-configuration
+install.crds.kubernetes-configuration: kustomize
 	$(KUSTOMIZE) build config/crd | kubectl apply -f -
 
 # Uninstall CRDs from the K8s cluster specified in $KUBECONFIG.

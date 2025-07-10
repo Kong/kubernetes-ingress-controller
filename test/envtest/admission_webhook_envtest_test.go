@@ -1006,7 +1006,7 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 			for _, credential := range tc.credentials {
 				require.NoError(t, ctrlClient.Create(ctx, credential))
 				t.Cleanup(func() { //nolint:contextcheck
-					ctx := context.Background() //nolint:usetesting
+					ctx := context.Background()
 					if err := ctrlClient.Delete(ctx, credential); err != nil && !apierrors.IsNotFound(err) {
 						assert.NoError(t, err)
 					}
@@ -1401,12 +1401,12 @@ func createKongConsumers(ctx context.Context, t *testing.T, cl client.Client, co
 	t.Logf("creating #%d of consumers on the cluster to verify the performance of the cached client during validation", count)
 
 	errg := errgroup.Group{}
-	for i := 0; i < count; i++ {
+	for i := range count {
 		errg.Go(func() error {
 			consumerName := fmt.Sprintf("background-noise-consumer-%d", i)
 
 			// create 5 credentials for each consumer
-			for j := 0; j < 5; j++ {
+			for j := range 5 {
 				credentialName := fmt.Sprintf("%s-credential-%d", consumerName, j)
 				credential := &corev1.Secret{
 					ObjectMeta: metav1.ObjectMeta{
@@ -1440,7 +1440,7 @@ func createKongConsumers(ctx context.Context, t *testing.T, cl client.Client, co
 				Username: consumerName,
 				CustomID: uuid.NewString(),
 			}
-			for j := 0; j < 5; j++ {
+			for j := range 5 {
 				credentialName := fmt.Sprintf("%s-credential-%d", consumerName, j)
 				consumer.Credentials = append(consumer.Credentials, credentialName)
 			}

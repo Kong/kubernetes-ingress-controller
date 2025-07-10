@@ -170,7 +170,7 @@ func BenchmarkCacheStores_TakeSnapshot(b *testing.B) {
 	require.NoError(b, err)
 
 	var k8sObjects []runtime.Object
-	for i := 0; i < 1_000; i++ {
+	for i := range 1_000 {
 		route := &gatewayapi.HTTPRoute{
 			TypeMeta: metav1.TypeMeta{
 				APIVersion: "gateway.networking.k8s.io/v1",
@@ -265,7 +265,7 @@ func BenchmarkCacheStores_TakeSnapshot(b *testing.B) {
 	require.NoError(b, err)
 
 	b.Run("Small_Without_Cache", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			s, err := smallStores.TakeSnapshot()
 			if err != nil || (s == store.CacheStores{}) {
 				b.Fatalf("unexpected error or empty snapshot err: %v, snapshot: %v", err, s)
@@ -273,7 +273,7 @@ func BenchmarkCacheStores_TakeSnapshot(b *testing.B) {
 		}
 	})
 	b.Run("Big_Without_Cache", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			s, err := bigStores.TakeSnapshot()
 			if err != nil || (s == store.CacheStores{}) {
 				b.Fatalf("unexpected error or empty snapshot err: %v, snapshot: %v", err, s)
@@ -285,7 +285,7 @@ func BenchmarkCacheStores_TakeSnapshot(b *testing.B) {
 		require.NoError(b, err)
 		require.NotEmpty(b, hash)
 		require.NotEqual(b, store.CacheStores{}, s)
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			s, hashNew, err := smallStores.TakeSnapshotIfChanged(hash)
 			if err != nil || hashNew != store.SnapshotHashEmpty || s != (store.CacheStores{}) {
 				b.Fatalf("unexpected error or non-empty snapshot err: %v, hash: %s, snapshot: %v", err, hashNew, s)
@@ -298,7 +298,7 @@ func BenchmarkCacheStores_TakeSnapshot(b *testing.B) {
 		require.NoError(b, err)
 		require.NotEmpty(b, hash)
 		require.NotEqual(b, store.CacheStores{}, s)
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			s, hashNew, err := bigStores.TakeSnapshotIfChanged(hash)
 			if err != nil || hashNew != store.SnapshotHashEmpty || s != (store.CacheStores{}) {
 				b.Fatalf("unexpected error or non-empty snapshot err: %v, hash: %s, snapshot: %v", err, hashNew, s)
@@ -307,7 +307,7 @@ func BenchmarkCacheStores_TakeSnapshot(b *testing.B) {
 	})
 
 	b.Run("Small_With_Missed_Cache", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			s, hashNew, err := smallStores.TakeSnapshotIfChanged(store.SnapshotHashEmpty)
 			if err != nil || hashNew == store.SnapshotHashEmpty || s == (store.CacheStores{}) {
 				b.Fatalf("unexpected error or empty snapshot err: %v, hash: %s, snapshot: %v", err, hashNew, s)
@@ -316,7 +316,7 @@ func BenchmarkCacheStores_TakeSnapshot(b *testing.B) {
 	})
 
 	b.Run("Big_With_Missed_Cache", func(b *testing.B) {
-		for i := 0; i < b.N; i++ {
+		for b.Loop() {
 			s, hashNew, err := bigStores.TakeSnapshotIfChanged(store.SnapshotHashEmpty)
 			if err != nil || hashNew == store.SnapshotHashEmpty || s == (store.CacheStores{}) {
 				b.Fatalf("unexpected error or empty snapshot err: %v, hash: %s, snapshot: %v", err, hashNew, s)

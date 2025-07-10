@@ -13,6 +13,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/blang/semver/v4"
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
@@ -259,7 +260,12 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 	// Create the translator.
 	logger := zapr.NewLogger(zap.NewNop())
 	s := store.New(cacheStores, "kong", logger)
-	p, err := translator.NewTranslator(logger, s, "", tc.featureFlags, fakeSchemaServiceProvier{}, consts.DefaultClusterDomain)
+	p, err := translator.NewTranslator(logger, s, "", semver.MustParse("3.9.1"), tc.featureFlags, fakeSchemaServiceProvier{},
+		translator.Config{
+			ClusterDomain:      consts.DefaultClusterDomain,
+			EnableDrainSupport: consts.DefaultEnableDrainSupport,
+		},
+	)
 	require.NoError(t, err, "failed creating translator")
 
 	// Start a mock Admin API server and create an Admin API client for inspecting the configuration.
@@ -382,9 +388,9 @@ func (f fakeSchemaService) Get(_ context.Context, entityType string) (kong.Schem
 	switch entityType {
 	case "degraphql_routes":
 		return kong.Schema{
-			"fields": []interface{}{
-				map[string]interface{}{
-					"service": map[string]interface{}{
+			"fields": []any{
+				map[string]any{
+					"service": map[string]any{
 						"type":      "foreign",
 						"reference": "services",
 					},
@@ -410,5 +416,5 @@ func buildPostConfigErrorResponseWithBrokenObjects(brokenObjects []client.Object
 		flattenedErrors = append(flattenedErrors, flattenedError)
 	}
 
-	return []byte(fmt.Sprintf(`{"flattened_errors": [%s]}`, strings.Join(flattenedErrors, ",")))
+	return fmt.Appendf(nil, `{"flattened_errors": [%s]}`, strings.Join(flattenedErrors, ","))
 }

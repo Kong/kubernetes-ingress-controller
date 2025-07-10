@@ -78,7 +78,7 @@ spec:
 	assert.NoError(t, err)
 	assert.False(t, exists)
 
-	var got interface{}
+	var got any
 	t.Log("ensuring that we can Get() the objects back out of the cache store")
 	svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "httpbin-deployment"}}
 	ing := &netv1.Ingress{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "httpbin-ingress"}}
@@ -187,7 +187,7 @@ func benchmarkListHTTPRoutes(b *testing.B, count int) {
 	c := New(cs, "kong", logr.Discard())
 
 	// Add some HTTPRoutes to the cache store
-	for i := 0; i < count; i++ {
+	for i := range count {
 		route := &gatewayapi.HTTPRoute{
 			ObjectMeta: metav1.ObjectMeta{
 				Name:      fmt.Sprintf("route-%d", i),
@@ -221,8 +221,7 @@ func benchmarkListHTTPRoutes(b *testing.B, count int) {
 		require.NoError(b, cs.HTTPRoute.Add(route))
 	}
 
-	b.ResetTimer()
-	for n := 0; n < b.N; n++ {
+	for b.Loop() {
 		_, err := c.ListHTTPRoutes()
 		require.NoError(b, err)
 	}

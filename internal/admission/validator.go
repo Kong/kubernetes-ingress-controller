@@ -658,7 +658,7 @@ func (validator KongHTTPValidator) ValidateCustomEntity(ctx context.Context, ent
 		// The admission webhook needs a placeholder value because the actual value isn't present in the KongCustomEntity spec.
 		// It will be derived from the resource(s) used by the parent KongPlugin during translation.
 		if field.Required && field.Type == kongstate.EntityFieldTypeForeign {
-			fields[fieldName] = map[string]interface{}{
+			fields[fieldName] = map[string]any{
 				"id": util.DefaultUUIDGenerator{}.NewString(),
 			}
 		}

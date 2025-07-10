@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net"
 	"net/http"
 	"sync"
 	"testing"
@@ -84,7 +85,7 @@ func TestDiagnosticsServer_Diffs(t *testing.T) {
 	configDiffs := map[string]ConfigDiff{}
 	var first, last string
 	init := sync.Once{}
-	for i := 0; i < configDumpsToWrite; i++ {
+	for range configDumpsToWrite {
 		diff := testConfigDiff()
 		configDiffs[diff.Hash] = diff
 		init.Do(func() { first = diff.Hash })
@@ -109,7 +110,7 @@ func TestDiagnosticsServer_Diffs(t *testing.T) {
 
 	// Having gotten a response, check that its available list contains all the diffs we've sent, and that we have the
 	// expected number of diffs.
-	actual := map[string]interface{}{}
+	actual := map[string]any{}
 	for _, available := range got.Available {
 		actual[available.ConfigHash] = nil
 	}
@@ -190,6 +191,16 @@ func setupTestServer(ctx context.Context, t *testing.T) (Client, int) {
 		require.NoError(t, err)
 	}()
 	t.Log("Started diagnostics collector")
+
+	// Wait for the server to be ready
+	require.Eventually(t, func() bool {
+		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", port))
+		if err != nil {
+			return false
+		}
+		conn.Close()
+		return true
+	}, 5*time.Second, 100*time.Millisecond, "Server should be ready")
 
 	return client, port
 }

@@ -52,9 +52,9 @@ func hostMatcherFromHosts(hosts []string) atc.Matcher {
 			continue
 		}
 
-		if strings.HasPrefix(host, "*") {
+		if after, ok := strings.CutPrefix(host, "*"); ok {
 			// wildcard match on hosts (like *.foo.com), genreate a suffix match.
-			matchers = append(matchers, atc.NewPrediacteHTTPHost(atc.OpSuffixMatch, strings.TrimPrefix(host, "*")))
+			matchers = append(matchers, atc.NewPrediacteHTTPHost(atc.OpSuffixMatch, after))
 		} else {
 			// exact match on hosts, generate an exact match.
 			matchers = append(matchers, atc.NewPrediacteHTTPHost(atc.OpEqual, host))

@@ -2,6 +2,7 @@ package translator
 
 import (
 	"fmt"
+	"maps"
 	"strconv"
 	"strings"
 
@@ -48,12 +49,8 @@ func mergeIngressRules(objs ...ingressRules) ingressRules {
 
 	for _, obj := range objs {
 		result.SecretNameToSNIs.merge(obj.SecretNameToSNIs)
-		for k, v := range obj.ServiceNameToServices {
-			result.ServiceNameToServices[k] = v
-		}
-		for k, v := range obj.ServiceNameToParent {
-			result.ServiceNameToParent[k] = v
-		}
+		maps.Copy(result.ServiceNameToServices, obj.ServiceNameToServices)
+		maps.Copy(result.ServiceNameToParent, obj.ServiceNameToParent)
 	}
 	return result
 }
@@ -65,8 +62,8 @@ func (ir *ingressRules) populateServices(
 	s store.Storer,
 	failuresCollector *failures.ResourceFailuresCollector,
 	translatedObjectsCollector *ObjectsCollector,
-) map[string]interface{} {
-	serviceNamesToSkip := make(map[string]interface{})
+) map[string]any {
+	serviceNamesToSkip := make(map[string]any)
 
 	// populate Kubernetes Service
 	for key, service := range ir.ServiceNameToServices {

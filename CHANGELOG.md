@@ -164,6 +164,25 @@ Adding a new version? You'll need three changes:
   source is different than cookie).
  [#7582](https://github.com/Kong/kubernetes-ingress-controller/pull/7582)
 
+## [3.4.8]
+
+> Release date: 2025-07-10
+
+### Fixes
+
+- Fix `KongUpstreamPolicy` hash on translation.
+  Until this version, when users specify cookie as hash fallback the rules
+  are not translated correctly due to unusual field usage in kong upstream
+  (and `KongUpstreamPolicy`'s `KongUpstreamHash`):
+  cookie and cookie path is used both for `hash_on` and `hash_fallback` in
+  kong upstream but not in `KongUpstreamHash` `KongUpstreamPolicy` so special care
+  needs to be taken during translation.
+  This is now fixed and users can use `hash_on` and `hash_fallback` as described
+  in <https://developer.konghq.com/gateway/entities/upstream/#consistent-hashing>.
+  [#7590](https://github.com/Kong/kubernetes-ingress-controller/pull/7590)
+- Bump Go to 1.24.5
+  [#7600](https://github.com/Kong/kubernetes-ingress-controller/pull/7600)
+
 ## [3.4.7]
 
 > Release date: 2025-06-20

@@ -36,6 +36,10 @@ jobs:
         resource-number: [1000, 2500, 5000]
       fail-fast: false
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        with:
+          egress-policy: audit
       - name: Download built image artifact
         if: ${{ inputs.load-local-image }}
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -129,6 +133,10 @@ jobs:
     strategy:
       fail-fast: false
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        with:
+          egress-policy: audit
       - name: Download built image artifact
         if: ${{ inputs.load-local-image }}
         uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0

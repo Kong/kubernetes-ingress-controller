@@ -3,7 +3,7 @@ package kongstate
 import (
 	"github.com/kong/go-kong/kong"
 
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 )
 
 // ConsumerGroup holds a Kong Consumer.

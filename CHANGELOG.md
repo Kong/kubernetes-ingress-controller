@@ -7,108 +7,109 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
- - [3.5.0](#350)
- - [3.4.8](#348)
- - [3.4.7](#347)
- - [3.4.6](#346)
- - [3.4.5](#345)
- - [3.4.4](#344)
- - [3.4.3](#343)
- - [3.4.2](#342)
- - [3.4.1](#341)
- - [3.4.0](#340)
- - [3.3.1](#331)
- - [3.3.0](#330)
- - [3.2.4](#324)
- - [3.2.3](#323)
- - [3.2.2](#322)
- - [3.2.1](#321)
- - [3.2.0](#320)
- - [3.1.6](#316)
- - [3.1.5](#315)
- - [3.1.4](#314)
- - [3.1.3](#313)
- - [3.1.2](#312)
- - [3.1.1](#311)
- - [3.1.0](#310)
- - [3.0.2](#302)
- - [3.0.1](#301)
- - [3.0.0](#300)
- - [2.12.8](#2128)
- - [2.12.7](#2127)
- - [2.12.6](#2126)
- - [2.12.5](#2125)
- - [2.12.4](#2124)
- - [2.12.3](#2123)
- - [2.12.2](#2122)
- - [2.12.1](#2121)
- - [2.12.0](#2120)
- - [2.11.1](#2111)
- - [2.11.0](#2110)
- - [2.10.5](#2105)
- - [2.10.4](#2104)
- - [2.10.3](#2103)
- - [2.10.2](#2102)
- - [2.10.1](#2101)
- - [2.10.0](#2100)
- - [2.9.3](#293)
- - [2.9.2](#292)
- - [2.9.1](#291)
- - [2.9.0](#290)
- - [2.8.2](#282)
- - [2.8.1](#281)
- - [2.8.0](#280)
- - [2.7.0](#270)
- - [2.6.0](#260)
- - [2.5.0](#250)
- - [2.4.2](#242)
- - [2.4.1](#241)
- - [2.4.0](#240)
- - [2.3.1](#231)
- - [2.3.0](#230)
- - [2.2.1](#221)
- - [2.2.0](#220)
- - [2.1.1](#211)
- - [2.1.0](#210)
- - [2.0.7](#207)
- - [2.0.6](#206)
- - [2.0.5](#205)
- - [2.0.4](#204)
- - [2.0.3](#203)
- - [2.0.2](#202)
- - [2.0.1](#201)
- - [2.0.0](#200)
- - [1.3.4](#134)
- - [1.3.3](#133)
- - [1.3.2](#132)
- - [1.3.1](#131)
- - [1.3.0](#130)
- - [1.2.0](#120)
- - [1.1.1](#111)
- - [1.1.0](#110)
- - [1.0.0](#100)
- - [0.10.0](#0100)
- - [0.9.1](#091)
- - [0.9.0](#090)
- - [0.8.1](#081)
- - [0.8.0](#080)
- - [0.7.1](#071)
- - [0.7.0](#070)
- - [0.6.2](#062)
- - [0.6.1](#061)
- - [0.6.0](#060)
- - [0.5.0](#050)
- - [0.4.0](#040)
- - [0.3.0](#030)
- - [0.2.2](#022)
- - [0.1.3](#013)
- - [0.2.1](#021)
- - [0.1.2](#012)
- - [0.1.1](#011)
- - [0.2.0](#020)
- - [0.1.0](#010)
- - [0.0.5](#005)
- - [0.0.4 and prior](#004-and-prior)
+
+- [3.5.0](#350)
+- [3.4.8](#348)
+- [3.4.7](#347)
+- [3.4.6](#346)
+- [3.4.5](#345)
+- [3.4.4](#344)
+- [3.4.3](#343)
+- [3.4.2](#342)
+- [3.4.1](#341)
+- [3.4.0](#340)
+- [3.3.1](#331)
+- [3.3.0](#330)
+- [3.2.4](#324)
+- [3.2.3](#323)
+- [3.2.2](#322)
+- [3.2.1](#321)
+- [3.2.0](#320)
+- [3.1.6](#316)
+- [3.1.5](#315)
+- [3.1.4](#314)
+- [3.1.3](#313)
+- [3.1.2](#312)
+- [3.1.1](#311)
+- [3.1.0](#310)
+- [3.0.2](#302)
+- [3.0.1](#301)
+- [3.0.0](#300)
+- [2.12.8](#2128)
+- [2.12.7](#2127)
+- [2.12.6](#2126)
+- [2.12.5](#2125)
+- [2.12.4](#2124)
+- [2.12.3](#2123)
+- [2.12.2](#2122)
+- [2.12.1](#2121)
+- [2.12.0](#2120)
+- [2.11.1](#2111)
+- [2.11.0](#2110)
+- [2.10.5](#2105)
+- [2.10.4](#2104)
+- [2.10.3](#2103)
+- [2.10.2](#2102)
+- [2.10.1](#2101)
+- [2.10.0](#2100)
+- [2.9.3](#293)
+- [2.9.2](#292)
+- [2.9.1](#291)
+- [2.9.0](#290)
+- [2.8.2](#282)
+- [2.8.1](#281)
+- [2.8.0](#280)
+- [2.7.0](#270)
+- [2.6.0](#260)
+- [2.5.0](#250)
+- [2.4.2](#242)
+- [2.4.1](#241)
+- [2.4.0](#240)
+- [2.3.1](#231)
+- [2.3.0](#230)
+- [2.2.1](#221)
+- [2.2.0](#220)
+- [2.1.1](#211)
+- [2.1.0](#210)
+- [2.0.7](#207)
+- [2.0.6](#206)
+- [2.0.5](#205)
+- [2.0.4](#204)
+- [2.0.3](#203)
+- [2.0.2](#202)
+- [2.0.1](#201)
+- [2.0.0](#200)
+- [1.3.4](#134)
+- [1.3.3](#133)
+- [1.3.2](#132)
+- [1.3.1](#131)
+- [1.3.0](#130)
+- [1.2.0](#120)
+- [1.1.1](#111)
+- [1.1.0](#110)
+- [1.0.0](#100)
+- [0.10.0](#0100)
+- [0.9.1](#091)
+- [0.9.0](#090)
+- [0.8.1](#081)
+- [0.8.0](#080)
+- [0.7.1](#071)
+- [0.7.0](#070)
+- [0.6.2](#062)
+- [0.6.1](#061)
+- [0.6.0](#060)
+- [0.5.0](#050)
+- [0.4.0](#040)
+- [0.3.0](#030)
+- [0.2.2](#022)
+- [0.1.3](#013)
+- [0.2.1](#021)
+- [0.1.2](#012)
+- [0.1.1](#011)
+- [0.2.0](#020)
+- [0.1.0](#010)
+- [0.0.5](#005)
+- [0.0.4 and prior](#004-and-prior)
 
 ## [3.5.0]
 
@@ -163,7 +164,7 @@ Adding a new version? You'll need three changes:
 - Fix `KongUpstreamPolicy` hash on fallback configuration so that cookie hashing
   can be used for both hash_on (always) and hash_fallack (when primary hashing
   source is different than cookie).
- [#7582](https://github.com/Kong/kubernetes-ingress-controller/pull/7582)
+  [#7582](https://github.com/Kong/kubernetes-ingress-controller/pull/7582)
 
 ## [3.4.8]
 
@@ -384,7 +385,7 @@ Please use [3.4.1] or later instead.
     certificate Secrets' names to use for verification.
   - `konghq.com/ca-certificates-configmaps`: set to a comma-delimited list of CA
     certificate ConfigMaps' names to use for verification.
-  [#6707](https://github.com/Kong/kubernetes-ingress-controller/pull/6707)
+    [#6707](https://github.com/Kong/kubernetes-ingress-controller/pull/6707)
 - Added Support for upstream TLS verification with the Gateway API `BackendTLSPolicy`
   API. The user can reference any Kubernetes `Service` in the `BackendTLSPolicy`
   spec, and in case the service is used as a backend by `HTTPRoute`s that reference
@@ -420,7 +421,7 @@ Please use [3.4.1] or later instead.
   - `konghq.com/host-aliases`
   - `konghq.com/publish-service`
   - `konghq.com/tags`
-  [#6729](https://github.com/Kong/kubernetes-ingress-controller/pull/6729)
+    [#6729](https://github.com/Kong/kubernetes-ingress-controller/pull/6729)
 - Log `Object requested backendRef to target, but it does not exist, skipping...`
   as `DEBUG` instead of `ERROR`, enhance `HTTPRoute` status with detailed message.
   [#6746](https://github.com/Kong/kubernetes-ingress-controller/pull/6746)
@@ -491,7 +492,7 @@ Please use [3.4.1] or later instead.
   `KongPlugin`s would be bound to multiple entities, e.g.:
   - route R1 and consumer group CG
   - route R2 and consumer group CG
-  [#6786](https://github.com/Kong/kubernetes-ingress-controller/pull/6786)
+    [#6786](https://github.com/Kong/kubernetes-ingress-controller/pull/6786)
 - Check referenced `KongCustomEntity`'s `parentRef` and verify if referenced
   `KongPlugin` or `KongClusterPlugin` exists.
   [#6791](https://github.com/Kong/kubernetes-ingress-controller/pull/6791)
@@ -509,7 +510,7 @@ Please use [3.4.1] or later instead.
   They were migrated to a new dedicated [repository][kconf]. If you depend on them,
   please update your dependencies to use the new repository.
 
-[kconf]: https://github.com/kong/kubernetes-configuration
+[kconf]: https://github.com/kong/kubernetes-configuration/v2
 
 ## [3.3.1]
 
@@ -657,8 +658,9 @@ Please use [3.4.1] or later instead.
   Service, KongConsumer, KongConsumerGroup object to allow plugins to be associated with combinations
   of those objects.
   [#6252](https://github.com/Kong/kubernetes-ingress-controller/pull/6252)
-  
+
 ### Added
+
 - Add `INFO` log when admission result is not allowed
   [#6084](https://github.com/Kong/kubernetes-ingress-controller/issues/6084)
 
@@ -815,7 +817,7 @@ Please use [3.4.1] or later instead.
   [#5964](https://github.com/Kong/kubernetes-ingress-controller/pull/5964)
 - The `--dump-sensitive-config` flag is no longer backwards.
   [#6073](https://github.com/Kong/kubernetes-ingress-controller/pull/6073)
-- Fixed KIC clearing Gateway API *Route status of routes that it shouldn't reconcilce, e.g.
+- Fixed KIC clearing Gateway API \*Route status of routes that it shouldn't reconcilce, e.g.
   those attached to Gateways that do not belong to GatewayClass that KIC reconciles.
   [#6079](https://github.com/Kong/kubernetes-ingress-controller/pull/6079)
 - Fixed KIC non leaders correctly getting up to date Admin API addresses by not
@@ -961,7 +963,7 @@ Please use [3.4.1] or later instead.
   If there are multiple `KongLicense`s in the cluster, the newest one
   (with latest `metadata.creationTimestamp`) is chosen. The `KongLicense`
   controller is disabled when synchoroniztion of license with Konnect is turned
-  on. When sync license with Konnect is turned on, licenses from Konnect are used.  
+  on. When sync license with Konnect is turned on, licenses from Konnect are used.
   [#5487](https://github.com/Kong/kubernetes-ingress-controller/pull/5487)
   [#5514](https://github.com/Kong/kubernetes-ingress-controller/pull/5514)
 - Added `configPatches` field to KongPlugin and KongClusterPlugin to
@@ -1013,9 +1015,9 @@ Please use [3.4.1] or later instead.
   - using `timeouts` in rules
   - `URLRewrite`, `RequestMirror` filters
   - using filters in backendRefs of rules
-  [#5312](https://github.com/Kong/kubernetes-ingress-controller/pull/5312)
+    [#5312](https://github.com/Kong/kubernetes-ingress-controller/pull/5312)
 - Added functionality to the `KongUpstreamPolicy` controller to properly set and
-  enforce `KongUpstreamPolicy` status. 
+  enforce `KongUpstreamPolicy` status.
   The controller will set an ancestor status in `KongUpstreamPolicy` status for
   each of its ancestors (i.e. `Service` or `KongServiceFacade`) with the `Accepted`
   and `Programmed` condition.
@@ -1103,9 +1105,9 @@ Please use [3.4.1] or later instead.
   - There's no `Gateway`'s `Listener` with `AllowedRoutes` matching the `HTTPRoute`.
   - There's no `Gateway`'s `Listener` with `Protocol` matching the `HTTPRoute`.
   - There's no `Gateway`'s `Listener` matching `HTTPRoute`'s `ParentRef`'s `SectionName`.
-  All of these are validated by the controller and the results are reported in a `HTTPRoute`'s
-  `Accepted` condition reported for a `Gateway`.
-  [#5469](https://github.com/Kong/kubernetes-ingress-controller/pull/5469)
+    All of these are validated by the controller and the results are reported in a `HTTPRoute`'s
+    `Accepted` condition reported for a `Gateway`.
+    [#5469](https://github.com/Kong/kubernetes-ingress-controller/pull/5469)
 
 [kong-vault]: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/
 
@@ -1156,7 +1158,7 @@ Please use [3.4.1] or later instead.
 - Only Kong Gateway in version >= 3.4.1 is supported. The controller will refuse to start
   if the version is lower, also won't discover such Kong Gateways.
   [#4766](https://github.com/Kong/kubernetes-ingress-controller/pull/4766)
-- Removed feature gates: 
+- Removed feature gates:
   - `CombinedServices`: The feature is enabled and it can't be changed.
     [#4743](https://github.com/Kong/kubernetes-ingress-controller/pull/4743)
   - `CombinedRoutes`: The feature is enabled and it can't be changed.
@@ -1233,10 +1235,10 @@ Please use [3.4.1] or later instead.
   [#5003](https://github.com/Kong/kubernetes-ingress-controller/pull/5003)
 - Use 46 bits in values of priorities of generated Kong routes when expression
   rotuer is enabled to limit the priorities to be less than `1e14`. This
-  prevents them to be encoded into scientific notation when dumping 
-  configurations from admin API that brings precision loss and type 
-  inconsistency in decoding JSON/YAML data to `uint64`. 
-  This change will limit number of `HTTPRoute`s that can be 
+  prevents them to be encoded into scientific notation when dumping
+  configurations from admin API that brings precision loss and type
+  inconsistency in decoding JSON/YAML data to `uint64`.
+  This change will limit number of `HTTPRoute`s that can be
   deterministically sorted by their creation timestamps, names and internal
   rule orders to `2^12=4096` and number of `GRPCRoutes` can be sorted to `2^8=256`.
   [#5024](https://github.com/Kong/kubernetes-ingress-controller/pull/5024)
@@ -1269,9 +1271,11 @@ Please use [3.4.1] or later instead.
   It was enabled by default since 2.6.0 so the default behavior doesn't change.
   If users want to disable related functionality, they still can by disabling
   related Gateway API controllers via setting the following flags to `false`:
+
   - `--enable-controller-gwapi-gateway`
   - `--enable-controller-gwapi-httproute`
   - `--enable-controller-gwapi-reference-grant`
+
 - Count `HTTPRoute` to gateway's number of attached route if the gateway is
   present in its `status.parents`, even if the gateway has unresolved refs.
   [#4987](https://github.com/Kong/kubernetes-ingress-controller/pull/4987)
@@ -1327,7 +1331,7 @@ Please use [3.4.1] or later instead.
 - KIC now specifies its `UserAgent` when communicating with kube-apiserver
   as `kong-ingress-controller/${VERSION}` where version is the version of KIC.
   [#5019](https://github.com/Kong/kubernetes-ingress-controller/pull/5019)
-- Allow Gateway Discovery with database backed Kong. KIC will send Kong 
+- Allow Gateway Discovery with database backed Kong. KIC will send Kong
   configurations to one of the backend pods of the service specified by the
   flag `--kong-admin-svc` if Kong gateway is DB backed.
   [#4828](https://github.com/Kong/kubernetes-ingress-controller/pull/4828)
@@ -1462,11 +1466,11 @@ Please use [3.4.1] or later instead.
 
 - Knative Ingress is deprecated and will be removed in KIC 3.0. [#2813](https://github.com/Kong/kubernetes-ingress-controller/issues/2813)
 - `KongIngress` for `Service` and `Route` parameters has been deprecated since KIC 2.8 and will be removed in KIC 3.0.
-    - We expect to eventually deprecate `KongIngress` also for `Upstream` parameters as described in [#3174](https://github.com/Kong/kubernetes-ingress-controller/issues/3174)
+  - We expect to eventually deprecate `KongIngress` also for `Upstream` parameters as described in [#3174](https://github.com/Kong/kubernetes-ingress-controller/issues/3174)
 - Existing Kustomize (`deploy/manifests/`) and `deploy/single/` YAML manifests as a method of installing KIC.
-    - The `deploy/single/` and `deploy/manifests/` directories will no longer work with KIC 3.0+. You should use the [Helm chart](https://docs.konghq.com/kubernetes-ingress-controller/latest/deployment/k4k8s/#helm) or [Kong Gateway Operator](https://docs.konghq.com/gateway-operator/latest/) instead.
+  - The `deploy/single/` and `deploy/manifests/` directories will no longer work with KIC 3.0+. You should use the [Helm chart](https://docs.konghq.com/kubernetes-ingress-controller/latest/deployment/k4k8s/#helm) or [Kong Gateway Operator](https://docs.konghq.com/gateway-operator/latest/) instead.
 - DB-less deployments of Kong running with KIC as a sidecar. The [Gateway Discovery](https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/using-gateway-discovery/) feature added in KIC 2.9 should be used instead.
-    - The mode where Kong runs with a database (Postgres) is not affected by the migration to Gateway Discovery yet, but likely will in the future [#4751](https://github.com/Kong/kubernetes-ingress-controller/issues/4751)
+  - The mode where Kong runs with a database (Postgres) is not affected by the migration to Gateway Discovery yet, but likely will in the future [#4751](https://github.com/Kong/kubernetes-ingress-controller/issues/4751)
 
 ### Added
 
@@ -1667,7 +1671,7 @@ Please use [3.4.1] or later instead.
 
 [gojson]: https://github.com/goccy/go-json
 [httproute-specification]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1.HTTPRoute
-[grpcroute-specification]:  https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRouteRule
+[grpcroute-specification]: https://gateway-api.sigs.k8s.io/references/spec/#gateway.networking.k8s.io/v1alpha2.GRPCRouteRule
 
 ## [2.10.5]
 
@@ -1826,6 +1830,7 @@ Please use [3.4.1] or later instead.
   [#4071](https://github.com/Kong/kubernetes-ingress-controller/pull/4071)
 
   There are 3 options available
+
   - `ip` (default): which will make KIC create Admin API addresses built out of
     IP addresses.
   - `pod`: will make KIC build addresses using the following template:
@@ -1833,6 +1838,7 @@ Please use [3.4.1] or later instead.
   - `service`: will make KIC build addresses using the following template:
     `pod-ip-address.service-name.my-namespace.svc`.
     This is known to not work on GKE because it uses `kube-dns` instead of `coredns`.
+
 - Gateway's `AttachedRoutes` fields get updated with the number of routes referencing
   and using each listener.
   [#4052](https://github.com/Kong/kubernetes-ingress-controller/pull/4052)
@@ -1936,7 +1942,7 @@ backported properly. It is included in the next patch release.
   configuration.
   [#3359](https://github.com/Kong/kubernetes-ingress-controller/pull/3359)
 - Added `version` command
-  [#3379](https://github.com/Kong/kubernetes-ingress-controller/pull/3379)  
+  [#3379](https://github.com/Kong/kubernetes-ingress-controller/pull/3379)
 - Added `--publish-service-udp` to indicate the Service that handles inbound
   UDP traffic.
   [#3325](https://github.com/Kong/kubernetes-ingress-controller/pull/3325)
@@ -1970,7 +1976,7 @@ backported properly. It is included in the next patch release.
   [#3469](https://github.com/Kong/kubernetes-ingress-controller/pull/3469)
 - Added Gateway discovery using Kong Admin API service configured via `--kong-admin-svc`
   which accepts a namespaced name of a headless service which should have
-  Admin API endpoints exposed under a named port called `admin`. Gateway 
+  Admin API endpoints exposed under a named port called `admin`. Gateway
   discovery is only allowed to run with dbless kong gateways.
   [#3421](https://github.com/Kong/kubernetes-ingress-controller/pull/3421)
   [#3642](https://github.com/Kong/kubernetes-ingress-controller/pull/3642)
@@ -1990,27 +1996,27 @@ backported properly. It is included in the next patch release.
   [#3446](https://github.com/Kong/kubernetes-ingress-controller/pull/3446)
 - Leader election is enabled by default when Kong Gateway discovery is enabled.
   [#3529](https://github.com/Kong/kubernetes-ingress-controller/pull/3529)
-- Added flag `--konnect-refresh-node-period` to set the period of uploading 
+- Added flag `--konnect-refresh-node-period` to set the period of uploading
   status of KIC instance to Konnect runtime group.
   [#3533](https://github.com/Kong/kubernetes-ingress-controller/pull/3533)
-- Replaced service account's token static secret with a projected volume in 
+- Replaced service account's token static secret with a projected volume in
   deployment manifests.
   [#3563](https://github.com/Kong/kubernetes-ingress-controller/pull/3563)
 - Added `GRPCRoute` controller and implemented basic `GRPCRoute` functionality.
   [#3537](https://github.com/Kong/kubernetes-ingress-controller/pull/3537)
 - Included Konnect sync and Gateway discovery features in telemetry reports.
   [#3588](https://github.com/Kong/kubernetes-ingress-controller/pull/3588)
-- Upload the status of controlled Kong gateway nodes to Konnect when syncing with 
-  Konnect is enabled by setting the flag `--konnect-sync-enabled` to true. 
-  If gateway discovery is enabled via `--kong-admin-svc` flag, the hostname of a node 
-  corresponding to each Kong gateway instance will use `<pod_namespace>/<pod_name>` 
-  format, where `pod_namespace` and `pod_name` are the namespace and name of the Kong 
-  gateway pod. If gateway discovery is disabled, the Kong gateway nodes will use `gateway_<address>` 
+- Upload the status of controlled Kong gateway nodes to Konnect when syncing with
+  Konnect is enabled by setting the flag `--konnect-sync-enabled` to true.
+  If gateway discovery is enabled via `--kong-admin-svc` flag, the hostname of a node
+  corresponding to each Kong gateway instance will use `<pod_namespace>/<pod_name>`
+  format, where `pod_namespace` and `pod_name` are the namespace and name of the Kong
+  gateway pod. If gateway discovery is disabled, the Kong gateway nodes will use `gateway_<address>`
   as the hostname, where `address` is the Admin API address used by KIC.
   [#3587](https://github.com/Kong/kubernetes-ingress-controller/pull/3587)
-- All all-in-one DB-less deployment manifests will now use separate deployments 
+- All all-in-one DB-less deployment manifests will now use separate deployments
   for the controller and the proxy. This enables the proxy to be scaled independently
-  of the controller. The old `all-in-one-dbless.yaml` manifest has been deprecated and 
+  of the controller. The old `all-in-one-dbless.yaml` manifest has been deprecated and
   renamed to `all-in-one-dbless-legacy.yaml`. It will be removed in a future release.
   [#3629](https://github.com/Kong/kubernetes-ingress-controller/pull/3629)
 - The RequestRedirect Gateway API filter is now supported and translated
@@ -2069,7 +2075,6 @@ backported properly. It is included in the next patch release.
 - Updated Golang from 1.19.4 to 1.20.1 to address several CVEs.
   [#3775](https://github.com/Kong/kubernetes-ingress-controller/pull/3775)
 
-
 ## [2.8.1]
 
 > Release date: 2022-01-04
@@ -2119,37 +2124,37 @@ backported properly. It is included in the next patch release.
 ### Added
 
 - Added `HTTPRoute` support for `CombinedRoutes` feature. When enabled,
-  `HTTPRoute.HTTPRouteRule` objects with identical `backendRefs` generate a 
-  single Kong service instead of a service per rule, and 
-  `HTTPRouteRule.HTTPRouteMatche` objects using the same `backendRefs` can be 
-  consolidated into a single Kong route instead of always creating a route per 
+  `HTTPRoute.HTTPRouteRule` objects with identical `backendRefs` generate a
+  single Kong service instead of a service per rule, and
+  `HTTPRouteRule.HTTPRouteMatche` objects using the same `backendRefs` can be
+  consolidated into a single Kong route instead of always creating a route per
   match, reducing configuration size.
   The following limitations apply:
-  - `HTTPRouteRule` objects cannot be consolidated into a single Kong Service 
+  - `HTTPRouteRule` objects cannot be consolidated into a single Kong Service
     if they belong to different `HTTPRoute`.
-  - `HTTPRouteRule` objects cannot be consolidated into a single Kong Service 
+  - `HTTPRouteRule` objects cannot be consolidated into a single Kong Service
     if they have different `HTTPRouteRule.HTTPBackendRef[]` objects. The order
     of the backend references is not important.
   - `HTTPRouteMatch` objects cannot be consolidated into a single Kong Route
     if parent `HTTPRouteRule` objects cannot be consolidated into a single Kong Service.
   - `HTTPRouteMatch` objects cannot be consolidated into a single Kong Route
     if parent `HTTPRouteRule` objects have different `HTTPRouteRule.HTTPRouteFilter[]` filters.
-  - `HTTPRouteMatch` objects cannot be consolidated into a single Kong Route 
-    if they have different matching spec (`HTTPHeaderMatch.Headers`, `HTTPHeaderMatch.QueryParams`, 
-    `HTTPHeaderMatch.Method`). Different `HTTPHeaderMatch.Path` paths between 
+  - `HTTPRouteMatch` objects cannot be consolidated into a single Kong Route
+    if they have different matching spec (`HTTPHeaderMatch.Headers`, `HTTPHeaderMatch.QueryParams`,
+    `HTTPHeaderMatch.Method`). Different `HTTPHeaderMatch.Path` paths between
     `HTTPRouteMatch[]` objects does not prevent consolidation.
-  This change does not functionally impact routing: requests that went to a given Service
-  using the original method still go to the same Service when `CombinedRoutes` is enabled.
-  [#3008](https://github.com/Kong/kubernetes-ingress-controller/pull/3008)
-  [#3060]https://github.com/Kong/kubernetes-ingress-controller/pull/3060)
-- Added `--cache-sync-timeout` flag allowing to change the default controllers' 
-  cache synchronisation timeout. 
+    This change does not functionally impact routing: requests that went to a given Service
+    using the original method still go to the same Service when `CombinedRoutes` is enabled.
+    [#3008](https://github.com/Kong/kubernetes-ingress-controller/pull/3008)
+    [#3060]https://github.com/Kong/kubernetes-ingress-controller/pull/3060)
+- Added `--cache-sync-timeout` flag allowing to change the default controllers'
+  cache synchronisation timeout.
   [#3013](https://github.com/Kong/kubernetes-ingress-controller/pull/3013)
 - Secrets validation introduced: CA certificates won't be synchronized
   to Kong if the certificate is expired.
   [#3063](https://github.com/Kong/kubernetes-ingress-controller/pull/3063)
 - Changed the logic of storing secrets into object cache. Now only the secrets
-  that are possibly used in Kong configuration are stored into cache, and the 
+  that are possibly used in Kong configuration are stored into cache, and the
   irrelevant secrets (e.g: service account tokens) are not stored. This change
   is made to reduce memory usage of the cache.
   [#3047](https://github.com/Kong/kubernetes-ingress-controller/pull/3047)
@@ -2165,7 +2170,7 @@ backported properly. It is included in the next patch release.
   [#3155](https://github.com/Kong/kubernetes-ingress-controller/pull/3155)
 - Routes support annotations for path handling.
   [#3121](https://github.com/Kong/kubernetes-ingress-controller/pull/3121)
-- Warning Kubernetes API events with a `KongConfigurationTranslationFailed` 
+- Warning Kubernetes API events with a `KongConfigurationTranslationFailed`
   reason are recorded when:
   - CA secrets cannot be properly translated into Kong configuration
     [#3125](https://github.com/Kong/kubernetes-ingress-controller/pull/3125)
@@ -2173,10 +2178,10 @@ backported properly. It is included in the next patch release.
     [#3130](https://github.com/Kong/kubernetes-ingress-controller/pull/3130)
   - A service's referred client-cert does not exist.
     [#3137](https://github.com/Kong/kubernetes-ingress-controller/pull/3137)
-  - One of `netv1.Ingress` related issues occurs (e.g. backing Kubernetes service couldn't 
+  - One of `netv1.Ingress` related issues occurs (e.g. backing Kubernetes service couldn't
     be found, matching Kubernetes service port couldn't be found).
     [#3138](https://github.com/Kong/kubernetes-ingress-controller/pull/3138)
-  - A Gateway Listener has more than one CertificateRef specified or refers to a Secret 
+  - A Gateway Listener has more than one CertificateRef specified or refers to a Secret
     that has no valid TLS key-pair.
     [#3147](https://github.com/Kong/kubernetes-ingress-controller/pull/3147)
   - An Ingress refers to a TLS secret that does not exist or
@@ -2226,15 +2231,15 @@ backported properly. It is included in the next patch release.
 - Admin and proxy listens in the deploy manifests now use the same parameters
   as the default upstream kong.conf.
   [#3165](https://github.com/Kong/kubernetes-ingress-controller/pull/3165)
-- Fix the behavior of filtering hostnames in `HTTPRoute` when listeners 
+- Fix the behavior of filtering hostnames in `HTTPRoute` when listeners
   of parent gateways specified hostname.
   If an `HTTPRoute` does not specify hostnames, and one of its parent listeners
-  has not specified hostname, the `HTTPRoute` matches any hostname. 
-  If an `HTTPRoute` specifies hostnames, and no intersecting hostnames 
+  has not specified hostname, the `HTTPRoute` matches any hostname.
+  If an `HTTPRoute` specifies hostnames, and no intersecting hostnames
   could be found in its parent listners, it is not accepted.
   [#3180](https://github.com/Kong/kubernetes-ingress-controller/pull/3180)
-- Matches `sectionName` in parentRefs of route objects in gateway API. Now 
-  if a route specifies `sectionName` in parentRefs, and no listener can 
+- Matches `sectionName` in parentRefs of route objects in gateway API. Now
+  if a route specifies `sectionName` in parentRefs, and no listener can
   match the specified name, the route is not accepted.
   [#3230](https://github.com/Kong/kubernetes-ingress-controller/pull/3230)
 - If there's no matching Kong listener for a protocol specified in a Gateway's
@@ -2386,8 +2391,7 @@ instructions and the [revised Kong 3.x upgrade instructions](https://docs.konghq
 - Update Listener statuses whenever they change, not just on Gateway creation.
   [#2797](https://github.com/Kong/kubernetes-ingress-controller/pull/2797)
 - StripPath for `HTTPRoute`s is now disabled by default to be conformant with the
-  Gateway API requirements.
-  #[#2737](https://github.com/Kong/kubernetes-ingress-controller/pull/2737)
+  Gateway API requirements. #[#2737](https://github.com/Kong/kubernetes-ingress-controller/pull/2737)
 
 #### Under the hood
 
@@ -2424,7 +2428,7 @@ instructions and the [revised Kong 3.x upgrade instructions](https://docs.konghq
 - Added information about service mesh deployment and distribution in telemetry data reported to Kong.
   [#2642](https://github.com/Kong/kubernetes-ingress-controller/pull/2642)
 
-[gw-v0.5.0]:https://github.com/kubernetes-sigs/gateway-api/releases/tag/v0.5.0
+[gw-v0.5.0]: https://github.com/kubernetes-sigs/gateway-api/releases/tag/v0.5.0
 
 #### Fixed
 
@@ -2539,9 +2543,9 @@ instructions and the [revised Kong 3.x upgrade instructions](https://docs.konghq
   [#2446](https://github.com/Kong/kubernetes-ingress-controller/issues/2446)
 - Added a mechanism to retry the initial connection to the Kong
   Admin API on controller start to fix an issue where the controller
-  pod could crash loop on start when waiting for Gateway readiness 
-  (e.g. if the Gateway is waiting for its database to initialize). 
-  The new retry mechanism can be manually configured using the 
+  pod could crash loop on start when waiting for Gateway readiness
+  (e.g. if the Gateway is waiting for its database to initialize).
+  The new retry mechanism can be manually configured using the
   `--kong-admin-init-retries` and `--kong-admin-init-retry-delay` flags.
   [#2274](https://github.com/Kong/kubernetes-ingress-controller/issues/2274)
 - diff logging now honors log level instead of printing at all log levels. It
@@ -2659,7 +2663,7 @@ instructions and the [revised Kong 3.x upgrade instructions](https://docs.konghq
 
 #### Added
 
-- Support for Kubernetes [Gateway APIs][gwapis] is now available [by enabling 
+- Support for Kubernetes [Gateway APIs][gwapis] is now available [by enabling
   the `Gateway` feature gate](https://docs.konghq.com/kubernetes-ingress-controller/2.2.x/guides/using-gateway-api/).
   This is an alpha feature, with limited support for the `HTTPRoute` API.
   [Gateway Milestone 1][gwm1]
@@ -2670,8 +2674,8 @@ instructions and the [revised Kong 3.x upgrade instructions](https://docs.konghq
 - The KIC Grafana dashboard [is now published on grafana.com](https://grafana.com/grafana/dashboards/15662).
   [#2235](https://github.com/Kong/kubernetes-ingress-controller/issues/2235)
 
-[gwapis]:https://github.com/kubernetes-sigs/gateway-api
-[gwm1]:https://github.com/Kong/kubernetes-ingress-controller/milestone/21
+[gwapis]: https://github.com/kubernetes-sigs/gateway-api
+[gwm1]: https://github.com/Kong/kubernetes-ingress-controller/milestone/21
 
 #### Fixed
 
@@ -2745,9 +2749,9 @@ the `configuration.konghq.com` API group.
   `konghq.com/protocols: tls_passthrough` annotation.
   [#2041](https://github.com/Kong/kubernetes-ingress-controller/issues/2041)
 
-[k8s-fg]:https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
-[kic-fg]:https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md
-[gwapi]:https://github.com/kubernetes-sigs/gateway-api
+[k8s-fg]: https://kubernetes.io/docs/reference/command-line-tools-reference/feature-gates/
+[kic-fg]: https://github.com/Kong/kubernetes-ingress-controller/blob/main/FEATURE_GATES.md
+[gwapi]: https://github.com/kubernetes-sigs/gateway-api
 
 #### Fixed
 
@@ -2865,6 +2869,7 @@ under the `resources` block for the `configuration.konghq.com` API group.
 ## [2.0.1]
 
 > Release date: 2021/10/11
+
 #### Added
 
 - The ingress controller version now gets logged on startup.
@@ -2881,11 +2886,11 @@ under the `resources` block for the `configuration.konghq.com` API group.
 > Release date: 2021/10/07
 
 **NOTE**: This changelog entry was compiled from every changelog entry in the
-  `alpha` and `beta` pre-releases of `2.0.0`. If you're looking for the interim
-  changelog between `alpha` and/or `beta` versions prior to the release see
-  the [historical changelog here][alpha-beta-changelog].
+`alpha` and `beta` pre-releases of `2.0.0`. If you're looking for the interim
+changelog between `alpha` and/or `beta` versions prior to the release see
+the [historical changelog here][alpha-beta-changelog].
 
-[alpha-beta-changelog]:https://github.com/Kong/kubernetes-ingress-controller/blob/3e9761c378d02eda1c4622d87b899ea9ea4c35b4/CHANGELOG.md
+[alpha-beta-changelog]: https://github.com/Kong/kubernetes-ingress-controller/blob/3e9761c378d02eda1c4622d87b899ea9ea4c35b4/CHANGELOG.md
 
 #### Breaking changes
 
@@ -2939,7 +2944,7 @@ previous `v1.3.x` releases to this release.
   before upgrading.
   [#2090](https://github.com/Kong/kubernetes-ingress-controller/issues/2090)
 
-[upgrade-1-3-to-2-0]:https://docs.konghq.com/kubernetes-ingress-controller/2.0.x/guides/upgrade/
+[upgrade-1-3-to-2-0]: https://docs.konghq.com/kubernetes-ingress-controller/2.0.x/guides/upgrade/
 
 #### Added
 
@@ -2997,7 +3002,7 @@ previous `v1.3.x` releases to this release.
 - Added `--proxy-timeout-seconds` flag to configure the kong client api timeout.
   [#1401](https://github.com/Kong/kubernetes-ingress-controller/pull/1401)
 
-[kong-udp]:https://konghq.com/blog/kong-gateway-2-2-released/#UDP-Support
+[kong-udp]: https://konghq.com/blog/kong-gateway-2-2-released/#UDP-Support
 
 #### Fixed
 
@@ -3078,11 +3083,11 @@ previous `v1.3.x` releases to this release.
   expected to remain unchanged.
 - taking configuration values from environment variables no longer uses Viper.
 
-[go-tick]:https://golang.org/pkg/time/#Ticker
-[kubebuilder]:https://github.com/kubernetes-sigs/kubebuilder
-[controller-runtime]:https://github.com/kubernetes-sigs/controller-runtime
-[go]:https://golang.org
-[ktf]:https://github.com/kong/kubernetes-testing-framework
+[go-tick]: https://golang.org/pkg/time/#Ticker
+[kubebuilder]: https://github.com/kubernetes-sigs/kubebuilder
+[controller-runtime]: https://github.com/kubernetes-sigs/controller-runtime
+[go]: https://golang.org
+[ktf]: https://github.com/kong/kubernetes-testing-framework
 
 ## [1.3.4]
 
@@ -3322,7 +3327,6 @@ previous `v1.3.x` releases to this release.
   place.
   [#751](https://github.com/Kong/kubernetes-ingress-controller/pull/751)
 
-
 #### Added
 
 - Added support for [Ingress
@@ -3420,22 +3424,22 @@ provided by other means in such architectures.
 
 #### Added
 
-- **Plugin configuration via Kubernetes Secrets**  Configuration of plugins
+- **Plugin configuration via Kubernetes Secrets** Configuration of plugins
   can be stored in Kubernetes Secrets and then referenced in `KongPlugin`
   and `KongClusterPlugin` resources.
   [#618](https://github.com/Kong/kubernetes-ingress-controller/pull/618)
-- **mTLS authentication**  The controller can configure CA Certificates
+- **mTLS authentication** The controller can configure CA Certificates
   in Kong and these can be used by `mtls-auth` plugin in Kong. The plugin
   is currently enterprise-only.
   [#616](https://github.com/Kong/kubernetes-ingress-controller/pull/616)
 - **Kong Custom entities in DB-less mode** Custom entities used in
   custom plugins can now be configured for DB-less deployments of Kong.
   [#630](https://github.com/Kong/kubernetes-ingress-controller/pull/630)
-- **Host-header manipulation**  Host header of a request destined to a
+- **Host-header manipulation** Host header of a request destined to a
   Kubernetes Service can now be manipulated using the `konghq.com/host-header`
   annotation on the `Service` resource.
   [#597](https://github.com/Kong/kubernetes-ingress-controller/pull/597)
-- **Method-based routing**  Method based routing can be performed using the
+- **Method-based routing** Method based routing can be performed using the
   Ingress resource. A new annotation `konghq.com/methods` can now be used to
   match HTTP method in addition to HTTP `host` and `path`. This was
   previously supported only via `KongIngress` Custom Resource.
@@ -3496,6 +3500,7 @@ provided by other means in such architectures.
 
 The following annotations are now deprecated and will be removed in a future
 release:
+
 - `configuration.konghq.com`
 - `plugins.konghq.com`
 - `configuration.konghq.com/protocols`
@@ -3506,15 +3511,15 @@ Please read the annotations document for new annotations.
 
 #### Added
 
-- **Knative Ingress support**  The controller can now proxy traffic for
+- **Knative Ingress support** The controller can now proxy traffic for
   serverless workloads running on top of Knative. Users can also select
   Kong plugins to execute on a per Knative workload/service basis.
   [#563](https://github.com/Kong/kubernetes-ingress-controller/pull/563)
-- **TCP/TLS routing**  New Custom Resource TCPIngress has been introduced
+- **TCP/TLS routing** New Custom Resource TCPIngress has been introduced
   to support TCP proxy. SNI-based proxying is also supported for TLS encrypted
   TCP streams.
   [#527](https://github.com/Kong/kubernetes-ingress-controller/pull/527)
-- **New Custom Resource KongClusterPlugin**  Plugin configuration can now
+- **New Custom Resource KongClusterPlugin** Plugin configuration can now
   be shared acrossed Kubernetes namespaces using `KongClusterPlugin`, a new
   cluster-level Custom Resource.
   [#520](https://github.com/Kong/kubernetes-ingress-controller/pull/520)
@@ -3665,7 +3670,6 @@ authentication, DB-less deployment by default and performance improvements.
   as default `algorithm` to avoid false positives during a sync operation.
   These false positives can have a negative impact on Kong's performance.
   [#480](https://github.com/Kong/kubernetes-ingress-controller/pull/480)
-
 
 #### Deprecated
 
@@ -3907,9 +3911,9 @@ Please read the changelog and test in your environment.
 
 #### Breaking Changes
 
- - :warning: Default Ingress class is now `kong`.
-   If you were relying on the previous default of `nginx`, you will
-   need to explicitly set the class using `--ingress-class` CLI flag.
+- :warning: Default Ingress class is now `kong`.
+  If you were relying on the previous default of `nginx`, you will
+  need to explicitly set the class using `--ingress-class` CLI flag.
 
 #### Added
 
@@ -3927,18 +3931,17 @@ Please read the changelog and test in your environment.
   The ingress controller can now talk to Kong's Control-Plane using TLS with
   custom certificates. Following new CLI flags are introduces:
   - `--admin-tls-skip-verify`: to skip validation of a certificate; it
-  shouldn't be used in production environments.
+    shouldn't be used in production environments.
   - `--admin-tls-server-name`: use this if the FQDN of Kong's Control Plane
-  doesn't match the CN in the certificate.
+    doesn't match the CN in the certificate.
   - `--admin-ca-cert-file`: use this to specify a custom CA cert which is
-  not part of the bundled CA certs.
-  [#212](https://github.com/Kong/kubernetes-ingress-controller/pull/212)
+    not part of the bundled CA certs.
+    [#212](https://github.com/Kong/kubernetes-ingress-controller/pull/212)
 
 #### Fixed
 
 - Retries for services in Kong can be set to zero.
-   [#211](https://github.com/Kong/kubernetes-ingress-controller/pull/211)
-
+  [#211](https://github.com/Kong/kubernetes-ingress-controller/pull/211)
 
 ## [0.2.2]
 
@@ -3946,19 +3949,18 @@ Please read the changelog and test in your environment.
 
 #### Fixed
 
- - Fix plugin config comparison logic to avoid unnecessary PATCH requests
-   to Kong
-   [#196](https://github.com/Kong/kubernetes-ingress-controller/pull/196)
- - Fix `strip_path` in Routes in Kong. It is now set to false by default
-   as in all other versions of Ingress controller except 0.2.1.
-   [#194](https://github.com/Kong/kubernetes-ingress-controller/pull/194)
- - Fix path-only based Ingress rule parsing and configuration where only a
-   path based rule for a Kubernetes Service
-   would not setup Routes and Service in Kong.
-   [#190](https://github.com/Kong/kubernetes-ingress-controller/pull/190)
- - Fix a nil pointer reference when overriding Ingress resource with KongIngress
-   [#188](https://github.com/Kong/kubernetes-ingress-controller/pull/188)
-
+- Fix plugin config comparison logic to avoid unnecessary PATCH requests
+  to Kong
+  [#196](https://github.com/Kong/kubernetes-ingress-controller/pull/196)
+- Fix `strip_path` in Routes in Kong. It is now set to false by default
+  as in all other versions of Ingress controller except 0.2.1.
+  [#194](https://github.com/Kong/kubernetes-ingress-controller/pull/194)
+- Fix path-only based Ingress rule parsing and configuration where only a
+  path based rule for a Kubernetes Service
+  would not setup Routes and Service in Kong.
+  [#190](https://github.com/Kong/kubernetes-ingress-controller/pull/190)
+- Fix a nil pointer reference when overriding Ingress resource with KongIngress
+  [#188](https://github.com/Kong/kubernetes-ingress-controller/pull/188)
 
 ## [0.1.3]
 
@@ -3966,14 +3968,13 @@ Please read the changelog and test in your environment.
 
 #### Fixed
 
- - Fix path-only based Ingress rule parsing and configuration where only a
-   path based rule for a Kubernetes Service
-   would not setup Routes and Service in Kong.
-   [#190](https://github.com/Kong/kubernetes-ingress-controller/pull/190)
- - Fix plugin config comparison logic to avoid unnecessary PATCH requests
-   to Kong
-   [#196](https://github.com/Kong/kubernetes-ingress-controller/pull/196)
-
+- Fix path-only based Ingress rule parsing and configuration where only a
+  path based rule for a Kubernetes Service
+  would not setup Routes and Service in Kong.
+  [#190](https://github.com/Kong/kubernetes-ingress-controller/pull/190)
+- Fix plugin config comparison logic to avoid unnecessary PATCH requests
+  to Kong
+  [#196](https://github.com/Kong/kubernetes-ingress-controller/pull/196)
 
 ## [0.2.1]
 
@@ -3981,38 +3982,37 @@ Please read the changelog and test in your environment.
 
 #### Added
 
- - **Header Injection in requests to Kong's Admin API** HTTP Headers
-   can be set via CLI which will be injected in every request sent to
-   Kong's Admin API, enabling the use of Ingress Controller when Kong's
-   Control Plane is protected by Authentication/Authorization.
-   [#172](https://github.com/Kong/kubernetes-ingress-controller/pull/172)
- - **Path only based routing** Path only Ingress rules (without a host)
-   are now parsed and served correctly.
-   [#142](https://github.com/Kong/kubernetes-ingress-controller/pull/142)
- - Under the hood, an external library is now used to talk to Kong's Admin
-   API. Several other packages and dead code has been dropped. These changes
-   don't have any user facing changes but are steps in direction to simplify
-   code and make it more testable.
-   [#150](https://github.com/Kong/kubernetes-ingress-controller/pull/150)
-   [#154](https://github.com/Kong/kubernetes-ingress-controller/pull/154)
-   [#179](https://github.com/Kong/kubernetes-ingress-controller/pull/179)
+- **Header Injection in requests to Kong's Admin API** HTTP Headers
+  can be set via CLI which will be injected in every request sent to
+  Kong's Admin API, enabling the use of Ingress Controller when Kong's
+  Control Plane is protected by Authentication/Authorization.
+  [#172](https://github.com/Kong/kubernetes-ingress-controller/pull/172)
+- **Path only based routing** Path only Ingress rules (without a host)
+  are now parsed and served correctly.
+  [#142](https://github.com/Kong/kubernetes-ingress-controller/pull/142)
+- Under the hood, an external library is now used to talk to Kong's Admin
+  API. Several other packages and dead code has been dropped. These changes
+  don't have any user facing changes but are steps in direction to simplify
+  code and make it more testable.
+  [#150](https://github.com/Kong/kubernetes-ingress-controller/pull/150)
+  [#154](https://github.com/Kong/kubernetes-ingress-controller/pull/154)
+  [#179](https://github.com/Kong/kubernetes-ingress-controller/pull/179)
 
 #### Fixed
 
- - Fixed KongIngress overrides to enable overriding hashing attributes in
-   Upstream object in Kong.
-   Thanks @jdevalk2 for the patch!
-   [#139](https://github.com/Kong/kubernetes-ingress-controller/pull/139)
- - Remove and sync certificates correctly when TLS secret reference changes
-   for a hostname in Ingress spec.
-   [#169](https://github.com/Kong/kubernetes-ingress-controller/pull/169)
- - Migrations for Kong are run using 'Job' in Kubernetes to avoid any
-   issues that might arise due to multiple Kong nodes running migrations.
-   [#161](https://github.com/Kong/kubernetes-ingress-controller/pull/161)
- - Kong and Ingress controller now wait for Postgres to start and migrations
-   to finish before attempting to start.
-   [#168](https://github.com/Kong/kubernetes-ingress-controller/pull/168)
-
+- Fixed KongIngress overrides to enable overriding hashing attributes in
+  Upstream object in Kong.
+  Thanks @jdevalk2 for the patch!
+  [#139](https://github.com/Kong/kubernetes-ingress-controller/pull/139)
+- Remove and sync certificates correctly when TLS secret reference changes
+  for a hostname in Ingress spec.
+  [#169](https://github.com/Kong/kubernetes-ingress-controller/pull/169)
+- Migrations for Kong are run using 'Job' in Kubernetes to avoid any
+  issues that might arise due to multiple Kong nodes running migrations.
+  [#161](https://github.com/Kong/kubernetes-ingress-controller/pull/161)
+- Kong and Ingress controller now wait for Postgres to start and migrations
+  to finish before attempting to start.
+  [#168](https://github.com/Kong/kubernetes-ingress-controller/pull/168)
 
 ## [0.1.2]
 
@@ -4020,53 +4020,52 @@ Please read the changelog and test in your environment.
 
 #### Deprecated
 
- - :warning: Configuring plugins in Kong using `<plugin-name>.plugin.konghq.com`
-   annotation is now deprecated and will be removed in a future release.
-   Please use `plugins.konghq.com` annotation instead.
+- :warning: Configuring plugins in Kong using `<plugin-name>.plugin.konghq.com`
+  annotation is now deprecated and will be removed in a future release.
+  Please use `plugins.konghq.com` annotation instead.
 
 #### Added
 
- - **Header Injection in requests to Kong's Admin API** HTTP Headers
-   can be set via CLI which will be injected in every request sent to
-   Kong's Admin API, enabling the use of Ingress Controller when Kong's
-   Control Plane is protected by Authentication/Authorization.
-   [#172](https://github.com/Kong/kubernetes-ingress-controller/pull/172)
- - **Path only based routing** Path only Ingress rules (without a host)
-   are now parsed and served correctly.
-   [#142](https://github.com/Kong/kubernetes-ingress-controller/pull/142)
- - **Global Plugins** Plugins can be configured to run globally in Kong
-   using a "global" label on `KongPlugin` resource.
-   [#112](https://github.com/Kong/kubernetes-ingress-controller/pull/112)
- - A new property `plugin` has been introduced in `KongPlugin` resource
-   which ties the configuration to be used and the type of the plugin.
-   [#122](https://github.com/Kong/kubernetes-ingress-controller/pull/122)
- - Multiple plugins can be configured for an Ingress or a Service in k8s
-   using `plugins.konghq.com` annotation.
-   [#124](https://github.com/Kong/kubernetes-ingress-controller/pull/124)
- - `KongPlugin` resources do not need to be duplicated any more.
-   The same `KongPlugin` resource can be used across
-   multiple Ingress/Service resources.
-   [#121](https://github.com/Kong/kubernetes-ingress-controller/pull/121)
+- **Header Injection in requests to Kong's Admin API** HTTP Headers
+  can be set via CLI which will be injected in every request sent to
+  Kong's Admin API, enabling the use of Ingress Controller when Kong's
+  Control Plane is protected by Authentication/Authorization.
+  [#172](https://github.com/Kong/kubernetes-ingress-controller/pull/172)
+- **Path only based routing** Path only Ingress rules (without a host)
+  are now parsed and served correctly.
+  [#142](https://github.com/Kong/kubernetes-ingress-controller/pull/142)
+- **Global Plugins** Plugins can be configured to run globally in Kong
+  using a "global" label on `KongPlugin` resource.
+  [#112](https://github.com/Kong/kubernetes-ingress-controller/pull/112)
+- A new property `plugin` has been introduced in `KongPlugin` resource
+  which ties the configuration to be used and the type of the plugin.
+  [#122](https://github.com/Kong/kubernetes-ingress-controller/pull/122)
+- Multiple plugins can be configured for an Ingress or a Service in k8s
+  using `plugins.konghq.com` annotation.
+  [#124](https://github.com/Kong/kubernetes-ingress-controller/pull/124)
+- `KongPlugin` resources do not need to be duplicated any more.
+  The same `KongPlugin` resource can be used across
+  multiple Ingress/Service resources.
+  [#121](https://github.com/Kong/kubernetes-ingress-controller/pull/121)
 
 #### Fixed
 
- - Avoid issuing unnecessary PATCH requests on Services in Kong during the
-   reconciliation loop, which lead to unnecessary Router rebuilds inside Kong.
-   [#107](https://github.com/Kong/kubernetes-ingress-controller/pull/107)
- - Fixed the diffing logic for plugin configuration between KongPlugin
-   resource in k8s and plugin config in Kong to avoid false positives.
-   [#106](https://github.com/Kong/kubernetes-ingress-controller/pull/106)
- - Correctly format IPv6 address for Targets in Kong.
-   Thanks @NixM0nk3y for the patch!
-   [#118](https://github.com/Kong/kubernetes-ingress-controller/pull/118)
- - Fixed KongIngress overrides to enable overriding hashing attributes in
-   Upstream object in Kong.
-   Thanks @jdevalk2 for the patch!
-   [#139](https://github.com/Kong/kubernetes-ingress-controller/pull/139)
- - Remove and sync certificates correctly when TLS secret reference changes
-   for a hostname in Ingress spec.
-   [#169](https://github.com/Kong/kubernetes-ingress-controller/pull/169)
-
+- Avoid issuing unnecessary PATCH requests on Services in Kong during the
+  reconciliation loop, which lead to unnecessary Router rebuilds inside Kong.
+  [#107](https://github.com/Kong/kubernetes-ingress-controller/pull/107)
+- Fixed the diffing logic for plugin configuration between KongPlugin
+  resource in k8s and plugin config in Kong to avoid false positives.
+  [#106](https://github.com/Kong/kubernetes-ingress-controller/pull/106)
+- Correctly format IPv6 address for Targets in Kong.
+  Thanks @NixM0nk3y for the patch!
+  [#118](https://github.com/Kong/kubernetes-ingress-controller/pull/118)
+- Fixed KongIngress overrides to enable overriding hashing attributes in
+  Upstream object in Kong.
+  Thanks @jdevalk2 for the patch!
+  [#139](https://github.com/Kong/kubernetes-ingress-controller/pull/139)
+- Remove and sync certificates correctly when TLS secret reference changes
+  for a hostname in Ingress spec.
+  [#169](https://github.com/Kong/kubernetes-ingress-controller/pull/169)
 
 ## [0.1.1]
 
@@ -4074,9 +4073,9 @@ Please read the changelog and test in your environment.
 
 #### Fixed
 
- - Fix version parsing for minor releases of Kong Enterprise (like 0.33-1).
-   The dash(`-`) didn't go well with the semver parsing
-   [#141](https://github.com/Kong/kubernetes-ingress-controller/pull/141)
+- Fix version parsing for minor releases of Kong Enterprise (like 0.33-1).
+  The dash(`-`) didn't go well with the semver parsing
+  [#141](https://github.com/Kong/kubernetes-ingress-controller/pull/141)
 
 ## [0.2.0]
 
@@ -4084,49 +4083,48 @@ Please read the changelog and test in your environment.
 
 #### Breaking Changes
 
- - :warning: Support for Kong 0.13.x has been dropped in favor of 0.14.x
+- :warning: Support for Kong 0.13.x has been dropped in favor of 0.14.x
 
 #### Deprecated
 
- - :warning: Configuring plugins in Kong using `<plugin-name>.plugin.konghq.com`
-   annotation is now deprecated and will be removed in a future release.
-   Please use `plugins.konghq.com` annotation instead.
+- :warning: Configuring plugins in Kong using `<plugin-name>.plugin.konghq.com`
+  annotation is now deprecated and will be removed in a future release.
+  Please use `plugins.konghq.com` annotation instead.
 
 #### Added
 
- - **Support for Kong 0.14.x** The supported version of Kong 0.14.x
-   has been introduced. Kong 0.14.x introduced breaking changes to a few
-   Admin API endpoints which have been updated in the Ingress Controller.
-   [#101](https://github.com/Kong/kubernetes-ingress-controller/pull/101)
- - **Global Plugins** Plugins can be configured to run globally in Kong
-   using a "global" label on `KongPlugin` resource.
-   [#112](https://github.com/Kong/kubernetes-ingress-controller/pull/112)
- - A new property `plugin` has been introduced in `KongPlugin` resource
-   which ties the configuration to be used and the type of the plugin.
-   [#122](https://github.com/Kong/kubernetes-ingress-controller/pull/122)
- - Multiple plugins can be configured for an Ingress or a Service in k8s
-   using `plugins.konghq.com` annotation.
-   [#124](https://github.com/Kong/kubernetes-ingress-controller/pull/124)
- - `KongPlugin` resources do not need to be duplicated any more.
-   The same `KongPlugin` resource can be used across
-   multiple Ingress/Service resources.
-   [#121](https://github.com/Kong/kubernetes-ingress-controller/pull/121)
- - The custom resource definitions now have a short-name for all the
-   CRDs, making it easy to interact with `kubectl`.
-   [#120](https://github.com/Kong/kubernetes-ingress-controller/pull/120)
+- **Support for Kong 0.14.x** The supported version of Kong 0.14.x
+  has been introduced. Kong 0.14.x introduced breaking changes to a few
+  Admin API endpoints which have been updated in the Ingress Controller.
+  [#101](https://github.com/Kong/kubernetes-ingress-controller/pull/101)
+- **Global Plugins** Plugins can be configured to run globally in Kong
+  using a "global" label on `KongPlugin` resource.
+  [#112](https://github.com/Kong/kubernetes-ingress-controller/pull/112)
+- A new property `plugin` has been introduced in `KongPlugin` resource
+  which ties the configuration to be used and the type of the plugin.
+  [#122](https://github.com/Kong/kubernetes-ingress-controller/pull/122)
+- Multiple plugins can be configured for an Ingress or a Service in k8s
+  using `plugins.konghq.com` annotation.
+  [#124](https://github.com/Kong/kubernetes-ingress-controller/pull/124)
+- `KongPlugin` resources do not need to be duplicated any more.
+  The same `KongPlugin` resource can be used across
+  multiple Ingress/Service resources.
+  [#121](https://github.com/Kong/kubernetes-ingress-controller/pull/121)
+- The custom resource definitions now have a short-name for all the
+  CRDs, making it easy to interact with `kubectl`.
+  [#120](https://github.com/Kong/kubernetes-ingress-controller/pull/120)
 
 #### Fixed
 
- - Avoid issuing unnecessary PATCH requests on Services in Kong during the
-   reconciliation loop, which lead to unnecessary Router rebuilds inside Kong.
-   [#107](https://github.com/Kong/kubernetes-ingress-controller/pull/107)
- - Fixed the diffing logic for plugin configuration between KongPlugin
-   resource in k8s and plugin config in Kong to avoid false positives.
-   [#106](https://github.com/Kong/kubernetes-ingress-controller/pull/106)
- - Correctly format IPv6 address for Targets in Kong.
-   Thanks @NixM0nk3y for the patch!
-   [#118](https://github.com/Kong/kubernetes-ingress-controller/pull/118)
-
+- Avoid issuing unnecessary PATCH requests on Services in Kong during the
+  reconciliation loop, which lead to unnecessary Router rebuilds inside Kong.
+  [#107](https://github.com/Kong/kubernetes-ingress-controller/pull/107)
+- Fixed the diffing logic for plugin configuration between KongPlugin
+  resource in k8s and plugin config in Kong to avoid false positives.
+  [#106](https://github.com/Kong/kubernetes-ingress-controller/pull/106)
+- Correctly format IPv6 address for Targets in Kong.
+  Thanks @NixM0nk3y for the patch!
+  [#118](https://github.com/Kong/kubernetes-ingress-controller/pull/118)
 
 ## [0.1.0]
 
@@ -4134,30 +4132,29 @@ Please read the changelog and test in your environment.
 
 #### Breaking Changes
 
- - :warning: **Declarative Consumers in Kong** Kong consumers can be
-   declaratively configured via `KongConsumer` custom resources. Any consumers
-   created directly in Kong without a corresponding `KongConsumer` custom
-   resource will be deleted by the ingress controller.
-   [#81](https://github.com/Kong/kubernetes-ingress-controller/pull/81)
+- :warning: **Declarative Consumers in Kong** Kong consumers can be
+  declaratively configured via `KongConsumer` custom resources. Any consumers
+  created directly in Kong without a corresponding `KongConsumer` custom
+  resource will be deleted by the ingress controller.
+  [#81](https://github.com/Kong/kubernetes-ingress-controller/pull/81)
 
 #### Added
 
- - **Support Upstream TLS** Service in Kong can be configured to use HTTPS
-   via `KongIngress` custom resource.
-   [#79](https://github.com/Kong/kubernetes-ingress-controller/pull/79)
- - Support for control over protocol(HTTP/HTTPS) to use for ingress traffic
-   via `KongIngress` custom resource.
-   [#64](https://github.com/Kong/kubernetes-ingress-controller/pull/64)
+- **Support Upstream TLS** Service in Kong can be configured to use HTTPS
+  via `KongIngress` custom resource.
+  [#79](https://github.com/Kong/kubernetes-ingress-controller/pull/79)
+- Support for control over protocol(HTTP/HTTPS) to use for ingress traffic
+  via `KongIngress` custom resource.
+  [#64](https://github.com/Kong/kubernetes-ingress-controller/pull/64)
 
 #### Fixed
 
- - Multiple SNIs are created in Kong if multiple hosts are specified in TLS
-   section of an `Ingress` resource.
-   [#76](https://github.com/Kong/kubernetes-ingress-controller/pull/76)
- - Updates to `KongIngress` resource associated with an Ingress
-   now updates the corresponding routing properties in Kong.
-   [#92](https://github.com/Kong/kubernetes-ingress-controller/pull/92)
-
+- Multiple SNIs are created in Kong if multiple hosts are specified in TLS
+  section of an `Ingress` resource.
+  [#76](https://github.com/Kong/kubernetes-ingress-controller/pull/76)
+- Updates to `KongIngress` resource associated with an Ingress
+  now updates the corresponding routing properties in Kong.
+  [#92](https://github.com/Kong/kubernetes-ingress-controller/pull/92)
 
 ## [0.0.5]
 
@@ -4165,12 +4162,12 @@ Please read the changelog and test in your environment.
 
 #### Added
 
- - Add support for Kong Enterprise Edition 0.32 and above
+- Add support for Kong Enterprise Edition 0.32 and above
 
 ## [0.0.4] and prior
 
- - The initial versions  were rapildy iterated to deliver
-   a working ingress controller.
+- The initial versions were rapildy iterated to deliver
+  a working ingress controller.
 
 [3.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.7...v3.5.0
 [3.4.7]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.6...v3.4.7

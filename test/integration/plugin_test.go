@@ -22,8 +22,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	"github.com/kong/kubernetes-configuration/pkg/clientset"
+	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
+	"github.com/kong/kubernetes-configuration/v2/pkg/clientset"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"

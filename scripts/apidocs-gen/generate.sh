@@ -7,7 +7,7 @@ set -o pipefail
 SCRIPT_ROOT="$(dirname "${BASH_SOURCE[0]}")/../.."
 CRD_REF_DOCS_BIN="$1"
 # Download the `kong/kubernetes-configuration` package and get its path.
-KUBE_CONF_REPO=github.com/kong/kubernetes-configuration
+KUBE_CONF_REPO=github.com/kong/kubernetes-configuration/v2
 KUBE_CONF_PATH=$(go mod download -json ${KUBE_CONF_REPO} | jq -rM .Dir)
 echo "Dowloaded ${KUBE_CONF_REPO} in ${KUBE_CONF_PATH}"
 

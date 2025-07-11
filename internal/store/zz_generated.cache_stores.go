@@ -13,10 +13,10 @@ import (
 	"k8s.io/client-go/tools/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	kongv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	kongv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	kongv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
-	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
+	kongv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
+	kongv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
+	kongv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/incubator/v1alpha1"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
 

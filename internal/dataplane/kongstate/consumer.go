@@ -6,7 +6,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )

@@ -12,7 +12,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"

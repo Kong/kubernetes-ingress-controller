@@ -4,7 +4,7 @@ import (
 	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util/kubernetes/object"

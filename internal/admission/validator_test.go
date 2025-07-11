@@ -23,10 +23,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
-	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
+	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/incubator/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"

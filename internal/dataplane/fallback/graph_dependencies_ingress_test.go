@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/incubator/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 )

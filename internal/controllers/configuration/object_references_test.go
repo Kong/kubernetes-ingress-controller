@@ -9,8 +9,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 )
 
 func TestListCoreV1ServiceReferredSecrets(t *testing.T) {

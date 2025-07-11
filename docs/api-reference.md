@@ -89,7 +89,7 @@ KongConsumer is the Schema for the kongconsumers API.
 
 
 KongIngress is the Schema for the kongingresses API.
-Deprecated: Use annotations and KongUpstreamPolicy instead. See https://developer.konghq.com/kubernetes-ingress-controller/migrate/kongingress/
+Deprecated: Use Gateway API instead. See https://developer.konghq.com/kubernetes-ingress-controller/migrate/kongingress/
 
 {% include md/kic/crd-ref/kong_ingress_description.md kong_version=page.kong_version %}
 
@@ -661,7 +661,7 @@ _Appears in:_
 _Underlying type:_ `string`
 
 HashInput is the input for consistent-hashing load balancing algorithm.
-It is required use "none" to disable hashing when "algorithm" is set to sticky sessions.
+Use "none" to disable hashing, it is required for sticky sessions.
 
 
 

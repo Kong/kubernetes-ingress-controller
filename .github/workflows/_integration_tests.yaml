@@ -53,7 +53,7 @@ jobs:
       helm-kong: ${{ steps.set-versions.outputs.helm-kong }}
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        uses: step-security/harden-runner@6c439dc8bdf85cadbbce9ed30d1c7b959517bc49 # v2.12.2
         with:
           egress-policy: audit
       - name: checkout repository
@@ -153,7 +153,7 @@ jobs:
 
     steps:
       - name: Harden Runner
-        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        uses: step-security/harden-runner@6c439dc8bdf85cadbbce9ed30d1c7b959517bc49 # v2.12.2
         with:
           egress-policy: audit
       - uses: Kong/kong-license@c4decf08584f84ff8fe8e7cd3c463e0192f6111b # master @ 20250107

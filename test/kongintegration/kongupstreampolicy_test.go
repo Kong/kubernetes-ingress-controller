@@ -327,6 +327,9 @@ func dropKongDefaults(upstream *kong.Upstream) *kong.Upstream {
 	if upstream.HashOnCookiePath != nil && *upstream.HashOnCookiePath == "/" {
 		upstream.HashOnCookiePath = nil
 	}
+	if upstream.StickySessionsCookiePath != nil && *upstream.StickySessionsCookiePath == "/" {
+		upstream.StickySessionsCookiePath = nil
+	}
 	if upstream.UseSrvName != nil && *upstream.UseSrvName == false {
 		upstream.UseSrvName = nil
 	}

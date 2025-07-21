@@ -66,7 +66,7 @@ func main() {
 
 		mustWrite(&markdown, fmt.Sprintf("  - flag: '%s'\n", name))
 		mustWrite(&markdown, fmt.Sprintf("    type: '%s'\n", typ))
-		mustWrite(&markdown, fmt.Sprintf("    description: %s\n", description))
+		mustWrite(&markdown, fmt.Sprintf("    description: \"%s\"\n", description))
 		mustWrite(&markdown, fmt.Sprintf("    default: %s\n", defaultValue))
 	})
 

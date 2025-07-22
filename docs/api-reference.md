@@ -8,7 +8,7 @@ content_type: reference
 layout: reference
 tags:
   - crd
-search_aliases: 
+search_aliases:
   - kic CRD
 products:
   - kic

@@ -25,7 +25,7 @@ import (
 	netv1 "k8s.io/api/networking/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 )
 
 type ClassMatching int
@@ -293,8 +293,7 @@ func ExtractHeaders(anns map[string]string) (map[string][]string, bool) {
 		separator = ","
 	}
 	for key, val := range anns {
-		if strings.HasPrefix(key, prefix) {
-			header := strings.TrimPrefix(key, prefix)
+		if header, ok0 := strings.CutPrefix(key, prefix); ok0 {
 			if len(header) == 0 || len(val) == 0 {
 				continue
 			}

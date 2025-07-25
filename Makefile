@@ -65,7 +65,7 @@ mise-install: mise
 
 # Do not store yq's version in .tools_versions.yaml as it is used to get tool versions.
 # renovate: datasource=github-releases depName=mikefarah/yq
-YQ_VERSION = 4.45.4
+YQ_VERSION = 4.46.1
 YQ = $(PROJECT_DIR)/bin/installs/yq/$(YQ_VERSION)/bin/yq
 .PHONY: yq
 yq: mise # Download yq locally if necessary.
@@ -154,6 +154,13 @@ download.shellcheck: mise yq ## Download shellcheck locally if necessary.
 	@$(MISE) plugin install --yes -q shellcheck
 	@$(MISE) install -q shellcheck@$(SHELLCHECK_VERSION)
 
+MODERNIZE_VERSION = $(shell $(YQ) -r '.modernize' < $(TOOLS_VERSIONS_FILE))
+MODERNIZE = $(PROJECT_DIR)/bin/modernize
+.PHONY: modernize
+modernize: yq
+	GOBIN=$(PROJECT_DIR)/bin go install -v \
+		golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@$(MODERNIZE_VERSION)
+
 # ------------------------------------------------------------------------------
 # Build
 # ------------------------------------------------------------------------------
@@ -203,8 +210,13 @@ _build.template.debug:
 fmt:
 	go fmt ./...
 
+
+.PHONY: lint.modernize
+lint.modernize: modernize
+	$(MODERNIZE) ./...
+
 .PHONY: lint
-lint: verify.tidy golangci-lint staticcheck
+lint: verify.tidy golangci-lint lint.modernize staticcheck
 
 .PHONY: lint.actions
 lint.actions: download.actionlint download.shellcheck
@@ -261,7 +273,7 @@ manifests: manifests.rbac manifests.webhook manifests.single
 
 .PHONY: manifests.rbac ## Generate ClusterRole objects.
 manifests.rbac: controller-gen
-	$(CONTROLLER_GEN) rbac:roleName=kong-ingress paths="./internal/controllers/configuration/" paths="./controllers/license/" paths="./internal/konnect/license/"
+	$(CONTROLLER_GEN) rbac:roleName=kong-ingress paths="./internal/controllers/configuration/" paths="./internal/controllers/license/" paths="./internal/konnect/license/"
 	$(CONTROLLER_GEN) rbac:roleName=kong-ingress-gateway paths="./internal/controllers/gateway/" output:rbac:artifacts:config=config/rbac/gateway
 	$(CONTROLLER_GEN) rbac:roleName=kong-ingress-crds paths="./internal/controllers/crds/" output:rbac:artifacts:config=config/rbac/crds
 
@@ -299,10 +311,15 @@ generate.docs: generate.apidocs generate.cli-arguments-docs
 .PHONY: generate.apidocs
 generate.apidocs: crd-ref-docs
 	./scripts/apidocs-gen/generate.sh $(CRD_REF_DOCS)
+	mv ./docs/api-reference.md ./docs/api-reference-temp.md
+	./scripts/apidocs-gen/post-process-for-konghq.sh ./docs/api-reference.md ./docs/api-reference-temp.md
+	rm -f ./docs/api-reference-temp.md
 
 .PHONY: generate.cli-arguments
 generate.cli-arguments-docs:
-	go run ./scripts/cli-arguments-docs-gen/main.go > ./docs/cli-arguments.md
+	go run ./scripts/cli-arguments-docs-gen/main.go > ./docs/cli-arguments-temp.md
+	./scripts/cli-arguments-docs-gen/post-process-for-konghq.sh ./docs/cli-arguments.md ./docs/cli-arguments-temp.md
+	rm -f ./docs/cli-arguments-temp.md
 
 .PHONY: generate.go
 generate.go:

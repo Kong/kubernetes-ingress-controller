@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
@@ -326,6 +326,9 @@ func dropKongDefaults(upstream *kong.Upstream) *kong.Upstream {
 	}
 	if upstream.HashOnCookiePath != nil && *upstream.HashOnCookiePath == "/" {
 		upstream.HashOnCookiePath = nil
+	}
+	if upstream.StickySessionsCookiePath != nil && *upstream.StickySessionsCookiePath == "/" {
+		upstream.StickySessionsCookiePath = nil
 	}
 	if upstream.UseSrvName != nil && *upstream.UseSrvName == false {
 		upstream.UseSrvName = nil

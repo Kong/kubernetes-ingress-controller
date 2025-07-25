@@ -71,7 +71,7 @@ func NewCacheIndexers(logger logr.Logger) CacheIndexers {
 // between k8s objects. The key is transferred to the following format:
 // group/version,Kind=kind/namespace/name:group/version,Kind=kind/namespace/name
 // The part before : is from referrer, and after : is from referent.
-func ObjectReferenceKeyFunc(obj interface{}) (string, error) {
+func ObjectReferenceKeyFunc(obj any) (string, error) {
 	ref, ok := obj.(*ObjectReference)
 	if !ok {
 		return "", ErrTypeNotObjectReference
@@ -91,7 +91,7 @@ func ObjectReferenceKeyFunc(obj interface{}) (string, error) {
 // ObjectReferenceIndexerReferrer is the index function to index by the referrer,
 // which returns the index in the following format from referrer:
 // group/version,Kind=kind/namespace/name.
-func ObjectReferenceIndexerReferrer(obj interface{}) ([]string, error) {
+func ObjectReferenceIndexerReferrer(obj any) ([]string, error) {
 	ref, ok := obj.(*ObjectReference)
 	if !ok {
 		return nil, ErrTypeNotObjectReference
@@ -106,7 +106,7 @@ func ObjectReferenceIndexerReferrer(obj interface{}) ([]string, error) {
 // ObjectReferenceIndexerReferent is the index function to index by the referent,
 // which returns index in the following format from referent:
 // group/version,Kind=kind/namespace/name.
-func ObjectReferenceIndexerReferent(obj interface{}) ([]string, error) {
+func ObjectReferenceIndexerReferent(obj any) ([]string, error) {
 	ref, ok := obj.(*ObjectReference)
 	if !ok {
 		return nil, ErrTypeNotObjectReference

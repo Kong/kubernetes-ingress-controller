@@ -6,7 +6,7 @@ set -o pipefail
 
 REPO_ROOT=$(dirname ${BASH_SOURCE})/..
 
-KCONF_PACKAGE="github.com/kong/kubernetes-configuration"
+KCONF_PACKAGE="github.com/kong/kubernetes-configuration/v2"
 RAW_VERSION=$(go list -m -f '{{ .Version }}' ${KCONF_PACKAGE})
 if [[ $(echo "${RAW_VERSION}" | tr -cd '-' | wc -c) -ge 2 ]]; then
     # If there are 2 or more hyphens, extract the part after the last hyphen as

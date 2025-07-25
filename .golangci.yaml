@@ -48,7 +48,7 @@ linters:
         # https://staticcheck.dev/docs/checks/#ST1005
         - -ST1005
     depguard:
-      rules:  
+      rules:
         do-not-use-internal-manager-package:
           files:
             - "!**/internal/manager/**/*.go"
@@ -146,19 +146,19 @@ linters:
           alias: metav1
         - pkg: sigs.k8s.io/gateway-api/apis/(v[\w\d]+)
           alias: gateway${1}
-        - pkg: github.com/kong/kubernetes-configuration/api/common/(v[\w\d]+)
+        - pkg: github.com/kong/kubernetes-configuration/v2/api/common/(v[\w\d]+)
           alias: common${1}
-        - pkg: github.com/kong/kubernetes-configuration/api/gateway-operator/(v[\w\d]+)
+        - pkg: github.com/kong/kubernetes-configuration/v2/api/gateway-operator/(v[\w\d]+)
           alias: operator${1}
-        - pkg: github.com/kong/kubernetes-configuration/api/configuration/(v[\w\d]+)
+        - pkg: github.com/kong/kubernetes-configuration/v2/api/configuration/(v[\w\d]+)
           alias: configuration${1}
-        - pkg: github.com/kong/kubernetes-configuration/api/incubator/(v[\w\d]+)
+        - pkg: github.com/kong/kubernetes-configuration/v2/api/incubator/(v[\w\d]+)
           alias: incubator${1}
-        - pkg: github.com/kong/kubernetes-configuration/api/konnect/(v[\w\d]+)
+        - pkg: github.com/kong/kubernetes-configuration/v2/api/konnect/(v[\w\d]+)
           alias: konnect${1}
         - pkg: github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config
           alias: dpconf
-        - pkg: github.com/kong/kubernetes-ingress-controller/v3/controllers/license
+        - pkg: github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/license
           alias: ctrllicense
         - pkg: github.com/Kong/sdk-konnect-go/models/components
           alias: sdkkonnectcomp
@@ -211,6 +211,11 @@ linters:
         path: \.go
         text: "var-declaration: should drop = 0 from declaration of var .*; it is the zero value"
       - linters:
+          - revive
+        # TODO: refactor the offending packages and remove this exclusion
+        path: test/util/.*\.go|pkg/telemetry/types/.*\.go|internal/util/.*\.go|internal/controllers/utils/.*\.go
+        text: "var-naming: avoid meaningless package names"
+      - linters:
           - gosec
         text: "G115: integer overflow conversion"
       - path: (.+)\.go$
@@ -247,7 +252,7 @@ formatters:
         - default
         - prefix(github.com/Kong/sdk-konnect-go)
         - prefix(github.com/kong/kubernetes-ingress-controller/v3)
-        - prefix(github.com/kong/kubernetes-configuration)
+        - prefix(github.com/kong/kubernetes-configuration/v2)
   exclusions:
     generated: lax
     paths:

@@ -6,7 +6,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 )
 
 func int64Ptr(i int64) *int64 {
@@ -135,7 +135,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 	type args struct {
 		credType   string
 		consumer   *Consumer
-		credConfig interface{}
+		credConfig any
 	}
 	type Case struct {
 		name    string
@@ -189,7 +189,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 			args: args{
 				credType:   "key-auth",
 				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
-				credConfig: map[string]interface{}{"key": true},
+				credConfig: map[string]any{"key": true},
 			},
 			result:  &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 			wantErr: true,
@@ -251,7 +251,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 			args: args{
 				credType:   "basic-auth",
 				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
-				credConfig: map[string]interface{}{"username": true},
+				credConfig: map[string]any{"username": true},
 			},
 			result:  &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 			wantErr: true,
@@ -317,7 +317,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 			args: args{
 				credType:   "hmac-auth",
 				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
-				credConfig: map[string]interface{}{"username": true},
+				credConfig: map[string]any{"username": true},
 			},
 			result:  &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 			wantErr: true,
@@ -350,7 +350,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 			args: args{
 				credType: "oauth2",
 				consumer: &Consumer{},
-				credConfig: map[string]interface{}{
+				credConfig: map[string]any{
 					"name":          "foo",
 					"client_id":     "bar",
 					"client_secret": "baz",
@@ -377,7 +377,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 			args: args{
 				credType: "oauth2",
 				consumer: &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
-				credConfig: map[string]interface{}{
+				credConfig: map[string]any{
 					"client_id": "bar",
 				},
 			},
@@ -389,7 +389,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 			args: args{
 				credType: "oauth2",
 				consumer: &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
-				credConfig: map[string]interface{}{
+				credConfig: map[string]any{
 					"name": "bar",
 				},
 			},
@@ -401,7 +401,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 			args: args{
 				credType:   "oauth2",
 				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
-				credConfig: map[string]interface{}{"client_id": true},
+				credConfig: map[string]any{"client_id": true},
 			},
 			result:  &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 			wantErr: true,
@@ -448,7 +448,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 			args: args{
 				credType:   "jwt",
 				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
-				credConfig: map[string]interface{}{"key": true},
+				credConfig: map[string]any{"key": true},
 			},
 			result:  &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 			wantErr: true,
@@ -514,7 +514,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 			args: args{
 				credType:   "acl",
 				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
-				credConfig: map[string]interface{}{"group": true},
+				credConfig: map[string]any{"group": true},
 			},
 			result:  &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 			wantErr: true,
@@ -567,7 +567,7 @@ func TestConsumer_SetCredential(t *testing.T) {
 			args: args{
 				credType:   "mtls-auth",
 				consumer:   &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
-				credConfig: map[string]interface{}{"subject_name": true},
+				credConfig: map[string]any{"subject_name": true},
 			},
 			result:  &Consumer{Consumer: kong.Consumer{Username: &username, Tags: []*string{}}},
 			wantErr: true,

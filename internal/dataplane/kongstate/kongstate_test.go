@@ -27,9 +27,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
+	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
@@ -67,7 +67,7 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 				Upstreams:      []Upstream{{Upstream: kong.Upstream{ID: kong.String("1")}}},
 				Certificates:   []Certificate{{Certificate: kong.Certificate{ID: kong.String("1"), Key: kong.String("secret")}}},
 				CACertificates: []kong.CACertificate{{ID: kong.String("1")}},
-				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: kong.String("1"), Config: map[string]interface{}{"key": "secret"}}}},
+				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: kong.String("1"), Config: map[string]any{"key": "secret"}}}},
 				Consumers: []Consumer{{
 					KeyAuths: []*KeyAuth{
 						{
@@ -98,7 +98,7 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 						},
 						Entities: []CustomEntity{
 							{
-								Object: map[string]interface{}{
+								Object: map[string]any{
 									"name": "foo",
 								},
 							},
@@ -111,7 +111,7 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 				Upstreams:      []Upstream{{Upstream: kong.Upstream{ID: kong.String("1")}}},
 				Certificates:   []Certificate{{Certificate: kong.Certificate{ID: kong.String("1"), Key: redactedString}}},
 				CACertificates: []kong.CACertificate{{ID: kong.String("1")}},
-				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: kong.String("1"), Config: map[string]interface{}{"key": "secret"}}}}, // We don't redact plugins' config.
+				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: kong.String("1"), Config: map[string]any{"key": "secret"}}}}, // We don't redact plugins' config.
 				Consumers: []Consumer{
 					{
 						KeyAuths: []*KeyAuth{
@@ -144,7 +144,7 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 						},
 						Entities: []CustomEntity{
 							{
-								Object: map[string]interface{}{
+								Object: map[string]any{
 									"name": "foo",
 								},
 							},
@@ -169,7 +169,7 @@ func BenchmarkSanitizedCopy(b *testing.B) {
 	ks := KongState{
 		Certificates: func() []Certificate {
 			certificates := make([]Certificate, 0, count)
-			for i := 0; i < count; i++ {
+			for i := range count {
 				certificates = append(certificates,
 					Certificate{kong.Certificate{ID: kong.String(strconv.Itoa(i)), Key: kong.String("secret")}},
 				)
@@ -178,7 +178,7 @@ func BenchmarkSanitizedCopy(b *testing.B) {
 		}(),
 		Consumers: func() []Consumer {
 			consumers := make([]Consumer, 0, count)
-			for i := 0; i < count; i++ {
+			for i := range count {
 				consumers = append(consumers,
 					Consumer{
 						Consumer: kong.Consumer{ID: kong.String(strconv.Itoa(i))},
@@ -189,7 +189,7 @@ func BenchmarkSanitizedCopy(b *testing.B) {
 		}(),
 		Licenses: func() []License {
 			licenses := make([]License, 0, count)
-			for i := 0; i < count; i++ {
+			for i := range count {
 				licenses = append(licenses,
 					License{kong.License{ID: kong.String(strconv.Itoa(i)), Payload: kong.String("secret")}},
 				)
@@ -197,8 +197,8 @@ func BenchmarkSanitizedCopy(b *testing.B) {
 			return licenses
 		}(),
 	}
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		ret := ks.SanitizedCopy(StaticUUIDGenerator{UUID: "52fdfc07-2182-454f-963f-5f0f9a621d72"})
 		_ = ret
 	}
@@ -822,9 +822,8 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 	require.NoError(b, err)
 	logger := logr.Discard()
 	failuresCollector := failures.NewResourceFailuresCollector(logger)
-	b.ResetTimer()
 
-	for i := 0; i < b.N; i++ {
+	for b.Loop() {
 		fr := ks.getPluginRelations(store, logger, failuresCollector)
 		_ = fr
 	}
@@ -2094,7 +2093,7 @@ func (s *fakeSchemaService) Get(_ context.Context, entityType string) (kong.Sche
 	return schema, nil
 }
 
-func (s *fakeSchemaService) Validate(_ context.Context, _ kong.EntityType, _ interface{}) (bool, string, error) {
+func (s *fakeSchemaService) Validate(_ context.Context, _ kong.EntityType, _ any) (bool, string, error) {
 	return true, "", nil
 }
 

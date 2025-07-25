@@ -23,10 +23,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
-	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
+	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/incubator/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
@@ -1518,10 +1518,10 @@ func TestValidator_ValidateCustomEntity(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			fieldList := make([]interface{}, 0, len(tc.fields))
+			fieldList := make([]any, 0, len(tc.fields))
 			for _, field := range tc.fields {
-				fieldList = append(fieldList, map[string]interface{}{
-					field.Name: map[string]interface{}{
+				fieldList = append(fieldList, map[string]any{
+					field.Name: map[string]any{
 						"type":      string(field.Type),
 						"required":  field.Required,
 						"reference": field.Reference,
@@ -1533,7 +1533,7 @@ func TestValidator_ValidateCustomEntity(t *testing.T) {
 				AdminAPIServicesProvider: fakeServicesProvider{
 					schemaSvc: fakeSchemaSvc{
 						entityTypeExist: tc.entityTypeExist,
-						schema: map[string]interface{}{
+						schema: map[string]any{
 							"fields": fieldList,
 						},
 						shouldFail: tc.validateSvcFail,
@@ -1550,7 +1550,7 @@ func TestValidator_ValidateCustomEntity(t *testing.T) {
 }
 
 type fakeSchemaSvc struct {
-	schema          map[string]interface{}
+	schema          map[string]any
 	entityTypeExist bool
 	shouldFail      bool
 }
@@ -1564,7 +1564,7 @@ func (s fakeSchemaSvc) Get(_ context.Context, _ string) (kong.Schema, error) {
 	return s.schema, nil
 }
 
-func (s fakeSchemaSvc) Validate(_ context.Context, _ kong.EntityType, _ interface{}) (bool, string, error) {
+func (s fakeSchemaSvc) Validate(_ context.Context, _ kong.EntityType, _ any) (bool, string, error) {
 	if s.shouldFail {
 		return false, "something is wrong in the entity", nil
 	}

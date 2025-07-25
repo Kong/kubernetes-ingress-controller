@@ -147,9 +147,9 @@ func installGatewayCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Confi
 func installKongCRDs(t *testing.T, scheme *k8sruntime.Scheme, cfg *rest.Config) {
 	t.Helper()
 
-	kconfVersion, err := testutils.DependencyModuleVersion("github.com/kong/kubernetes-configuration")
+	kconfVersion, err := testutils.DependencyModuleVersion("github.com/kong/kubernetes-configuration/v2")
 	require.NoError(t, err)
-	kconfBasePath := filepath.Join(build.Default.GOPATH, "pkg", "mod", "github.com", "kong", "kubernetes-configuration@"+kconfVersion)
+	kconfBasePath := filepath.Join(build.Default.GOPATH, "pkg", "mod", "github.com", "kong", "kubernetes-configuration/v2@"+kconfVersion)
 	kongCRDPath := filepath.Join(kconfBasePath, "config", "crd", "ingress-controller")
 	kongIncubatorCRDPath := filepath.Join(kconfBasePath, "config", "crd", "ingress-controller-incubator")
 

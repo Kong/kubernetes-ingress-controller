@@ -57,7 +57,7 @@ type MTLSAuth struct {
 	kong.MTLSAuth
 }
 
-func NewKeyAuth(config interface{}) (*KeyAuth, error) {
+func NewKeyAuth(config any) (*KeyAuth, error) {
 	var res KeyAuth
 	err := decodeCredential(config, &res.KeyAuth)
 	if err != nil {
@@ -76,7 +76,7 @@ func NewKeyAuth(config interface{}) (*KeyAuth, error) {
 	return &res, nil
 }
 
-func NewHMACAuth(config interface{}) (*HMACAuth, error) {
+func NewHMACAuth(config any) (*HMACAuth, error) {
 	var res HMACAuth
 	err := decodeCredential(config, &res.HMACAuth)
 	if err != nil {
@@ -88,7 +88,7 @@ func NewHMACAuth(config interface{}) (*HMACAuth, error) {
 	return &res, nil
 }
 
-func NewJWTAuth(config interface{}) (*JWTAuth, error) {
+func NewJWTAuth(config any) (*JWTAuth, error) {
 	var res JWTAuth
 	err := decodeCredential(config, &res.JWTAuth)
 	if err != nil {
@@ -109,7 +109,7 @@ func NewJWTAuth(config interface{}) (*JWTAuth, error) {
 	return &res, nil
 }
 
-func NewBasicAuth(config interface{}) (*BasicAuth, error) {
+func NewBasicAuth(config any) (*BasicAuth, error) {
 	var res BasicAuth
 	err := decodeCredential(config, &res.BasicAuth)
 	if err != nil {
@@ -121,7 +121,7 @@ func NewBasicAuth(config interface{}) (*BasicAuth, error) {
 	return &res, nil
 }
 
-func NewACLGroup(config interface{}) (*ACLGroup, error) {
+func NewACLGroup(config any) (*ACLGroup, error) {
 	var res ACLGroup
 	err := decodeCredential(config, &res.ACLGroup)
 	if err != nil {
@@ -133,7 +133,7 @@ func NewACLGroup(config interface{}) (*ACLGroup, error) {
 	return &res, nil
 }
 
-func NewOauth2Credential(config interface{}) (*Oauth2Credential, error) {
+func NewOauth2Credential(config any) (*Oauth2Credential, error) {
 	var res Oauth2Credential
 	err := decodeCredential(config, &res.Oauth2Credential)
 	if err != nil {
@@ -148,7 +148,7 @@ func NewOauth2Credential(config interface{}) (*Oauth2Credential, error) {
 	return &res, nil
 }
 
-func NewMTLSAuth(config interface{}) (*MTLSAuth, error) {
+func NewMTLSAuth(config any) (*MTLSAuth, error) {
 	var res MTLSAuth
 	err := decodeCredential(config, &res.MTLSAuth)
 	if err != nil {
@@ -233,8 +233,8 @@ func (c *Oauth2Credential) SanitizedCopy() *Oauth2Credential {
 	}
 }
 
-func decodeCredential(credConfig interface{},
-	credStructPointer interface{},
+func decodeCredential(credConfig any,
+	credStructPointer any,
 ) error {
 	decoder, err := mapstructure.NewDecoder(
 		&mapstructure.DecoderConfig{

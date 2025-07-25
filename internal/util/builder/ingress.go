@@ -1,6 +1,7 @@
 package builder
 
 import (
+	"maps"
 	"strings"
 
 	netv1 "k8s.io/api/networking/v1"
@@ -61,9 +62,7 @@ func (b *IngressBuilder) WithAnnotations(annotations map[string]string) *Ingress
 		b.ingress.Annotations = annotations
 		return b
 	}
-	for k, v := range annotations {
-		b.ingress.Annotations[k] = v
-	}
+	maps.Copy(b.ingress.Annotations, annotations)
 	return b
 }
 

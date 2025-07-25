@@ -8,8 +8,8 @@ import (
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
@@ -95,7 +95,7 @@ func parseFlatEntityErrors(body []byte, logger logr.Logger) ([]ResourceError, er
 		// we _should_ arguably be able to parse the "message" field into a ConfigError even if we can't parse a full set
 		// of flattened errors, but for some reason those incomplete errors still don't unmarshal. as a fallback, try and
 		// yank the field out via a more basic unmarshal target
-		fallback := map[string]interface{}{}
+		fallback := map[string]any{}
 		if fallbackErr := json.Unmarshal(body, &fallback); fallbackErr == nil {
 			if message, ok := fallback["message"]; ok {
 				logger.Error(nil, "Could not fully parse config error", "message", message)

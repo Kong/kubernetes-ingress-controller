@@ -9,7 +9,7 @@ import (
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
 )
@@ -199,13 +199,13 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 			want: kong.Plugin{
 				Name: kong.String("response-transformer"),
 				Config: kong.Configuration{
-					"replace": map[string]interface{}{
-						"headers": []interface{}{
+					"replace": map[string]any{
+						"headers": []any{
 							"foo:bar",
 						},
 					},
-					"add": map[string]interface{}{
-						"headers": []interface{}{
+					"add": map[string]any{
+						"headers": []any{
 							"h1:v1",
 							"h2:v2",
 						},
@@ -577,13 +577,13 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 			want: kong.Plugin{
 				Name: kong.String("response-transformer"),
 				Config: kong.Configuration{
-					"replace": map[string]interface{}{
-						"headers": []interface{}{
+					"replace": map[string]any{
+						"headers": []any{
 							"foo:bar",
 						},
 					},
-					"add": map[string]interface{}{
-						"headers": []interface{}{
+					"add": map[string]any{
+						"headers": []any{
 							"h1:v1",
 							"h2:v2",
 						},

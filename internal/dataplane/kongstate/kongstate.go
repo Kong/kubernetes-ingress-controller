@@ -19,9 +19,9 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
-	"github.com/kong/kubernetes-configuration/pkg/metadata"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
+	"github.com/kong/kubernetes-configuration/v2/pkg/metadata"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/admission/validation/consumers/credentials"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
@@ -135,7 +135,7 @@ func (ks *KongState) FillConsumersAndCredentials(
 				pushCredentialResourceFailures(fmt.Sprintf("Failed to fetch secret: %v", err))
 				continue
 			}
-			credConfig := map[string]interface{}{}
+			credConfig := map[string]any{}
 			// try the label first. if it's present, no need to check the field
 			credType, err := util.ExtractKongCredentialType(secret)
 			if err != nil {
@@ -629,7 +629,7 @@ func globalKongClusterPlugins(logger logr.Logger, s store.Storer) ([]Plugin, err
 	if err != nil {
 		return nil, fmt.Errorf("error listing global KongClusterPlugins: %w", err)
 	}
-	for i := 0; i < len(globalClusterPlugins); i++ {
+	for i := range globalClusterPlugins {
 		k8sPlugin := *globalClusterPlugins[i]
 		pluginName := k8sPlugin.PluginName
 		// empty pluginName skip it

@@ -17,8 +17,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	configurationv1beta1 "github.com/kong/kubernetes-configuration/api/configuration/v1beta1"
-	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/api/incubator/v1alpha1"
+	configurationv1beta1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1beta1"
+	incubatorv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/incubator/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	gatewaycontroller "github.com/kong/kubernetes-ingress-controller/v3/internal/controllers/gateway"
@@ -1013,7 +1013,7 @@ func TestBuildPolicyStatus(t *testing.T) {
 			name: "more ancestors than allowed - keeps only maxNAncestors oldest ones",
 			ancestorsStatuses: func() []ancestorStatus {
 				var ancestors []ancestorStatus
-				for i := 0; i < maxNAncestors+2; i++ {
+				for i := range maxNAncestors + 2 {
 					ancestors = append(ancestors, serviceStatus(fmt.Sprintf("svc-%d", i), now.Add(time.Duration(i)*time.Second)))
 				}
 				return ancestors
@@ -1021,7 +1021,7 @@ func TestBuildPolicyStatus(t *testing.T) {
 			expected: gatewayapi.PolicyStatus{
 				Ancestors: func() []gatewayapi.PolicyAncestorStatus {
 					var ancestors []gatewayapi.PolicyAncestorStatus
-					for i := 0; i < maxNAncestors; i++ {
+					for i := range maxNAncestors {
 						ancestors = append(ancestors, serviceExpectedPolicyAncestorStatus(fmt.Sprintf("svc-%d", i)))
 					}
 					return ancestors

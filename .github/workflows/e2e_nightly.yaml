@@ -13,6 +13,10 @@ jobs:
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES) }}
     runs-on: ubuntu-latest
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        with:
+          egress-policy: audit
       - name: Check if image built this night exists
         run: docker pull kong/nightly-ingress-controller:$(date +%Y-%m-%d)
 
@@ -76,6 +80,10 @@ jobs:
       - test-reports
     if: always() && contains(needs.*.result, 'failure') && github.event_name == 'schedule'
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        with:
+          egress-policy: audit
       - name: Notify on Slack for failures of e2e tests run automatically at night
         uses: 8398a7/action-slack@1750b5085f3ec60384090fb7c52965ef822e869e # v3.18.0
         env:

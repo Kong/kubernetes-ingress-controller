@@ -1,6 +1,6 @@
 ### Standard binary
 # Build the manager binary
-FROM --platform=$BUILDPLATFORM golang:1.24.4@sha256:20a022e5112a144aa7b7aeb3f22ebf2cdaefcc4aac0d64e8deeee8cdc18b9c0f AS builder
+FROM --platform=$BUILDPLATFORM golang:1.24.5@sha256:a9219eb99cd2951b042985dbec09d508b3ddc20c4da52a3a55b275b3779e4a05 AS builder
 
 ARG GOPATH
 ARG GOCACHE
@@ -26,7 +26,6 @@ RUN --mount=type=cache,target=$GOPATH/pkg/mod \
     --mount=type=bind,source=go.mod,target=go.mod \
     go mod download -x
 
-COPY controllers/ controllers/
 COPY pkg/ pkg/
 COPY internal/ internal/
 COPY Makefile .
@@ -97,12 +96,12 @@ ARG TARGETOS
 ARG TARGETARCH
 
 LABEL name="Kong Ingress Controller" \
-      vendor="Kong" \
-      version="$TAG" \
-      release="1" \
-      url="https://github.com/Kong/kubernetes-ingress-controller" \
-      summary="Kong for Kubernetes Ingress" \
-      description="Use Kong for Kubernetes Ingress. Configure plugins, health checking, load balancing and more in Kong for Kubernetes Services, all using Custom Resource Definitions (CRDs) and Kubernetes-native tooling."
+    vendor="Kong" \
+    version="$TAG" \
+    release="1" \
+    url="https://github.com/Kong/kubernetes-ingress-controller" \
+    summary="Kong for Kubernetes Ingress" \
+    description="Use Kong for Kubernetes Ingress. Configure plugins, health checking, load balancing and more in Kong for Kubernetes Services, all using Custom Resource Definitions (CRDs) and Kubernetes-native tooling."
 
 WORKDIR /
 COPY --from=builder /workspace/bin/manager .

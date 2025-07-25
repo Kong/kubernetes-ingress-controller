@@ -19,7 +19,7 @@ import (
 const StubUpstreamName = "kong"
 
 type PluginSchemaStore interface {
-	Schema(ctx context.Context, pluginName string) (map[string]interface{}, error)
+	Schema(ctx context.Context, pluginName string) (map[string]any, error)
 }
 
 // GenerateDeckContentParams is the parameters used to generate deck contents.

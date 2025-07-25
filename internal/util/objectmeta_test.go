@@ -88,8 +88,8 @@ func BenchmarkFromK8sObject(b *testing.B) {
 			APIVersion: "networking.k8s.io/v1",
 		},
 	}
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+
+	for b.Loop() {
 		out := FromK8sObject(in)
 		_ = out
 	}

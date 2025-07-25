@@ -6,7 +6,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
@@ -81,7 +81,7 @@ func (c *Consumer) SanitizedCopy(uuidGenerator util.UUIDGenerator) Consumer {
 	}
 }
 
-func (c *Consumer) SetCredential(credType string, credConfig interface{}, tags []*string) (interface{}, error) {
+func (c *Consumer) SetCredential(credType string, credConfig any, tags []*string) (any, error) {
 	switch credType {
 	case "key-auth", "keyauth_credential":
 		cred, err := NewKeyAuth(credConfig)

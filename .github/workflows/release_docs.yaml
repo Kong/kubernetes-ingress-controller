@@ -18,6 +18,10 @@ jobs:
       contents: read
       pull-requests: write
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@c6295a65d1254861815972266d5933fd6e532bdf # v2.11.1
+        with:
+          egress-policy: audit
       - name: Parse semver string
         id: semver_parser
         uses: booxmedialtd/ws-action-parse-semver@7784200024d6b3fc01253e617ec0168daf603de3 # v1.4.7
@@ -35,15 +39,10 @@ jobs:
           path: developer.konghq.com
           fetch-depth: 0
 
-      - name: Generate CRDs reference
+      - name: Update reference docs
         run: |
-          ./scripts/apidocs-gen/post-process-for-konghq.sh \
-          developer.konghq.com/app/kubernetes-ingress-controller/reference/custom-resources.md
-
-      - name: Generate flags reference
-        run: |
-          ./scripts/cli-arguments-docs-gen/post-process-for-konghq.sh \
-          developer.konghq.com/app/kubernetes-ingress-controller/reference/configuration-options.md
+          cp ./docs/api-reference.md developer.konghq.com/app/kubernetes-ingress-controller/reference/custom-resources.md
+          cp ./docs/cli-arguments.md developer.konghq.com/app/kubernetes-ingress-controller/reference/configuration-options.md         
 
       - name: Detect changes
         id: detect-changes

@@ -571,7 +571,7 @@ func getReferenceGrantConditionReason(
 // isGatewayClassEventInClass produces a boolean whether or not a given event which contains
 // one or more GatewayClass objects is supported by this controller according to those
 // objects ControllerName.
-func isGatewayClassEventInClass(log logr.Logger, watchEvent interface{}) bool {
+func isGatewayClassEventInClass(log logr.Logger, watchEvent any) bool {
 	objs := make([]client.Object, 0, 2)
 	switch e := watchEvent.(type) {
 	case event.CreateEvent:

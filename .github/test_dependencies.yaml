@@ -1,11 +1,11 @@
 e2e:
   kind:
     # renovate: datasource=docker depName=kindest/node versioning=docker
-    - 'v1.33.0'
+    - 'v1.33.2'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
     - 'v1.32.5'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.31.6'
+    - 'v1.31.9'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
     - 'v1.30.13'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
@@ -18,9 +18,9 @@ e2e:
   # used directly in the test matrix `include` section.
   istio:
     - # renovate: datasource=docker depName=kindest/node versioning=docker
-      kind: 'v1.33.0'
+      kind: 'v1.33.2'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
-      istio: '1.26.0'
+      istio: '1.26.2'
     - # renovate: datasource=docker depName=kindest/node@only-patch versioning=docker
       kind: 'v1.30.8'
       # renovate: datasource=docker depName=istio/istioctl@only-patch versioning=docker
@@ -35,28 +35,28 @@ e2e:
       istio: '1.21.2'
 
   # renovate: datasource=helm depName=kuma registryUrl=https://kumahq.github.io/charts versioning=helm
-  kuma: '2.11.0'
+  kuma: '2.11.2'
 
 integration:
   helm:
     # renovate: datasource=helm depName=kong registryUrl=https://charts.konghq.com versioning=helm
-    kong: '2.49.0'
+    kong: '2.51.0'
   # renovate: datasource=docker depName=kindest/node versioning=docker
-  kind: 'v1.33.0'
+  kind: 'v1.33.2'
   # renovate: datasource=docker depName=kong versioning=docker
   kong-oss: '3.9.1'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-  kong-ee: '3.9.1.1'
+  kong-ee: '3.11.0.0'
 
 kongintegration:
   # renovate: datasource=docker depName=kong versioning=docker
   kong-oss: '3.9.1'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-  kong-ee: '3.9.1.1'
+  kong-ee: '3.11.0.0'
 
 envtests:
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-  kong-ee: '3.9.1.1'
+  kong-ee: '3.11.0.0'
   # This is a version of Kong Gateway that does not support sticky sessions,
   # all versions >= 3.11.0 support sticky sessions.
   kong-without-sticky-sessions: '3.9.1'

@@ -13,7 +13,7 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1alpha1 "github.com/kong/kubernetes-configuration/api/configuration/v1alpha1"
+	configurationv1alpha1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1alpha1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/failures"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
@@ -54,7 +54,7 @@ type EntityField struct {
 	// UUID is true means that the field is in UUID format.
 	UUID bool `json:"uuid,omitempty"`
 	// Default is the default value of the field when it is not given.
-	Default interface{} `json:"default,omitempty"`
+	Default any `json:"default,omitempty"`
 	// Reference is the type referring entity when the field is "foreign" to refer to another entity.
 	Reference string `json:"reference,omitempty"`
 	// Other attributes in field metadata that do not affect validation and translation are omitted.
@@ -72,17 +72,17 @@ func ExtractEntityFieldDefinitions(schema kong.Schema) EntitySchema {
 		Fields: make(map[string]EntityField),
 	}
 
-	fieldList, ok := schema["fields"].([]interface{})
+	fieldList, ok := schema["fields"].([]any)
 	if !ok {
 		return retSchema
 	}
 	for _, item := range fieldList {
-		fieldDef, ok := item.(map[string]interface{})
+		fieldDef, ok := item.(map[string]any)
 		if !ok {
 			continue
 		}
 		for fieldName, fieldAttributes := range fieldDef {
-			fieldAttributesMap, ok := fieldAttributes.(map[string]interface{})
+			fieldAttributesMap, ok := fieldAttributes.(map[string]any)
 			if !ok {
 				continue
 			}
@@ -149,7 +149,7 @@ type CustomEntity struct {
 // It can also validate an entity against its schema.
 type SchemaService interface {
 	Get(ctx context.Context, entityType string) (kong.Schema, error)
-	Validate(ctx context.Context, entityType kong.EntityType, entity interface{}) (bool, string, error)
+	Validate(ctx context.Context, entityType kong.EntityType, entity any) (bool, string, error)
 }
 
 type entityForeignFieldValue struct {

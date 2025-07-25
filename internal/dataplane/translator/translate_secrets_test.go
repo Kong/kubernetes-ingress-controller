@@ -9,7 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1 "github.com/kong/kubernetes-configuration/api/configuration/v1"
+	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
@@ -22,7 +22,7 @@ func TestGetPluginsAssociatedWithCACertSecret(t *testing.T) {
 				Name: name,
 			},
 			Config: apiextensionsv1.JSON{
-				Raw: []byte(fmt.Sprintf(`{"ca_certificates": ["%s"]}`, secretID)),
+				Raw: fmt.Appendf(nil, `{"ca_certificates": ["%s"]}`, secretID),
 			},
 		}
 	}
@@ -33,7 +33,7 @@ func TestGetPluginsAssociatedWithCACertSecret(t *testing.T) {
 				Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
 			},
 			Config: apiextensionsv1.JSON{
-				Raw: []byte(fmt.Sprintf(`{"ca_certificates": ["%s"]}`, secretID)),
+				Raw: fmt.Appendf(nil, `{"ca_certificates": ["%s"]}`, secretID),
 			},
 		}
 	}

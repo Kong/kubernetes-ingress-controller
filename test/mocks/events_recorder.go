@@ -24,11 +24,11 @@ func (r *EventRecorder) Event(o runtime.Object, eventtype, reason, message strin
 	r.writeEvent(o, eventtype, reason, "%s", message)
 }
 
-func (r *EventRecorder) Eventf(o runtime.Object, eventtype, reason, messageFmt string, args ...interface{}) {
+func (r *EventRecorder) Eventf(o runtime.Object, eventtype, reason, messageFmt string, args ...any) {
 	r.writeEvent(o, eventtype, reason, messageFmt, args...)
 }
 
-func (r *EventRecorder) AnnotatedEventf(o runtime.Object, _ map[string]string, eventtype, reason, messageFmt string, args ...interface{}) {
+func (r *EventRecorder) AnnotatedEventf(o runtime.Object, _ map[string]string, eventtype, reason, messageFmt string, args ...any) {
 	r.writeEvent(o, eventtype, reason, messageFmt, args...)
 }
 
@@ -40,7 +40,7 @@ func (r *EventRecorder) Events() []string {
 	return copied
 }
 
-func (r *EventRecorder) writeEvent(o runtime.Object, eventtype, reason, messageFmt string, args ...interface{}) {
+func (r *EventRecorder) writeEvent(o runtime.Object, eventtype, reason, messageFmt string, args ...any) {
 	r.l.Lock()
 	defer r.l.Unlock()
 

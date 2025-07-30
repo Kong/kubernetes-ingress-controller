@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/blang/semver/v4"
 	environment "github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
@@ -122,6 +123,15 @@ func TestKonnectLicenseActivation(t *testing.T) {
 		}
 		return license.License.Expiration != ""
 	}, adminAPIWait, time.Second)
+
+	skipTestIfControllerVersionBelow(t, semver.MustParse("3.5.1"))
+	t.Log("checking if the license is stored in the local secret")
+	secret, err := env.Cluster().Client().CoreV1().Secrets(namespace).Get(
+		ctx, "konnect-license-"+rgID, metav1.GetOptions{})
+	require.NoError(t, err)
+	require.NotNil(t, secret.Data, "secret to store Konnect license should not be empty")
+	require.NotEmpty(t, secret.Data["id"], "stored license should have a non-empty ID")
+
 	t.Log("done")
 }
 

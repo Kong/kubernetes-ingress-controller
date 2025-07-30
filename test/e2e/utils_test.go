@@ -189,8 +189,6 @@ func extractVersionFromImage(imageName string) (semver.Version, error) {
 // below the minVersion.
 // if the override KIC image is not set, it assumes that the latest image is used, so it never skips
 // the test if override image is not given.
-//
-//lint:ignore U1000 retained for future use
 func skipTestIfControllerVersionBelow(t *testing.T, minVersion semver.Version) {
 	if testenv.ControllerImageTag() == "" {
 		return

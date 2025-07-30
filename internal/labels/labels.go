@@ -24,7 +24,7 @@ const (
 
 	// ManagedByLabel is the label key to mark that the object is managed by a specific controller.
 	ManagedByLabel = LabelPrefix + ManagedByKey
-	// ManagedByLabelValueIngressController is the label value that marks the object is managed byu KIC.
+	// ManagedByLabelValueIngressController is the label value that marks the object is managed by KIC.
 	ManagedByLabelValueIngressController = "kong-ingress-controller"
 )
 

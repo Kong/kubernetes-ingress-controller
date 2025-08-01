@@ -6,6 +6,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/blang/semver/v4"
 	"github.com/hashicorp/go-retryablehttp"
 	"github.com/samber/lo"
 	"golang.org/x/mod/modfile"
@@ -49,13 +50,17 @@ func DependencyModuleVersionGit(dep string) (string, error) {
 		return "", err
 	}
 
-	// The same logic as in scripts/generate-crd-kustomize.sh:11:18
-	if versionParts := strings.Split(version, "-"); len(versionParts) >= 2 {
-		// If there are 2 or more hyphens, extract the part after the last hyphen as
-		// that's a git commit hash (e.g. `v1.1.1-0.20250217181409-44e5ddce290d`).
-		version = versionParts[len(versionParts)-1]
+	// NOTE: When we rely on a pseudo-version (e.g. `v1.1.1-0.20250217181409-44e5ddce290d`),
+	// we need to extract the commit hash from it to use it in the GitHub API.
+	// When version is set to a tag (e.g. `v1.1.1`), we could use it against the /commits
+	// endpoint as well but there's no need for that as we can use the tag directly.
 
-		resp, err := retryablehttp.Get("https://api.github.com/repos/Kong/kubernetes-configuration/commits/" + version)
+	// The same logic as in scripts/generate-crd-kustomize.sh:11:18
+
+	// If there are 2 or more hyphens, extract the part after the last hyphen as
+	// that's a git commit hash (e.g. `v1.1.1-0.20250217181409-44e5ddce290d`).
+	if hash, ok := GetHashFromPseudoVersion(version); ok {
+		resp, err := retryablehttp.Get("https://api.github.com/repos/Kong/kubernetes-configuration/commits/" + hash)
 		if err != nil {
 			return "", fmt.Errorf("failed to fetch commit data: %w", err)
 		}
@@ -71,4 +76,25 @@ func DependencyModuleVersionGit(dep string) (string, error) {
 	}
 
 	return version, nil
+}
+
+// GetHashFromPseudoVersion extracts the commit hash from a pseudo version string.
+// It returns the hash and a boolean indicating whether the provided string
+// is a valid pseudo version.
+func GetHashFromPseudoVersion(pseudoVersion string) (string, bool) {
+	pseudoVersion = strings.TrimSpace(pseudoVersion)
+	pseudoVersion = strings.TrimPrefix(pseudoVersion, "v") // Remove leading 'v' if present
+
+	// The pseudo version is expected to be in the format:
+	// v1.1.1-0.20250217181409-44e5ddce290d
+	// We need to extract the last part after the last hyphen.
+	parts := strings.Split(pseudoVersion, "-")
+	if len(parts) <= 2 {
+		return "", false
+	}
+
+	if _, err := semver.Parse(parts[0]); err != nil {
+		return "", false
+	}
+	return parts[len(parts)-1], true
 }

@@ -23,16 +23,16 @@ func DeployCRDsForCluster(ctx context.Context, cluster clusters.Cluster) error {
 		return err
 	}
 
-	fmt.Printf("INFO: deploying Kong CRDs to cluster\n")
+	fmt.Printf("INFO: deploying Kong CRDs (%s) to cluster\n", kongCRDsKustomize)
 	if err := clusters.KustomizeDeployForCluster(ctx, cluster, kongCRDsKustomize); err != nil {
 		return err
 	}
-	fmt.Printf("INFO: deploying Kong incubator CRDs to cluster\n")
+	fmt.Printf("INFO: deploying Kong incubator CRDs (%s) to cluster\n", kongIncubatorCRDsKustomize)
 	if err := clusters.KustomizeDeployForCluster(ctx, cluster, kongIncubatorCRDsKustomize); err != nil {
 		return err
 	}
 
-	fmt.Printf("INFO: deploying Gateway CRDs to cluster\n")
+	fmt.Printf("INFO: deploying Gateway CRDs (%s) to cluster\n", consts.GatewayExperimentalCRDsKustomizeURL)
 	if err := clusters.KustomizeDeployForCluster(ctx, cluster, consts.GatewayExperimentalCRDsKustomizeURL); err != nil {
 		return err
 	}

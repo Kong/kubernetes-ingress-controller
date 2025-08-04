@@ -91,6 +91,11 @@ func TestCacheStores(t *testing.T) {
 		},
 
 		{
+			name:          "GatewayClass",
+			objectToStore: &gatewayapi.GatewayClass{},
+		},
+
+		{
 			name:          "BackendTLSPolicy",
 			objectToStore: &gatewayapi.BackendTLSPolicy{},
 		},

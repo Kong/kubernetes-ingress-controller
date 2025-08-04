@@ -36,6 +36,7 @@ type CacheStores struct {
 	GRPCRoute                      cache.Store
 	ReferenceGrant                 cache.Store
 	Gateway                        cache.Store
+	GatewayClass                   cache.Store
 	BackendTLSPolicy               cache.Store
 	Plugin                         cache.Store
 	ClusterPlugin                  cache.Store
@@ -69,6 +70,7 @@ func NewCacheStores() CacheStores {
 		GRPCRoute:                      cache.NewStore(namespacedKeyFunc),
 		ReferenceGrant:                 cache.NewStore(namespacedKeyFunc),
 		Gateway:                        cache.NewStore(namespacedKeyFunc),
+		GatewayClass:                   cache.NewStore(clusterWideKeyFunc),
 		BackendTLSPolicy:               cache.NewStore(namespacedKeyFunc),
 		Plugin:                         cache.NewStore(namespacedKeyFunc),
 		ClusterPlugin:                  cache.NewStore(clusterWideKeyFunc),
@@ -119,6 +121,8 @@ func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err
 		return c.ReferenceGrant.Get(obj)
 	case *gatewayapi.Gateway:
 		return c.Gateway.Get(obj)
+	case *gatewayapi.GatewayClass:
+		return c.GatewayClass.Get(obj)
 	case *gatewayapi.BackendTLSPolicy:
 		return c.BackendTLSPolicy.Get(obj)
 	case *kongv1.KongPlugin:
@@ -182,6 +186,8 @@ func (c CacheStores) Add(obj runtime.Object) error {
 		return c.ReferenceGrant.Add(obj)
 	case *gatewayapi.Gateway:
 		return c.Gateway.Add(obj)
+	case *gatewayapi.GatewayClass:
+		return c.GatewayClass.Add(obj)
 	case *gatewayapi.BackendTLSPolicy:
 		return c.BackendTLSPolicy.Add(obj)
 	case *kongv1.KongPlugin:
@@ -245,6 +251,8 @@ func (c CacheStores) Delete(obj runtime.Object) error {
 		return c.ReferenceGrant.Delete(obj)
 	case *gatewayapi.Gateway:
 		return c.Gateway.Delete(obj)
+	case *gatewayapi.GatewayClass:
+		return c.GatewayClass.Delete(obj)
 	case *gatewayapi.BackendTLSPolicy:
 		return c.BackendTLSPolicy.Delete(obj)
 	case *kongv1.KongPlugin:
@@ -291,6 +299,7 @@ func (c CacheStores) ListAllStores() []cache.Store {
 		c.GRPCRoute,
 		c.ReferenceGrant,
 		c.Gateway,
+		c.GatewayClass,
 		c.BackendTLSPolicy,
 		c.Plugin,
 		c.ClusterPlugin,
@@ -323,6 +332,7 @@ func (c CacheStores) SupportedTypes() []client.Object {
 		&gatewayapi.GRPCRoute{},
 		&gatewayapi.ReferenceGrant{},
 		&gatewayapi.Gateway{},
+		&gatewayapi.GatewayClass{},
 		&gatewayapi.BackendTLSPolicy{},
 		&kongv1.KongPlugin{},
 		&kongv1.KongClusterPlugin{},

@@ -3,7 +3,7 @@ controller-tools: "0.18.0"
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize
 kustomize: "5.7.1"
 # renovate: datasource=github-releases depName=golangci/golangci-lint
-golangci-lint: "2.3.0"
+golangci-lint: "2.3.1"
 # TODO: Renovate comment is missing. This needs to be added at some point.
 modernize: "v0.19.1"
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold

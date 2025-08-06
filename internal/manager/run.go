@@ -221,8 +221,9 @@ func New(
 
 	configTranslator, err := translator.NewTranslator(logger, storer, c.KongWorkspace, kongSemVersion, translatorFeatureFlags, NewSchemaServiceGetter(clientsManager),
 		translator.Config{
-			ClusterDomain:      c.ClusterDomain,
-			EnableDrainSupport: c.EnableDrainSupport,
+			ClusterDomain:         c.ClusterDomain,
+			EnableDrainSupport:    c.EnableDrainSupport,
+			GatewayControllerName: c.GatewayAPIControllerName,
 		},
 	)
 	if err != nil {

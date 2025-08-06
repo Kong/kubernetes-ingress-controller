@@ -109,8 +109,9 @@ type Translator struct {
 	failuresCollector          *failures.ResourceFailuresCollector
 	translatedObjectsCollector *ObjectsCollector
 
-	clusterDomain      string
-	enableDrainSupport bool
+	clusterDomain         string
+	enableDrainSupport    bool
+	gatewayControllerName string
 }
 
 // Config is a configuration for the Translator.
@@ -120,6 +121,10 @@ type Config struct {
 
 	// ClusterDomain is the cluster domain used for translating Kubernetes objects.
 	ClusterDomain string
+
+	// GatewayControllerName is the gateway controller name used by KIC.
+	// GatewayClasses with this controller name in spec.ControllerName are managed by KIC, otherwise they are managed by other components(like Kong Operator).
+	GatewayControllerName string
 }
 
 // NewTranslator produces a new Translator object provided a logging mechanism
@@ -152,6 +157,7 @@ func NewTranslator(
 		translatedObjectsCollector: translatedObjectsCollector,
 		clusterDomain:              config.ClusterDomain,
 		enableDrainSupport:         config.EnableDrainSupport,
+		gatewayControllerName:      config.GatewayControllerName,
 	}, nil
 }
 

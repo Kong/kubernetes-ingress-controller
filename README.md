@@ -98,7 +98,7 @@ docker pull kong/nightly-ingress-controller:nightly
 
 ## Documentation
 
-All documentation for the Kong Ingress Controller is present in the [kong/docs.konghq.com](https://github.com/kong/docs.konghq.com) repository. Pull Requests are welcome for additions and corrections.
+All documentation for the Kong Ingress Controller is present in the [kong/developer.konghq.com](https://github.com/Kong/developer.konghq.com) repository. Pull Requests are welcome for additions and corrections.
 
 ### Guides and Tutorials
 
@@ -160,11 +160,11 @@ preview features can be found in [FEATURE_PREVIEW_DOCUMENTATION.md][fpreview].
 [github-kic-discussions]: https://github.com/Kong/kubernetes-ingress-controller/discussions
 [github-kic-issues]: https://github.com/kong/kubernetes-ingress-controller/issues
 
-[docs-konghq]:https://docs.konghq.com
-[docs-konghq-hub]: https://docs.konghq.com/hub/
-[docs-konghq-faqs]: https://docs.konghq.com/kubernetes-ingress-controller/latest/faq/
-[docs-konghq-getting-started-guide]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/getting-started/
-[docs-konghq-k4k8s-enterprise-setup]: https://docs.konghq.com/kubernetes-ingress-controller/latest/deployment/k4k8s-enterprise/
-[docs-konghq-kic-guides]: https://docs.konghq.com/kubernetes-ingress-controller/latest/guides/overview/
+[docs-konghq]:https://developer.konghq.com/
+[docs-konghq-hub]: https://developer.konghq.com/plugins/
+[docs-konghq-faqs]: https://developer.konghq.com/kubernetes-ingress-controller/
+[docs-konghq-getting-started-guide]: https://developer.konghq.com/kubernetes-ingress-controller/install/
+[docs-konghq-k4k8s-enterprise-setup]: [https://docs.konghq.com/kubernetes-ingress-controller/latest/deployment/k4k8s-enterprise/](https://developer.konghq.com/kubernetes-ingress-controller/install/)
+[docs-konghq-kic-guides]: https://developer.konghq.com/how-to/?products=kic
 
-[kgo-guide]: https://docs.konghq.com/gateway-operator/latest/get-started/kic/install/
+[kgo-guide]: https://developer.konghq.com/operator/dataplanes/get-started/kic/install/

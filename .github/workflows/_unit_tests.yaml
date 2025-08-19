@@ -23,7 +23,7 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - uses: jdx/mise-action@5cb1df66ed5e1fb3c670ea0b62fd17a76979826a # v2.3.1
+      - uses: jdx/mise-action@c0b8518a9f5e56c720e9545c993b77ff15dc7b27 # v3.0.2
         with:
           install: false
 

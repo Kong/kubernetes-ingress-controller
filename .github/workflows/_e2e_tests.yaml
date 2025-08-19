@@ -173,7 +173,7 @@ jobs:
         if: ${{ inputs.kong-image != '' && inputs.load-local-image }}
         run: docker pull ${{ inputs.kong-image }}
 
-      - uses: jdx/mise-action@5cb1df66ed5e1fb3c670ea0b62fd17a76979826a # v2.3.1
+      - uses: jdx/mise-action@c0b8518a9f5e56c720e9545c993b77ff15dc7b27 # v3.0.2
         with:
           install: false
 
@@ -283,7 +283,7 @@ jobs:
             echo "kic-tag=nightly" >> $GITHUB_OUTPUT
           fi
 
-      - uses: jdx/mise-action@5cb1df66ed5e1fb3c670ea0b62fd17a76979826a # v2.3.1
+      - uses: jdx/mise-action@c0b8518a9f5e56c720e9545c993b77ff15dc7b27 # v3.0.2
         with:
           install: false
 
@@ -403,7 +403,7 @@ jobs:
             echo "kic-tag=$kic_tag" >> $GITHUB_OUTPUT
           fi
 
-      - uses: jdx/mise-action@5cb1df66ed5e1fb3c670ea0b62fd17a76979826a # v2.3.1
+      - uses: jdx/mise-action@c0b8518a9f5e56c720e9545c993b77ff15dc7b27 # v3.0.2
         with:
           install: false
 

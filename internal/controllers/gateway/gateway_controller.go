@@ -181,6 +181,7 @@ func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bo
 		r.Log.Error(err, "Could not retrieve gatewayclass", "gatewayclass", gateway.Spec.GatewayClassName)
 		return false
 	}
+
 	return isGatewayClassControlled(gatewayClass)
 }
 
@@ -439,6 +440,11 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 		debug(log, gateway, "Ensured gateway was removed from the data-plane (if ever present)")
 		return ctrl.Result{}, nil
+	}
+	err := r.DataplaneClient.UpdateObject(gwc)
+	if err != nil {
+		debug(log, gwc, "Failed to update GatewayClass in dataplane, requeueing")
+		return ctrl.Result{}, err
 	}
 
 	// if there's any deletion timestamp on the object, we can simply ignore it. At this point

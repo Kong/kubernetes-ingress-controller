@@ -99,6 +99,7 @@ type Storer interface {
 
 	// Gateway API resources.
 	GetGateway(namespace string, name string) (*gatewayapi.Gateway, error)
+	GetGatewayClass(name string) (*gatewayapi.GatewayClass, error)
 	ListHTTPRoutes() ([]*gatewayapi.HTTPRoute, error)
 	ListUDPRoutes() ([]*gatewayapi.UDPRoute, error)
 	ListTCPRoutes() ([]*gatewayapi.TCPRoute, error)
@@ -605,6 +606,18 @@ func (s Store) GetGateway(namespace string, name string) (*gatewayapi.Gateway, e
 		return nil, NotFoundError{fmt.Sprintf("Gateway %v not found", name)}
 	}
 	return obj.(*gatewayapi.Gateway), nil
+}
+
+// GetGatewayClass returns gatewayclass resource having the specified name.
+func (s Store) GetGatewayClass(name string) (*gatewayapi.GatewayClass, error) {
+	obj, exists, err := s.stores.GatewayClass.GetByKey(name)
+	if err != nil {
+		return nil, err
+	}
+	if !exists {
+		return nil, NotFoundError{fmt.Sprintf("GatewayClass %v not found", name)}
+	}
+	return obj.(*gatewayapi.GatewayClass), nil
 }
 
 // GetKongVault returns kongvault resource having specified name.

@@ -123,7 +123,7 @@ type Config struct {
 	ClusterDomain string
 
 	// GatewayControllerName is the gateway controller name used by KIC.
-	// GatewayClasses with this controller name in spec.ControllerName are managed by KIC, otherwise they are managed by other components(like Kong Operator).
+	// GatewayClasses with this controller name in spec.ControllerName are managed by KIC, otherwise they are managed by other  (like Kong Operator).
 	GatewayControllerName string
 }
 

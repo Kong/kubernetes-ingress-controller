@@ -63,6 +63,11 @@ func (t *Translator) getGatewayCerts() []certWrapper {
 			continue
 		}
 
+		// Skip the gateway when the gateway's GatewayClass is not controlled by the KIC instance.
+		if gwc.Spec.ControllerName != gatewayapi.GatewayController(t.gatewayControllerName) {
+			continue
+		}
+
 		statuses := lo.SliceToMap(gateway.Status.Listeners, func(status gatewayapi.ListenerStatus) (gatewayapi.SectionName, gatewayapi.ListenerStatus) {
 			return status.Name, status
 		})
@@ -79,12 +84,11 @@ func (t *Translator) getGatewayCerts() []certWrapper {
 				continue
 			}
 
-			// Check if listener is marked as programmed when the gateway is controlled by KIC  and corresponding GatewayClass has the "Unmanaged" annotation.
-			// If the GatewayClass does not satisfy the condition, the gateway is considered to be managed by other components (for example Kong Operator),
+			// Check if listener is marked as programmed when the gateway's GatewayClass has the "Unmanaged" annotation.
+			// If the GatewayClass does not have the annotation, the gateway is considered to be managed by other components (for example Kong Operator),
 			// so we do not check the "Programmed" condition before extracting the certificate from the listener
-			// to prevent unexpected deletion of certificates when the instancec is managed by Kong Operator.
-			if gwc.Spec.ControllerName == gatewayapi.GatewayController(t.gatewayControllerName) &&
-				annotations.ExtractUnmanagedGatewayClassMode(gwc.Annotations) != "" &&
+			// to prevent unexpected deletion of certificates when the instance is managed by Kong Operator.
+			if annotations.ExtractUnmanagedGatewayClassMode(gwc.Annotations) != "" &&
 				!util.CheckCondition(
 					status.Conditions,
 					util.ConditionType(gatewayapi.ListenerConditionProgrammed),

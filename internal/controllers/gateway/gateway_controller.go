@@ -143,6 +143,8 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Log:              r.Log.WithName(strings.ToUpper(gatewayapi.V1GroupVersion) + "GatewayClass"),
 		Scheme:           r.Scheme,
 		CacheSyncTimeout: r.CacheSyncTimeout,
+
+		DataplaneClient: r.DataplaneClient,
 	}
 
 	return gwcCTRL.SetupWithManager(mgr)
@@ -440,11 +442,6 @@ func (r *GatewayReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ct
 		}
 		debug(log, gateway, "Ensured gateway was removed from the data-plane (if ever present)")
 		return ctrl.Result{}, nil
-	}
-	err := r.DataplaneClient.UpdateObject(gwc)
-	if err != nil {
-		debug(log, gwc, "Failed to update GatewayClass in dataplane, requeueing")
-		return ctrl.Result{}, err
 	}
 
 	// if there's any deletion timestamp on the object, we can simply ignore it. At this point

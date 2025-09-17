@@ -79,9 +79,10 @@ func (t *Translator) getGatewayCerts() []certWrapper {
 				continue
 			}
 
-			// Check if listener is marked as programmed when the gateway is controlled by KIC in its spec and has the "Unmanaged" annotation.
-			// If the GatewayClass is does not satify the condition, the gateway is considered to be managed by other components (for example Kong Oprator),
-			// So we do not check the "Programmed" condition before extracting the certificate from the listener.
+			// Check if listener is marked as programmed when the gateway is controlled by KIC  and corresponding GatewayClass has the "Unmanaged" annotation.
+			// If the GatewayClass does not satisfy the condition, the gateway is considered to be managed by other components (for example Kong Operator),
+			// so we do not check the "Programmed" condition before extracting the certificate from the listener
+			// to prevent unexpected deletion of certificates when the instancec is managed by Kong Operator.
 			if gwc.Spec.ControllerName == gatewayapi.GatewayController(t.gatewayControllerName) &&
 				annotations.ExtractUnmanagedGatewayClassMode(gwc.Annotations) != "" &&
 				!util.CheckCondition(

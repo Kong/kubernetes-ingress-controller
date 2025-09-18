@@ -112,9 +112,7 @@ Adding a new version? You'll need three changes:
 - [0.0.5](#005)
 - [0.0.4 and prior](#004-and-prior)
 
-## [3.5.1]
-
-> Release date: 2025-07-31
+## Unreleased
 
 ### Fixed
 
@@ -124,6 +122,13 @@ Adding a new version? You'll need three changes:
   that KIC deletes the certificates of listeners on dataplane pods deleted when
   KIC is running under the control of Kong gateway operator.
   [#7666](https://github.com/Kong/kubernetes-ingress-controller/pull/7666)
+
+## [3.5.1]
+
+> Release date: 2025-07-31
+
+### Fixed
+
 - Fix the issue that invalid label value causing KIC failed to store the license
   from Konnect into `Secret`.
   [#7648](https://github.com/Kong/kubernetes-ingress-controller/pull/7648)

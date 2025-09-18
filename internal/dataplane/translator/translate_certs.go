@@ -9,9 +9,11 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
@@ -55,10 +57,20 @@ func (t *Translator) getGatewayCerts() []certWrapper {
 		return certs
 	}
 	for _, gateway := range gateways {
-		statuses := make(map[gatewayapi.SectionName]gatewayapi.ListenerStatus, len(gateway.Status.Listeners))
-		for _, status := range gateway.Status.Listeners {
-			statuses[status.Name] = status
+		gwc, err := s.GetGatewayClass(string(gateway.Spec.GatewayClassName))
+		if err != nil {
+			logger.Error(err, "Failed to get GatewayClass for Gateway, skipping", "gateway", gateway.Name, "gateway_class", gateway.Spec.GatewayClassName)
+			continue
 		}
+
+		// Skip the gateway when the gateway's GatewayClass is not controlled by the KIC instance.
+		if gwc.Spec.ControllerName != gatewayapi.GatewayController(t.gatewayControllerName) {
+			continue
+		}
+
+		statuses := lo.SliceToMap(gateway.Status.Listeners, func(status gatewayapi.ListenerStatus) (gatewayapi.SectionName, gatewayapi.ListenerStatus) {
+			return status.Name, status
+		})
 
 		for _, listener := range gateway.Spec.Listeners {
 			status, ok := statuses[listener.Name]
@@ -72,14 +84,18 @@ func (t *Translator) getGatewayCerts() []certWrapper {
 				continue
 			}
 
-			// Check if listener is marked as programmed
-			if !util.CheckCondition(
-				status.Conditions,
-				util.ConditionType(gatewayapi.ListenerConditionProgrammed),
-				util.ConditionReason(gatewayapi.ListenerReasonProgrammed),
-				metav1.ConditionTrue,
-				gateway.Generation,
-			) {
+			// Check if listener is marked as programmed when the gateway's GatewayClass has the "Unmanaged" annotation.
+			// If the GatewayClass does not have the annotation, the gateway is considered to be managed by other components (for example Kong Operator),
+			// so we do not check the "Programmed" condition before extracting the certificate from the listener
+			// to prevent unexpected deletion of certificates when the instance is managed by Kong Operator.
+			if annotations.ExtractUnmanagedGatewayClassMode(gwc.Annotations) != "" &&
+				!util.CheckCondition(
+					status.Conditions,
+					util.ConditionType(gatewayapi.ListenerConditionProgrammed),
+					util.ConditionReason(gatewayapi.ListenerReasonProgrammed),
+					metav1.ConditionTrue,
+					gateway.Generation,
+				) {
 				continue
 			}
 

@@ -41,6 +41,7 @@ type FakeObjects struct {
 	GRPCRoutes                     []*gatewayapi.GRPCRoute
 	ReferenceGrants                []*gatewayapi.ReferenceGrant
 	Gateways                       []*gatewayapi.Gateway
+	GatewayClasses                 []*gatewayapi.GatewayClass
 	BackendTLSPolicies             []*gatewayapi.BackendTLSPolicy
 	TCPIngresses                   []*configurationv1beta1.TCPIngress
 	UDPIngresses                   []*configurationv1beta1.UDPIngress

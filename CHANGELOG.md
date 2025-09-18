@@ -112,6 +112,12 @@ Adding a new version? You'll need three changes:
 
 ### Fixed
 
+- Do not skip the gateway listeners without `Programmed` condition set to `True`
+  when the gateway class does not contain `konghq.com/gateway-unmanaged`
+  annotation in extracting certificates from listeners. This fixes the issue
+  that KIC deletes the certificates of listeners on dataplane pods deleted when
+  KIC is running under the control of Kong gateway operator.
+  [#7666](https://github.com/Kong/kubernetes-ingress-controller/pull/7666)
 - Add `request-termination` plugin to return `500` if there are no available
   `backendRef` only when the service is translated from `HTTPRoute` or
   `GRPCRoute`.
@@ -4112,8 +4118,8 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
-[3.4.6]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.7...v3.4.8
-[3.4.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.6...v3.4.7
+[3.4.8]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.7...v3.4.8
+[3.4.7]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.6...v3.4.7
 [3.4.6]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.5...v3.4.6
 [3.4.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.4...v3.4.5
 [3.4.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.3...v3.4.4

@@ -50,6 +50,8 @@ func GenerateKongBuilder(_ context.Context) (*kong.Builder, []string, error) {
 
 	if testenv.DBMode() == testenv.DBModePostgres {
 		kongbuilder = kongbuilder.WithPostgreSQL()
+		// Use bitnamilegacy/postgresql since the bitnami/postgresql repository is gone.
+		kongbuilder = kongbuilder.WithAdditionalValue("postgresql.image.repository", "bitnamilegacy/postgresql")
 	}
 
 	flavor := testenv.KongRouterFlavor()

@@ -17,7 +17,7 @@ go 1.24.3
 
 require (
 	cloud.google.com/go/container v1.44.0
-	github.com/Kong/sdk-konnect-go v0.6.0
+	github.com/Kong/sdk-konnect-go v0.10.1
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/avast/retry-go/v4 v4.6.1
 	github.com/blang/semver/v4 v4.0.0
@@ -46,7 +46,7 @@ require (
 	github.com/sethvargo/go-password v0.3.1
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.7
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 	github.com/testcontainers/testcontainers-go v0.37.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.37.0
 	github.com/tonglil/buflogr v1.1.1

@@ -2,6 +2,7 @@ package translator
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
@@ -79,7 +80,8 @@ func generateKongServiceFromBackendRefWithName(
 		if service.Plugins == nil {
 			service.Plugins = make([]kong.Plugin, 0)
 		}
-		if strings.Contains(service.Service.Protocol, "http") || strings.Contains(service.Service.Protocol, "grpc") {
+		if service.Service.Protocol != nil &&
+			(strings.Contains(*service.Service.Protocol, "http") || strings.Contains(*service.Service.Protocol, "grpc")) {
 			service.Plugins = append(service.Plugins, kong.Plugin{
 				Name: kong.String("request-termination"),
 				Config: kong.Configuration{

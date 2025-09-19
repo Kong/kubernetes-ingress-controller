@@ -4,11 +4,6 @@ services:
   host: udproute.udp-example.tftp.0
   id: 439fc57a-baff-51a3-9e1f-4e6af6b9dcae
   name: udproute.udp-example.tftp.0
-  plugins:
-  - config:
-      message: no existing backendRef provided
-      status_code: 500
-    name: request-termination
   protocol: udp
   read_timeout: 60000
   retries: 5

@@ -290,14 +290,8 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 				},
 				Namespace: "behbudiy",
 				Backends:  []kongstate.ServiceBackend{},
-				Plugins: []kong.Plugin{
-					{
-						Name: kong.String("request-termination"),
-						Config: kong.Configuration{
-							"status_code": 500,
-							"message":     "no existing backendRef provided",
-						},
-					},
+				Plugins:   []kong.Plugin{
+					// No request-termination plugin is added for services with protocol not containing `http` or `grpc`.
 				},
 				Parent: &gatewayapi.TCPRoute{
 					ObjectMeta: metav1.ObjectMeta{

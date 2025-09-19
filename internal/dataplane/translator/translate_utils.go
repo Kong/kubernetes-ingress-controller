@@ -80,8 +80,8 @@ func generateKongServiceFromBackendRefWithName(
 		if service.Plugins == nil {
 			service.Plugins = make([]kong.Plugin, 0)
 		}
-		if service.Service.Protocol != nil &&
-			(strings.Contains(*service.Service.Protocol, "http") || strings.Contains(*service.Service.Protocol, "grpc")) {
+		if service.Protocol != nil &&
+			(strings.Contains(*service.Protocol, "http") || strings.Contains(*service.Protocol, "grpc")) {
 			service.Plugins = append(service.Plugins, kong.Plugin{
 				Name: kong.String("request-termination"),
 				Config: kong.Configuration{

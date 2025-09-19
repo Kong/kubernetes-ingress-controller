@@ -5103,6 +5103,9 @@ func (p fakeSchemaServiceProvier) GetSchemaService() kong.AbstractSchemaService 
 
 func mustNewTranslator(t *testing.T, storer store.Storer) *Translator {
 	logger := zapr.NewLogger(zap.NewNop())
+	translatorConfig := Config{
+		ClusterDomain: consts.DefaultClusterDomain,
+	}
 	p, err := NewTranslator(logger, storer, "",
 		FeatureFlags{
 			// We'll assume these are true for all tests.
@@ -5111,7 +5114,7 @@ func mustNewTranslator(t *testing.T, storer store.Storer) *Translator {
 			KongServiceFacade:                 true,
 		},
 		fakeSchemaServiceProvier{},
-		consts.DefaultClusterDomain,
+		translatorConfig,
 	)
 	require.NoError(t, err)
 	return p

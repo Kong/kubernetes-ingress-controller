@@ -18,6 +18,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/controllers"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -59,6 +60,8 @@ type GatewayClassReconciler struct { //nolint:revive
 	Log              logr.Logger
 	Scheme           *runtime.Scheme
 	CacheSyncTimeout time.Duration
+
+	DataplaneClient controllers.DataPlane
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -143,6 +146,13 @@ func (r *GatewayClassReconciler) Reconcile(ctx context.Context, req ctrl.Request
 			}
 			setGatewayClassCondition(gwc, acceptedCondtion)
 			return ctrl.Result{}, r.Status().Update(ctx, pruneGatewayClassStatusConds(gwc))
+		}
+
+		// Add the gatewayclass to the translation cache if the gatewayclass is managed by the KIC instance.
+		err := r.DataplaneClient.UpdateObject(gwc)
+		if err != nil {
+			debug(log, gwc, "Failed to update GatewayClass in dataplane, requeueing")
+			return ctrl.Result{}, err
 		}
 	}
 

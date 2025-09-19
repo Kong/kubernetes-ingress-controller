@@ -143,6 +143,8 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		Log:              r.Log.WithName(strings.ToUpper(gatewayapi.V1GroupVersion) + "GatewayClass"),
 		Scheme:           r.Scheme,
 		CacheSyncTimeout: r.CacheSyncTimeout,
+
+		DataplaneClient: r.DataplaneClient,
 	}
 
 	return gwcCTRL.SetupWithManager(mgr)
@@ -181,6 +183,7 @@ func (r *GatewayReconciler) gatewayHasMatchingGatewayClass(obj client.Object) bo
 		r.Log.Error(err, "Could not retrieve gatewayclass", "gatewayclass", gateway.Spec.GatewayClassName)
 		return false
 	}
+
 	return isGatewayClassControlled(gatewayClass)
 }
 

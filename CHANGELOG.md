@@ -116,6 +116,10 @@ Adding a new version? You'll need three changes:
 
 ### Fixed
 
+- Add `request-termination` plugin to return `500` if there are no available
+  `backendRef` only when the service is translated from `HTTPRoute` or
+  `GRPCRoute`.
+  [#7720](https://github.com/Kong/kubernetes-ingress-controller/pull/7720)
 - Do not skip the gateway listeners without `Programmed` condition set to `True`
   when the gateway class does not contain `konghq.com/gateway-unmanaged`
   annotation in extracting certificates from listeners. This fixes the issue

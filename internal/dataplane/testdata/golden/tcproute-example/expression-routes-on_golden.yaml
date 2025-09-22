@@ -4,11 +4,6 @@ services:
   host: tcproute.tcp-namespace.echo-plaintext.0
   id: e2302e1e-0a75-5174-82f3-c0bc379a108a
   name: tcproute.tcp-namespace.echo-plaintext.0
-  plugins:
-  - config:
-      message: no existing backendRef provided
-      status_code: 500
-    name: request-termination
   protocol: tcp
   read_timeout: 60000
   retries: 5

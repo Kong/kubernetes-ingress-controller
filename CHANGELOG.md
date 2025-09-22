@@ -7,6 +7,8 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.4.8](#348)
+ - [3.4.7](#347)
  - [3.4.6](#346)
  - [3.4.5](#345)
  - [3.4.4](#344)
@@ -107,6 +109,36 @@ Adding a new version? You'll need three changes:
  - [0.0.4 and prior](#004-and-prior)
 
 ## Unreleased
+
+### Fixed
+
+- Add `request-termination` plugin to return `500` if there are no available
+  `backendRef` only when the service is translated from `HTTPRoute` or
+  `GRPCRoute`.
+  [#7720](https://github.com/Kong/kubernetes-ingress-controller/pull/7720)
+
+## [3.4.8]
+
+> Release date: 2025-07-10
+
+### Fixes
+
+- Fix `KongUpstreamPolicy` hash on translation.
+  Until this version, when users specify cookie as hash fallback the rules
+  are not translated correctly due to unusual field usage in kong upstream
+  (and `KongUpstreamPolicy`'s `KongUpstreamHash`):
+  cookie and cookie path is used both for `hash_on` and `hash_fallback` in
+  kong upstream but not in `KongUpstreamHash` `KongUpstreamPolicy` so special care
+  needs to be taken during translation.
+  This is now fixed and users can use `hash_on` and `hash_fallback` as described
+  in <https://developer.konghq.com/gateway/entities/upstream/#consistent-hashing>.
+  [#7590](https://github.com/Kong/kubernetes-ingress-controller/pull/7590)
+- Bump Go to 1.24.5
+  [#7600](https://github.com/Kong/kubernetes-ingress-controller/pull/7600)
+
+## [3.4.7]
+
+> Release date: 2025-06-20
 
 ### Fixed
 
@@ -4080,6 +4112,8 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.4.6]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.7...v3.4.8
+[3.4.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.6...v3.4.7
 [3.4.6]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.5...v3.4.6
 [3.4.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.4...v3.4.5
 [3.4.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.3...v3.4.4

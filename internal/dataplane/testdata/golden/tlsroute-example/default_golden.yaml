@@ -4,11 +4,6 @@ services:
   host: tlsroute.tls-namespace.echo-tls.0
   id: 2a2aad7c-6331-5bcf-bd7c-d9516639f65d
   name: tlsroute.tls-namespace.echo-tls.0
-  plugins:
-  - config:
-      message: no existing backendRef provided
-      status_code: 500
-    name: request-termination
   protocol: tcp
   read_timeout: 60000
   retries: 5

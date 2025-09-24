@@ -62,6 +62,7 @@ func ResolveDependencies(cache store.CacheStores, obj client.Object) ([]client.O
 		*discoveryv1.EndpointSlice,
 		*gatewayapi.ReferenceGrant,
 		*gatewayapi.Gateway,
+		*gatewayapi.GatewayClass,
 		*gatewayapi.BackendTLSPolicy,
 		*configurationv1.KongIngress,
 		*configurationv1beta1.KongUpstreamPolicy,

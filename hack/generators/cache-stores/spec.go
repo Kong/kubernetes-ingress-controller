@@ -61,6 +61,11 @@ var supportedTypes = []cacheStoreSupportedType{
 		Package: "gatewayapi",
 	},
 	{
+		Type:    "GatewayClass",
+		Package: "gatewayapi",
+		KeyFunc: clusterWideKeyFunc,
+	},
+	{
 		Type:    "BackendTLSPolicy",
 		Package: "gatewayapi",
 	},

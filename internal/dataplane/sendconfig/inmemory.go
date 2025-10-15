@@ -75,7 +75,7 @@ func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentW
 		}
 	}
 
-	configSize := mo.Some[int](len(config))
+	configSize := mo.Some(len(config))
 	if reloadConfigErr := s.configService.ReloadDeclarativeRawConfig(
 		ctx,
 		bytes.NewReader(config),

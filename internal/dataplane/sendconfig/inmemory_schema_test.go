@@ -279,6 +279,7 @@ func TestDefaultContentToDBLessConfigConverter(t *testing.T) {
 							Plugin: kong.Plugin{
 								Name: kong.String("p1"),
 								Config: kong.Configuration{
+									"config1": nil,
 									"config2": "value2",
 								},
 							},
@@ -294,6 +295,7 @@ func TestDefaultContentToDBLessConfigConverter(t *testing.T) {
 									Plugin: kong.Plugin{
 										Name: kong.String("p1"),
 										Config: kong.Configuration{
+											"config1": nil,
 											"config2": "value2",
 										},
 									},
@@ -311,6 +313,7 @@ func TestDefaultContentToDBLessConfigConverter(t *testing.T) {
 									Plugin: kong.Plugin{
 										Name: kong.String("p1"),
 										Config: kong.Configuration{
+											"config1": nil,
 											"config2": "value2",
 										},
 									},
@@ -328,6 +331,7 @@ func TestDefaultContentToDBLessConfigConverter(t *testing.T) {
 									Plugin: kong.Plugin{
 										Name: kong.String("p1"),
 										Config: kong.Configuration{
+											"config1": nil,
 											"config2": "value2",
 										},
 									},

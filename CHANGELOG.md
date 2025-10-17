@@ -8,6 +8,7 @@ Adding a new version? You'll need three changes:
   This is all the way at the bottom. It's the thing we always forget.
 --->
 
+- [3.5.2](#352)
 - [3.5.1](#351)
 - [3.5.0](#350)
 - [3.4.8](#348)
@@ -113,6 +114,17 @@ Adding a new version? You'll need three changes:
 - [0.0.4 and prior](#004-and-prior)
 
 ## Unreleased
+
+### Fixed
+
+- Do not cleanup `null`s in the configuration of plugins with Kong running in
+  DBLess mode in the translator of ingress-controller. This enables user to use
+  explicit `null`s in plugins.
+  [#7751](https://github.com/Kong/kubernetes-ingress-controller/pull/7751)
+
+## [3.5.2]
+
+> Release date: 2025-09-23
 
 ### Fixed
 
@@ -4197,6 +4209,7 @@ Please read the changelog and test in your environment.
 - The initial versions were rapildy iterated to deliver
   a working ingress controller.
 
+[3.5.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.1...v3.5.2
 [3.5.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.0...v3.5.1
 [3.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.7...v3.5.0
 [3.4.8]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.7...v3.4.8

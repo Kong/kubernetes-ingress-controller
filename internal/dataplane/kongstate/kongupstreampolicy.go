@@ -173,6 +173,7 @@ func translateHealthchecks(healthchecks *configurationv1beta1.KongUpstreamHealth
 	return &kong.Healthcheck{
 		Active:  translateActiveHealthcheck(healthchecks.Active),
 		Passive: translatePassiveHealthcheck(healthchecks.Passive),
+		Thresholds: healthchecks.Thresholds,
 	}
 }
 

@@ -4,6 +4,7 @@ package integration
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -800,12 +801,18 @@ func TestPluginNullInConfig(t *testing.T) {
 		plugins, err := kc.Plugins.ListAll(ctx)
 		require.NoError(t, err, "failed to list plugins")
 		if len(plugins) != 1 {
+			t.Logf("Expected to get 1 plugin, actual %d", len(plugins))
 			return false
 		}
 		plugin := plugins[0]
 		if plugin.Name == nil || *plugin.Name != "datadog" {
 			return false
 		}
+
+		configJSON, err := json.Marshal(plugin.Config)
+		require.NoError(t, err)
+		t.Logf("Configuration of datadog plugin: %s", string(configJSON))
+
 		configPrefix, ok := plugin.Config["prefix"]
 		return ok && configPrefix == nil
 	}, ingressWait, waitTick, "failed to find 'datadog' plugin with null in config.prefix in Kong")

@@ -126,6 +126,8 @@ Adding a new version? You'll need three changes:
   that KIC deletes the certificates of listeners on dataplane pods deleted when
   KIC is running under the control of Kong gateway operator.
   [#7666](https://github.com/Kong/kubernetes-ingress-controller/pull/7666)
+- Reject CA Secrets with multiple PEM certs.
+  [#7763](https://github.com/Kong/kubernetes-ingress-controller/pull/7763)
 
 ## [3.5.1]
 

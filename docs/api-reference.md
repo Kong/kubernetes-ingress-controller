@@ -557,16 +557,11 @@ KongConsumerGroup is the Schema for the kongconsumergroups API.
 
 
 KongUpstreamPolicy allows configuring algorithm that should be used for load balancing traffic between Kong
-Upstream's Targets. It also allows configuring health checks for Kong Upstream's Targets.<br /><br />
-Its configuration is similar to Kong Upstream object (https://docs.konghq.com/gateway/latest/admin-api/#upstream-object),
-and it is applied to Kong Upstream objects created by the controller.<br /><br />
-It can be attached to Services. To attach it to a Service, it has to be annotated with
+Upstream's Targets. It also allows configuring health checks for Kong Upstream's Targets.<br /><br />Its configuration is similar to Kong Upstream object (https://docs.konghq.com/gateway/latest/admin-api/#upstream-object),
+and it is applied to Kong Upstream objects created by the controller.<br /><br />It can be attached to Services. To attach it to a Service, it has to be annotated with
 `konghq.com/upstream-policy: <name>`, where `<name>` is the name of the KongUpstreamPolicy
-object in the same namespace as the Service.<br /><br />
-When attached to a Service, it will affect all Kong Upstreams created for the Service.<br /><br />
-When attached to a Service used in a Gateway API *Route rule with multiple BackendRefs, all of its Services MUST
-be configured with the same KongUpstreamPolicy. Otherwise, the controller will *ignore* the KongUpstreamPolicy.<br /><br />
-Note: KongUpstreamPolicy doesn't implement Gateway API's GEP-713 strictly.
+object in the same namespace as the Service.<br /><br />When attached to a Service, it will affect all Kong Upstreams created for the Service.<br /><br />When attached to a Service used in a Gateway API *Route rule with multiple BackendRefs, all of its Services MUST
+be configured with the same KongUpstreamPolicy. Otherwise, the controller will *ignore* the KongUpstreamPolicy.<br /><br />Note: KongUpstreamPolicy doesn't implement Gateway API's GEP-713 strictly.
 In particular, it doesn't use the TargetRef for attaching to Services and Gateway API *Routes - annotations are
 used instead. This is to allow reusing the same KongUpstreamPolicy for multiple Services and Gateway API *Routes.
 

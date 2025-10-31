@@ -1,6 +1,7 @@
 package translator
 
 import (
+	"bytes"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -81,11 +82,29 @@ func (t *Translator) getCACerts() []kong.CACertificate {
 }
 
 func toKongCACertificate(caCertBytes []byte, object client.Object, secretID string) (kong.CACertificate, error) {
-	pemBlock, _ := pem.Decode(caCertBytes)
-	if pemBlock == nil {
+	rest := bytes.TrimSpace(caCertBytes)
+	pemBlocks := make([][]byte, 0, 1)
+
+	for len(rest) > 0 {
+		block, r := pem.Decode(rest)
+		if block == nil {
+			return kong.CACertificate{}, errors.New("invalid PEM block")
+		}
+		if block.Type != "CERTIFICATE" {
+			return kong.CACertificate{}, errors.New("invalid PEM block type")
+		}
+		pemBlocks = append(pemBlocks, block.Bytes)
+		rest = bytes.TrimSpace(r)
+	}
+
+	if len(pemBlocks) == 0 {
 		return kong.CACertificate{}, errors.New("invalid PEM block")
 	}
-	x509Cert, err := x509.ParseCertificate(pemBlock.Bytes)
+	if len(pemBlocks) > 1 {
+		return kong.CACertificate{}, errors.New("multiple PEM certificates found")
+	}
+
+	x509Cert, err := x509.ParseCertificate(pemBlocks[0])
 	if err != nil {
 		return kong.CACertificate{}, errors.New("failed to parse certificate")
 	}
@@ -96,9 +115,12 @@ func toKongCACertificate(caCertBytes []byte, object client.Object, secretID stri
 		return kong.CACertificate{}, errors.New("expired")
 	}
 
+	// Re-encode a single clean CERTIFICATE PEM block to ensure only one is sent to Kong.
+	singlePEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: pemBlocks[0]})
+
 	return kong.CACertificate{
 		ID:   kong.String(secretID),
-		Cert: kong.String(string(caCertBytes)),
+		Cert: kong.String(string(singlePEM)),
 		Tags: util.GenerateTagsForObject(object),
 	}, nil
 }

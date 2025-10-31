@@ -109,6 +109,13 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## Unreleased
+
+### Fixed
+
+- Reject CA Secrets with multiple PEM certs.
+  [#7767](https://github.com/Kong/kubernetes-ingress-controller/pull/7767)
+
 ## [3.4.9]
 
 > Release date: 2025-09-24

@@ -422,7 +422,10 @@ ENVTEST_TIMEOUT ?= 8m
 .PHONY: _test.envtest
 .ONESHELL: _test.envtest
 _test.envtest: gotestsum setup-envtest use-setup-envtest
-	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use -p path)" \
+	# Disable testcontainer's reaper (Ryuk). It's needed because Ryuk requires
+	# privileged mode to run, which is not desired and could cause issues in CI.
+	TESTCONTAINERS_RYUK_DISABLED="true" \
+	KUBEBUILDER_ASSETS="$(shell $(SETUP_ENVTEST) use $(CLUSTER_VERSION) -p path)" \
 		GOTESTSUM_FORMAT=$(GOTESTSUM_FORMAT) \
 		$(GOTESTSUM) \
 		--hide-summary output \

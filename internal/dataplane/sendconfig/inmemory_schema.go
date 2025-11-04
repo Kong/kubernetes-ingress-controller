@@ -28,53 +28,10 @@ func (DefaultContentToDBLessConfigConverter) Convert(content *file.Content) DBLe
 	// DBLess schema does not support decK's Info section.
 	dblessConfig.Content.Info = nil
 
-	// DBLess schema does not support nulls in plugin configs.
-	cleanUpNullsInPluginConfigs(&dblessConfig.Content)
-
 	// DBLess schema does not 1-1 match decK's schema for ConsumerGroups.
 	convertConsumerGroups(&dblessConfig)
 
 	return dblessConfig
-}
-
-// cleanUpNullsInPluginConfigs removes null values from plugins' configs.
-func cleanUpNullsInPluginConfigs(state *file.Content) {
-	for _, s := range state.Services {
-		for _, p := range s.Plugins {
-			for k, v := range p.Config {
-				if v == nil {
-					delete(p.Config, k)
-				}
-			}
-		}
-		for _, r := range state.Routes {
-			for _, p := range r.Plugins {
-				for k, v := range p.Config {
-					if v == nil {
-						delete(p.Config, k)
-					}
-				}
-			}
-		}
-	}
-
-	for _, c := range state.Consumers {
-		for _, p := range c.Plugins {
-			for k, v := range p.Config {
-				if v == nil {
-					delete(p.Config, k)
-				}
-			}
-		}
-	}
-
-	for _, p := range state.Plugins {
-		for k, v := range p.Config {
-			if v == nil {
-				delete(p.Config, k)
-			}
-		}
-	}
 }
 
 // convertConsumerGroups drops consumer groups related fields that are not supported in DBLess schema:

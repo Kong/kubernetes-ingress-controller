@@ -1,6 +1,6 @@
 ### Standard binary
 # Build the manager binary
-FROM --platform=$BUILDPLATFORM golang:1.25.3@sha256:7d73c4c57127279b23f3f70cbb368bf0fe08f7ab32af5daf5764173d25e78b74 AS builder
+FROM --platform=$BUILDPLATFORM golang:1.25.3@sha256:0afe9b553123ec160b8282154b7156241ebf43c9033ea2bf9528c6c58c17e89d AS builder
 
 ARG GOPATH
 ARG GOCACHE

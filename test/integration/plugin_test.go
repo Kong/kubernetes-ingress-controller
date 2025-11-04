@@ -4,6 +4,7 @@ package integration
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
@@ -15,6 +16,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
+	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -25,12 +27,15 @@ import (
 	configurationv1 "github.com/kong/kubernetes-configuration/v2/api/configuration/v1"
 	"github.com/kong/kubernetes-configuration/v2/pkg/clientset"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/labels"
+	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
 func TestPluginEssentials(t *testing.T) {
@@ -182,7 +187,7 @@ func TestPluginConfigPatch(t *testing.T) {
 	cleaner.Add(service)
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
-	ingress := generators.NewIngressForService("/test_plugin_essentials", map[string]string{
+	ingress := generators.NewIngressForService("/test_plugin_config_patch", map[string]string{
 		"konghq.com/strip-path": "true",
 	}, service)
 	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
@@ -191,7 +196,7 @@ func TestPluginConfigPatch(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational")
 	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_plugin_essentials", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_plugin_config_patch", proxyHTTPURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
@@ -293,7 +298,7 @@ func TestPluginConfigPatch(t *testing.T) {
 
 	t.Logf("validating that plugin %s was successfully configured", kongplugin.Name)
 	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_plugin_essentials", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_plugin_config_patch", proxyHTTPURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
@@ -316,7 +321,7 @@ func TestPluginConfigPatch(t *testing.T) {
 
 	t.Logf("validating that clusterplugin %s was successfully configured", kongclusterplugin.Name)
 	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_plugin_essentials", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_plugin_config_patch", proxyHTTPURL))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
 			return false
@@ -328,7 +333,7 @@ func TestPluginConfigPatch(t *testing.T) {
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
-	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPURL, proxyHTTPURL.Host, "/test_plugin_essentials", ingressWait, waitTick, nil)
+	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPURL, proxyHTTPURL.Host, "/test_plugin_config_patch", ingressWait, waitTick, nil)
 }
 
 func TestPluginOrdering(t *testing.T) {
@@ -711,4 +716,118 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 		defer resp.Body.Close()
 		assert.True(c, resp.StatusCode == http.StatusTeapot)
 	}, ingressWait, waitTick)
+}
+
+func TestPluginNullInConfig(t *testing.T) {
+	ctx := t.Context()
+
+	t.Parallel()
+	ns, cleaner := helpers.Setup(ctx, t, env)
+
+	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
+	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
+	deployment := generators.NewDeploymentForContainer(container)
+	deployment, err := env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(deployment)
+
+	t.Logf("exposing deployment %s via service", deployment.Name)
+	service := generators.NewServiceForDeployment(deployment, corev1.ServiceTypeLoadBalancer)
+	service, err = env.Cluster().Client().CoreV1().Services(ns.Name).Create(ctx, service, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(service)
+
+	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
+	ingress := generators.NewIngressForService("/test_plugin_null_in_config", map[string]string{
+		"konghq.com/strip-path": "true",
+	}, service)
+	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
+	ingress, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Create(ctx, ingress, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(ingress)
+
+	t.Log("waiting for routes from Ingress to be operational")
+	assert.Eventually(t, func() bool {
+		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_plugin_null_in_config", proxyHTTPURL))
+		if err != nil {
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
+			return false
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			// now that the ingress backend is routable, make sure the contents we're getting back are what we expect
+			// Expected: "<title>httpbin.org</title>"
+			b := new(bytes.Buffer)
+			n, err := b.ReadFrom(resp.Body)
+			require.NoError(t, err)
+			require.True(t, n > 0)
+			return strings.Contains(b.String(), "<title>httpbin.org</title>")
+		}
+		return false
+	}, ingressWait, waitTick)
+
+	t.Log("Creating a plugin with `null` in its configuration")
+
+	kongplugin := &configurationv1.KongPlugin{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: ns.Name,
+			Name:      "plugin-datadog",
+		},
+		InstanceName: "plugin-with-null",
+		PluginName:   "datadog",
+		Config: apiextensionsv1.JSON{
+			Raw: []byte(`{"host":"localhost","port":8125,"prefix":null}`),
+		},
+	}
+	c, err := clientset.NewForConfig(env.Cluster().Config())
+	require.NoError(t, err)
+	kongplugin, err = c.ConfigurationV1().KongPlugins(ns.Name).Create(ctx, kongplugin, metav1.CreateOptions{})
+	require.NoError(t, err)
+	cleaner.Add(kongplugin)
+
+	t.Logf("Updating Ingress to use plugin %s", kongplugin.Name)
+	require.Eventually(t, func() bool {
+		ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, ingress.Name, metav1.GetOptions{})
+		if err != nil {
+			return false
+		}
+		ingress.Annotations[annotations.AnnotationPrefix+annotations.PluginsKey] = kongplugin.Name
+		_, err = env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Update(ctx, ingress, metav1.UpdateOptions{})
+		return err == nil
+	}, ingressWait, waitTick)
+
+	t.Logf("Checking the configuration of the plugin %s in Kong", kongplugin.Name)
+	kc, err := adminapi.NewKongAPIClient(proxyAdminURL.String(), managercfg.AdminAPIClientConfig{}, consts.KongTestPassword)
+	require.NoError(t, err, "failed to create Kong client")
+	// For integration tests in enterprise edition and postgres DB backed Kong gateway,
+	// the tests are run in "notdefault" workspace of Kong.
+	if testenv.DBMode() != testenv.DBModeOff && testenv.KongEnterpriseEnabled() {
+		kc.SetWorkspace(consts.KongTestWorkspace)
+	}
+	require.Eventually(t, func() bool {
+		plugins, err := kc.Plugins.ListAll(ctx)
+		require.NoError(t, err, "failed to list plugins")
+
+		datadogPlugin, found := lo.Find(plugins, func(p *kong.Plugin) bool {
+			return p.Name != nil && *p.Name == "datadog"
+		})
+		if !found {
+			t.Logf("datadog plugin not found. %d plugins found: %s",
+				len(plugins),
+				strings.Join(
+					lo.Map(plugins, func(p *kong.Plugin, _ int) string {
+						return lo.FromPtrOr(p.Name, "_")
+					}),
+					","),
+			)
+			return false
+		}
+
+		configJSON, err := json.Marshal(datadogPlugin.Config)
+		require.NoError(t, err)
+		t.Logf("Configuration of datadog plugin: %s", string(configJSON))
+
+		configPrefix, ok := datadogPlugin.Config["prefix"]
+		return ok && configPrefix == nil
+	}, ingressWait, waitTick, "failed to find 'datadog' plugin with null in config.prefix in Kong")
 }

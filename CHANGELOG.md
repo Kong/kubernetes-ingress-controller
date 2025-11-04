@@ -113,6 +113,10 @@ Adding a new version? You'll need three changes:
 
 ### Fixed
 
+- Do not cleanup `null`s in the configuration of plugins with Kong running in
+  DBLess mode in the translator of ingress-controller. This enables user to use
+  explicit `null`s in plugins.
+  [#7751](https://github.com/Kong/kubernetes-ingress-controller/pull/7751)
 - Reject CA Secrets with multiple PEM certs.
   [#7767](https://github.com/Kong/kubernetes-ingress-controller/pull/7767)
 

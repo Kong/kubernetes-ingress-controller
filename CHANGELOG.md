@@ -110,6 +110,17 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## Unreleased
+
+### Fixed
+
+- Do not cleanup `null`s in the configuration of plugins with Kong running in
+  DBLess mode in the translator of ingress-controller. This enables user to use
+  explicit `null`s in plugins.
+  [#7751](https://github.com/Kong/kubernetes-ingress-controller/pull/7751)
+- Reject CA Secrets with multiple PEM certs.
+  [#7763](https://github.com/Kong/kubernetes-ingress-controller/pull/7763)
+
 ## [3.5.2]
 
 > Release date: 2025-09-23
@@ -126,8 +137,6 @@ Adding a new version? You'll need three changes:
   that KIC deletes the certificates of listeners on dataplane pods deleted when
   KIC is running under the control of Kong gateway operator.
   [#7666](https://github.com/Kong/kubernetes-ingress-controller/pull/7666)
-- Reject CA Secrets with multiple PEM certs.
-  [#7763](https://github.com/Kong/kubernetes-ingress-controller/pull/7763)
 
 ## [3.5.1]
 

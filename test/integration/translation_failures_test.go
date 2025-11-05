@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
@@ -29,6 +30,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v2/pkg/clientset"
 	"github.com/kong/kubernetes-ingress-controller/v2/test"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v2/test/helpers/certificate"
 	"github.com/kong/kubernetes-ingress-controller/v2/test/internal/helpers"
 )
 
@@ -51,6 +53,38 @@ func TestTranslationFailures(t *testing.T) {
 		// that we expect translation failure warning events to be created for.
 		translationFailureTrigger func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure
 	}{
+		{
+			name: "CA secret with multiple PEMs",
+			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
+				createdSecret, err := env.Cluster().Client().CoreV1().Secrets(ns).Create(ctx, multiPEMCASecret(ns, uuid.NewString()), metav1.CreateOptions{})
+				require.NoError(t, err)
+				cleaner.Add(createdSecret)
+
+				return expectedTranslationFailure{
+					causingObjects: []client.Object{createdSecret},
+					reasonContains: "multiple PEM certificates found",
+				}
+			},
+		},
+		{
+			name: "CA secret with multiple PEMs referred by a plugin",
+			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
+				createdSecret, err := env.Cluster().Client().CoreV1().Secrets(ns).Create(ctx, multiPEMCASecret(ns, invalidCASecretID), metav1.CreateOptions{})
+				require.NoError(t, err)
+				cleaner.Add(createdSecret)
+
+				c, err := clientset.NewForConfig(env.Cluster().Config())
+				require.NoError(t, err)
+				createdPlugin, err := c.ConfigurationV1().KongPlugins(ns).Create(ctx, pluginUsingInvalidCACert(ns), metav1.CreateOptions{})
+				require.NoError(t, err)
+				cleaner.Add(createdPlugin)
+
+				return expectedTranslationFailure{
+					causingObjects: []client.Object{createdSecret, createdPlugin},
+					reasonContains: "multiple PEM certificates found",
+				}
+			},
+		},
 		{
 			name: "invalid CA secret",
 			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
@@ -337,6 +371,34 @@ func invalidCASecret(ns string) *corev1.Secret {
 		Data: map[string][]byte{
 			"id": []byte(invalidCASecretID),
 			// missing cert key
+		},
+	}
+}
+
+func multiPEMCASecret(ns, id string) *corev1.Secret {
+	ca1, _ := certificate.MustGenerateSelfSignedCertPEMFormat(
+		certificate.WithCommonName("test-ca-1"),
+		certificate.WithCATrue(),
+	)
+	ca2, _ := certificate.MustGenerateSelfSignedCertPEMFormat(
+		certificate.WithCommonName("test-ca-2"),
+		certificate.WithCATrue(),
+	)
+
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      testutils.RandomName(testTranslationFailuresObjectsPrefix),
+			Namespace: ns,
+			Labels: map[string]string{
+				"konghq.com/ca-cert": "true",
+			},
+			Annotations: map[string]string{
+				annotations.IngressClassKey: consts.IngressClass,
+			},
+		},
+		StringData: map[string]string{
+			"id":   id,
+			"cert": string(ca1) + string(ca2),
 		},
 	}
 }

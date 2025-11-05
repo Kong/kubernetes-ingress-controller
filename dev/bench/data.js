@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1762336040545,
+  "lastUpdate": 1762336558014,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -21096,6 +21096,78 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "8910008 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "tao.yi@konghq.com",
+            "name": "Yi Tao",
+            "username": "randmonkey"
+          },
+          "distinct": true,
+          "id": "5f5f2435c6bfed208719ef68464c07d4970c8b59",
+          "message": "fix(sendconfig): Do not cleanup `null`s in plugin configuration   (#7751)\n\n* remove cleanup of nulls in plugin config\n\n* update tests\n\n* update changelog\n\n* dump plugin config in tests\n\n* find plugin in multiple plugins\n\n* use different paths for plugin tests and fix workspace\n\n(cherry picked from commit 2bb2029577de2e30d3b0dea01e36baa7c82c3157)",
+          "timestamp": "2025-11-05T17:50:43+08:00",
+          "tree_id": "8b2ef89d682580b92c723373aea730567d0a440c",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/5f5f2435c6bfed208719ef68464c07d4970c8b59"
+        },
+        "date": 1762336406223,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 74080,
+            "unit": "ns/op\t   11117 B/op\t      12 allocs/op",
+            "extra": "17101 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 74080,
+            "unit": "ns/op",
+            "extra": "17101 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11117,
+            "unit": "B/op",
+            "extra": "17101 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "17101 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert",
+            "value": 64.11,
+            "unit": "ns/op\t       0 B/op\t       0 allocs/op",
+            "extra": "20103526 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 64.11,
+            "unit": "ns/op",
+            "extra": "20103526 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "20103526 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "20103526 times\n4 procs"
           }
         ]
       }

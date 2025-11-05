@@ -1,5 +1,5 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1762331300800,
+  "lastUpdate": 1762332665529,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
@@ -20952,6 +20952,78 @@ window.BENCHMARK_DATA = {
             "value": 0,
             "unit": "allocs/op",
             "extra": "6578305 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "zhangjintao9020@gmail.com",
+            "name": "Jintao Zhang",
+            "username": "tao12345666333"
+          },
+          "committer": {
+            "email": "tao.yi@konghq.com",
+            "name": "Yi Tao",
+            "username": "randmonkey"
+          },
+          "distinct": true,
+          "id": "befe280cddce298822076aa2d97829381e05ea57",
+          "message": "fix(translator): reject CA Secrets with multiple PEM certs (#7763)\n\n* docs: update API references and bump crd-ref-docs to 0.2.0\n\n* fix(translator): reject CA Secrets with multiple PEM certs\n\n* update CHANGELOG\n\nSigned-off-by: Jintao Zhang <zhangjintao9020@gmail.com>\n\n---------\n\nSigned-off-by: Jintao Zhang <zhangjintao9020@gmail.com>\n(cherry picked from commit 64e50933f0688324f3954145d4a2ef4705ed1c43)",
+          "timestamp": "2025-11-05T16:46:11+08:00",
+          "tree_id": "f829940a377313370cf4891eacc5d6c777fa27a4",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/befe280cddce298822076aa2d97829381e05ea57"
+        },
+        "date": 1762332514587,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkDeckgenGenerateSHA",
+            "value": 70932,
+            "unit": "ns/op\t   11109 B/op\t      12 allocs/op",
+            "extra": "16838 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - ns/op",
+            "value": 70932,
+            "unit": "ns/op",
+            "extra": "16838 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - B/op",
+            "value": 11109,
+            "unit": "B/op",
+            "extra": "16838 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDeckgenGenerateSHA - allocs/op",
+            "value": 12,
+            "unit": "allocs/op",
+            "extra": "16838 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert",
+            "value": 152.5,
+            "unit": "ns/op\t       0 B/op\t       0 allocs/op",
+            "extra": "7795472 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
+            "value": 152.5,
+            "unit": "ns/op",
+            "extra": "7795472 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "7795472 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "7795472 times\n4 procs"
           }
         ]
       }

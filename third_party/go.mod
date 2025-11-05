@@ -17,7 +17,6 @@ require (
 	sigs.k8s.io/controller-runtime/tools/setup-envtest v0.0.0-20230728161957-7f0c6dc440f3
 	sigs.k8s.io/controller-tools v0.13.0
 	sigs.k8s.io/kustomize/kustomize/v5 v5.1.1
-
 )
 
 // Note: needed for skaffold

@@ -4,11 +4,14 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
+	"net/http"
 
 	"github.com/blang/semver/v4"
 	"github.com/kong/deck/file"
+	"github.com/kong/go-kong/kong"
 	"github.com/sirupsen/logrus"
 
 	"github.com/kong/kubernetes-ingress-controller/v2/internal/metrics"
@@ -21,7 +24,7 @@ type ConfigService interface {
 		config io.Reader,
 		checkHash bool,
 		flattenErrors bool,
-	) ([]byte, error)
+	) error
 }
 
 type ContentToDBLessConfigConverter interface {
@@ -65,9 +68,13 @@ func (s UpdateStrategyInMemory) Update(ctx context.Context, targetState ContentW
 	}
 
 	flattenErrors := shouldUseFlattenedErrors(s.version)
-	if errBody, err := s.configService.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true, flattenErrors); err != nil {
-		resourceErrors, parseErr := parseFlatEntityErrors(errBody, s.log)
-		return err, resourceErrors, parseErr
+	if err := s.configService.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(config), true, flattenErrors); err != nil {
+		var apiError *kong.APIError
+		if errors.As(err, &apiError) && apiError.Code() == http.StatusBadRequest {
+			resourceErrors, parseErr := parseFlatEntityErrors(apiError.Raw(), s.log)
+			return err, resourceErrors, parseErr
+		}
+		return err, nil, nil
 	}
 
 	return nil, nil, nil
@@ -94,5 +101,5 @@ func shouldUseFlattenedErrors(version semver.Version) bool {
 
 type InMemoryClient interface {
 	BaseRootURL() string
-	ReloadDeclarativeRawConfig(ctx context.Context, config io.Reader, checkHash bool, flattenErrors bool) ([]byte, error)
+	ReloadDeclarativeRawConfig(ctx context.Context, config io.Reader, checkHash bool, flattenErrors bool) error
 }

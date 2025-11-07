@@ -175,7 +175,7 @@ func TestKongUpstreamPolicyTranslation(t *testing.T) {
 							Timeouts:     lo.ToPtr(120),
 						},
 					},
-					Threshold: lo.ToPtr(140),
+					Threshold: lo.ToPtr(10),
 				},
 			},
 			expectedUpstream: &kong.Upstream{
@@ -214,7 +214,7 @@ func TestKongUpstreamPolicyTranslation(t *testing.T) {
 							Timeouts:     lo.ToPtr(120),
 						},
 					},
-					Threshold: lo.ToPtr(0.),
+					Threshold: kong.Float64(10.0),
 				},
 			},
 		},

@@ -418,6 +418,7 @@ func TestTranslateKongUpstreamPolicy(t *testing.T) {
 							Timeouts:    lo.ToPtr(120),
 						},
 					},
+					Threshold: kong.Float64(140.0),
 				},
 			},
 		},

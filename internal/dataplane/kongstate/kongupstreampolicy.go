@@ -171,9 +171,9 @@ func translateHealthchecks(healthchecks *configurationv1beta1.KongUpstreamHealth
 		return nil
 	}
 	return &kong.Healthcheck{
-		Active:  translateActiveHealthcheck(healthchecks.Active),
-		Passive: translatePassiveHealthcheck(healthchecks.Passive),
-		Thresholds: healthchecks.Thresholds,
+		Active:    translateActiveHealthcheck(healthchecks.Active),
+		Passive:   translatePassiveHealthcheck(healthchecks.Passive),
+		Threshold: translateThreshold(healthchecks.Threshold),
 	}
 }
 
@@ -203,6 +203,13 @@ func translatePassiveHealthcheck(healthcheck *configurationv1beta1.KongUpstreamP
 		Healthy:   translateHealthy(healthcheck.Healthy),
 		Unhealthy: translateUnhealthy(healthcheck.Unhealthy),
 	}
+}
+
+func translateThreshold(threshold *int) *float64 {
+	if threshold == nil {
+		return nil
+	}
+	return lo.ToPtr(float64(*threshold))
 }
 
 func translateHealthy(healthy *configurationv1beta1.KongUpstreamHealthcheckHealthy) *kong.Healthy {

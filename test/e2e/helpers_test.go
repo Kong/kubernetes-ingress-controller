@@ -96,7 +96,7 @@ const (
 func setupE2ETest(t *testing.T, addons ...clusters.Addon) (context.Context, environments.Environment) {
 	t.Helper()
 
-	ctx, cancel := context.WithCancel(context.Background()) //nolint:usetesting
+	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 
 	t.Log("building test cluster and environment")

@@ -233,6 +233,10 @@ linters:
         text: Potential file inclusion via variable
       - path: (.+)\.go$
         text: (G601)
+      - path: (.+)\.go$
+        text: "var-naming: avoid meaningless package names"
+      - path: pkg/apis/.*\.go$
+        text: "`Deprecated: ` notices should be in a dedicated paragraph, separated from the rest"
     paths:
       - third_party$
       - builtin$

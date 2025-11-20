@@ -718,6 +718,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 // a message and checks if returned one matches. It returns an error with
 // an explanation if it is not (typical network related errors like io.EOF or
 // syscall.ECONNRESET are returned directly).
+//
 // Deprecated: use test.EchoResponds with ProtocolTLS instead.
 func tlsEchoResponds(
 	url string, podName string, hostname string, certPool *x509.CertPool, passthrough bool,

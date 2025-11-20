@@ -1006,7 +1006,7 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 			for _, credential := range tc.credentials {
 				require.NoError(t, ctrlClient.Create(ctx, credential))
 				t.Cleanup(func() { //nolint:contextcheck
-					ctx := context.Background() //nolint:usetesting
+					ctx := context.Background()
 					if err := ctrlClient.Delete(ctx, credential); err != nil && !apierrors.IsNotFound(err) {
 						assert.NoError(t, err)
 					}

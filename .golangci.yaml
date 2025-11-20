@@ -227,6 +227,8 @@ linters:
         text: Potential file inclusion via variable
       - path: (.+)\.go$
         text: (G601)
+      - path: (.+)\.go$
+        text: "var-naming: avoid meaningless package names"
     paths:
       - third_party$
       - builtin$
@@ -254,3 +256,4 @@ formatters:
       - third_party$
       - builtin$
       - examples$
+

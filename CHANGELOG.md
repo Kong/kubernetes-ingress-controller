@@ -120,6 +120,10 @@ Adding a new version? You'll need three changes:
   [#7751](https://github.com/Kong/kubernetes-ingress-controller/pull/7751)
 - Reject CA Secrets with multiple PEM certs.
   [#7763](https://github.com/Kong/kubernetes-ingress-controller/pull/7763)
+- Translate `healtchchecks.thershold` in `KongUpstreamPolicy` to the
+  `healthchecks.thershold` field in Kong upstreams.
+  (Thanks to [@elbrogan-vizio](https://github.com/elbrogan-vizio) who contributed to the fix.)
+  [#7784](https://github.com/Kong/kubernetes-ingress-controller/pull/7784)
 
 ## [3.5.2]
 

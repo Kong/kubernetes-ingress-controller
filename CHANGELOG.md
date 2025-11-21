@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.5.3](#353)
  - [3.5.2](#352)
  - [3.5.1](#351)
  - [3.5.0](#350)
@@ -110,7 +111,9 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## Unreleased
+## [3.5.3]
+
+> Release date: 2025-11-21
 
 ### Fixed
 
@@ -124,6 +127,8 @@ Adding a new version? You'll need three changes:
   `healthchecks.thershold` field in Kong upstreams.
   (Thanks to [@elbrogan-vizio](https://github.com/elbrogan-vizio) who contributed to the fix.)
   [#7784](https://github.com/Kong/kubernetes-ingress-controller/pull/7784)
+- Bump Go to 1.25.4
+  [#7794](https://github.com/Kong/kubernetes-ingress-controller/pull/7794)
 
 ## [3.5.2]
 
@@ -4183,6 +4188,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.5.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.2...v3.5.3
 [3.5.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.1...v3.5.2
 [3.5.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.0...v3.5.1
 [3.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.7...v3.5.0

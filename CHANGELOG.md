@@ -8,9 +8,12 @@ Adding a new version? You'll need three changes:
   This is all the way at the bottom. It's the thing we always forget.
 --->
 
+- [3.5.3](#353)
 - [3.5.2](#352)
 - [3.5.1](#351)
 - [3.5.0](#350)
+- [3.4.10](#3410)
+- [3.4.9](#349)
 - [3.4.8](#348)
 - [3.4.7](#347)
 - [3.4.6](#346)
@@ -125,6 +128,27 @@ Adding a new version? You'll need three changes:
   `healthchecks.thershold` field in Kong upstreams.
   (Thanks to [@elbrogan-vizio](https://github.com/elbrogan-vizio) who contributed to the fix.)
   [#7784](https://github.com/Kong/kubernetes-ingress-controller/pull/7784)
+- Reject CA Secrets with multiple PEM certs.
+  [#7763](https://github.com/Kong/kubernetes-ingress-controller/pull/7763)
+
+## [3.5.3]
+
+> Release date: 2025-11-21
+
+### Fixed
+
+- Do not cleanup `null`s in the configuration of plugins with Kong running in
+  DBLess mode in the translator of ingress-controller. This enables user to use
+  explicit `null`s in plugins.
+  [#7751](https://github.com/Kong/kubernetes-ingress-controller/pull/7751)
+- Reject CA Secrets with multiple PEM certs.
+  [#7763](https://github.com/Kong/kubernetes-ingress-controller/pull/7763)
+- Translate `healtchchecks.thershold` in `KongUpstreamPolicy` to the
+  `healthchecks.thershold` field in Kong upstreams.
+  (Thanks to [@elbrogan-vizio](https://github.com/elbrogan-vizio) who contributed to the fix.)
+  [#7784](https://github.com/Kong/kubernetes-ingress-controller/pull/7784)
+- Bump Go to 1.25.4
+  [#7794](https://github.com/Kong/kubernetes-ingress-controller/pull/7794)
 
 ## [3.5.2]
 
@@ -142,8 +166,6 @@ Adding a new version? You'll need three changes:
   that KIC deletes the certificates of listeners on dataplane pods deleted when
   KIC is running under the control of Kong gateway operator.
   [#7666](https://github.com/Kong/kubernetes-ingress-controller/pull/7666)
-- Reject CA Secrets with multiple PEM certs.
-  [#7763](https://github.com/Kong/kubernetes-ingress-controller/pull/7763)
 
 ## [3.5.1]
 
@@ -209,6 +231,42 @@ Adding a new version? You'll need three changes:
   can be used for both hash_on (always) and hash_fallack (when primary hashing
   source is different than cookie).
   [#7582](https://github.com/Kong/kubernetes-ingress-controller/pull/7582)
+
+## [3.4.10]
+
+> Release date: 2025-11-21
+
+### Fixed
+
+- Do not cleanup `null`s in the configuration of plugins with Kong running in
+  DBLess mode in the translator of ingress-controller. This enables user to use
+  explicit `null`s in plugins.
+  [#7751](https://github.com/Kong/kubernetes-ingress-controller/pull/7751)
+- Reject CA Secrets with multiple PEM certs.
+  [#7767](https://github.com/Kong/kubernetes-ingress-controller/pull/7767)
+- Translate `healtchchecks.thershold` in `KongUpstreamPolicy` to the
+  `healthchecks.thershold` field in Kong upstreams.
+  (Thanks to [@elbrogan-vizio](https://github.com/elbrogan-vizio) who contributed to the fix.)
+  [#7784](https://github.com/Kong/kubernetes-ingress-controller/pull/7784)
+- Bump Go to 1.25.4
+  [#7765](https://github.com/Kong/kubernetes-ingress-controller/pull/7795)
+
+## [3.4.9]
+
+> Release date: 2025-09-24
+
+### Fixed
+
+- Do not skip the gateway listeners without `Programmed` condition set to `True`
+  when the gateway class does not contain `konghq.com/gateway-unmanaged`
+  annotation in extracting certificates from listeners. This fixes the issue
+  that KIC deletes the certificates of listeners on dataplane pods deleted when
+  KIC is running under the control of Kong gateway operator.
+  [#7666](https://github.com/Kong/kubernetes-ingress-controller/pull/7666)
+- Add `request-termination` plugin to return `500` if there are no available
+  `backendRef` only when the service is translated from `HTTPRoute` or
+  `GRPCRoute`.
+  [#7720](https://github.com/Kong/kubernetes-ingress-controller/pull/7720)
 
 ## [3.4.8]
 
@@ -4213,9 +4271,12 @@ Please read the changelog and test in your environment.
 - The initial versions were rapildy iterated to deliver
   a working ingress controller.
 
+[3.5.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.2...v3.5.3
 [3.5.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.1...v3.5.2
 [3.5.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.0...v3.5.1
 [3.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.7...v3.5.0
+[3.4.10]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.9...v3.4.10
+[3.4.9]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.8...v3.4.9
 [3.4.8]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.7...v3.4.8
 [3.4.7]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.6...v3.4.7
 [3.4.6]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.5...v3.4.6

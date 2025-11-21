@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.4.10](#3410)
  - [3.4.9](#349)
  - [3.4.8](#348)
  - [3.4.7](#347)
@@ -109,7 +110,9 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## Unreleased
+## [3.4.10]
+
+> Release date: 2025-11-21
 
 ### Fixed
 
@@ -123,6 +126,8 @@ Adding a new version? You'll need three changes:
   `healthchecks.thershold` field in Kong upstreams.
   (Thanks to [@elbrogan-vizio](https://github.com/elbrogan-vizio) who contributed to the fix.)
   [#7784](https://github.com/Kong/kubernetes-ingress-controller/pull/7784)
+- Bump Go to 1.25.4
+  [#7765](https://github.com/Kong/kubernetes-ingress-controller/pull/7795)
 
 ## [3.4.9]
 

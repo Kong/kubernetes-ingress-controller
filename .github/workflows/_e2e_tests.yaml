@@ -95,7 +95,7 @@ jobs:
           echo "istio=$(yq -r -ojson '.e2e.istio' < .github/test_dependencies.yaml | jq -c)" >> $GITHUB_OUTPUT
 
   kind:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 30) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 30) }}
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
     needs:

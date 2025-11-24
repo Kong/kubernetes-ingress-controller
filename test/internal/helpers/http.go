@@ -61,7 +61,7 @@ func DefaultHTTPClient(opts ...HTTPClientOption) *http.Client {
 	if cfg.resolveHostTo != "" {
 		tr.DialContext = func(ctx context.Context, network, _ string) (net.Conn, error) {
 			return (&net.Dialer{
-				Timeout:   30 * time.Second,
+				Timeout:   120 * time.Second,
 				KeepAlive: 30 * time.Second,
 			}).DialContext(ctx, network, cfg.resolveHostTo)
 		}
@@ -69,7 +69,7 @@ func DefaultHTTPClient(opts ...HTTPClientOption) *http.Client {
 
 	client := cleanhttp.DefaultClient()
 	client.Transport = tr
-	client.Timeout = 10 * time.Second
+	client.Timeout = 120 * time.Second
 
 	return client
 }

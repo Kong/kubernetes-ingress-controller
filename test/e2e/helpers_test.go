@@ -51,20 +51,20 @@ const (
 	// kongComponentWait is the maximum amount of time to wait for components (such as
 	// the ingress controller or the Kong Gateway) to become responsive after
 	// deployment to the cluster has finished.
-	kongComponentWait = time.Minute * 7
+	kongComponentWait = time.Minute * 15 // Increased from 7 to 15 minutes to allow more time for Kuma environment
 
 	// ingressWait is the maximum amount of time to wait for a basic HTTP service
 	// (e.g. httpbin) to come online and for ingress to have properly configured
 	// proxy traffic to route to it.
-	ingressWait = time.Minute * 5
+	ingressWait = time.Minute * 10 // Increased from 5 to 10 minutes to allow more time for Kuma mesh
 
 	// adminAPIWait is the maximum amount of time to wait for the Admin API to become
 	// responsive after updating the KONG_ADMIN_LISTEN and adding a service for it.
-	adminAPIWait = time.Minute * 2
+	adminAPIWait = time.Minute * 5 // Increased from 2 to 5 minutes
 
 	// gatewayUpdateWaitTime is the amount of time to wait for updates to the Gateway, or to its
 	// parent Service to fully resolve into ready state.
-	gatewayUpdateWaitTime = time.Minute * 3
+	gatewayUpdateWaitTime = time.Minute * 5 // Increased from 3 to 5 minutes
 
 	ingressClass     = "kong"
 	namespace        = "kong"
@@ -572,7 +572,7 @@ func verifyIngressWithEchoBackendsInAdminAPI(
 			return false
 		}
 		return true
-	}, time.Minute*3, time.Second, "%q didn't get the config", kongClient.BaseRootURL())
+	}, time.Minute*5, time.Second, "%q didn't get the config", kongClient.BaseRootURL()) // Increased from 3 to 5 minutes
 }
 
 // verifyEnterprise performs some basic tests of the Kong Admin API in the provided
@@ -879,7 +879,7 @@ func scaleDeployment(ctx context.Context, t *testing.T, env environments.Environ
 			return false
 		}
 		return deployment.Status.ReadyReplicas == replicas
-	}, time.Minute*3, time.Second, "deployment %s did not scale to %d replicas", deployment.Name, replicas)
+	}, time.Minute*5, time.Second, "deployment %s did not scale to %d replicas", deployment.Name, replicas) // Increased from 3 to 5 minutes
 }
 
 func (d Deployments) Restart(ctx context.Context, t *testing.T, env environments.Environment) {

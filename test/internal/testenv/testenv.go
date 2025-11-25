@@ -237,7 +237,7 @@ func WaitForClusterDelete() bool {
 // ready, including all the dependencies (kong, metallb, etc)
 // used here to make up a context to pass into environments.WaitForReady to trigger cleanup when timed out.
 func EnvironmentReadyTimeout() time.Duration {
-	const DefaultEnvironmentReadyTimeout = time.Minute * 10
+	const DefaultEnvironmentReadyTimeout = time.Minute * 20 // Increased from 10 to 20 minutes to allow more time for Kuma deployment
 	timeout, err := time.ParseDuration(os.Getenv("KONG_TEST_ENVIRONMENT_READY_TIMEOUT"))
 	if err != nil {
 		timeout = DefaultEnvironmentReadyTimeout

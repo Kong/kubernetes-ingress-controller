@@ -13,7 +13,7 @@ import (
 )
 
 const (
-	kongComponentRolloutTimeout = 7 * time.Minute
+	kongComponentRolloutTimeout = 15 * time.Minute // Increased from 7 to 15 minutes to allow more time for Kuma pods to start
 )
 
 // WaitForDeploymentRollout waits for the deployment to roll out in the cluster. It fails the test if the deployment

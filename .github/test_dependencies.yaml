@@ -35,7 +35,7 @@ e2e:
       istio: '1.21.2'
 
   # renovate: datasource=helm depName=kuma registryUrl=https://kumahq.github.io/charts versioning=helm
-  kuma: '2.12.4'
+  kuma: '2.10.9'
 
 integration:
   helm:

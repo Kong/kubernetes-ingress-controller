@@ -1,20 +1,30 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "configMigration": true,
-  "enabledManagers": ["custom.regex", "kustomize", "gomod"],
+  "enabledManagers": [
+    "custom.regex",
+    "kustomize",
+    "gomod"
+  ],
   "automerge": false,
   "separateMinorPatch": true,
-  "labels": ["dependencies"],
+  "labels": [
+    "dependencies"
+  ],
   "schedule": "before 5am every weekday",
   "registryAliases": {
     "kong": "https://charts.konghq.com"
   },
-  "ignorePaths": ["config/crd"],
+  "ignorePaths": [
+    "config/crd"
+  ],
   "customManagers": [
     {
       "description": "Match dependencies in .github/test_dependencies.yaml that are properly annotated with `# renovate: datasource={} depName={} [packageName={}] [registryUrl={}] versioning={}.`",
       "customType": "regex",
-      "fileMatch": ["^.github/test_dependencies.yaml$"],
+      "managerFilePatterns": [
+        "/^.github/test_dependencies.yaml$/"
+      ],
       "matchStrings": [
         "#\\s+renovate:\\s+datasource=(?<datasource>.*?)\\s+depName=(?<depName>.*?)\\s+(packageName=(?<packageName>.*)\\s+)?(registryUrl=(?<registryUrl>.*)\\s+)?versioning=(?<versioning>.*?)\\n.+'(?<currentValue>.*?)'"
       ]
@@ -22,7 +32,9 @@
     {
       "description": "Match dependencies in .tools_verisons.yaml that are properly annotated with `# renovate: datasource={} depName={}.`",
       "customType": "regex",
-      "fileMatch": ["\\.tools_versions\\.yaml$"],
+      "managerFilePatterns": [
+        "/\\.tools_versions\\.yaml$/"
+      ],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\n.+\"(?<currentValue>.*?)\""
       ]
@@ -30,7 +42,9 @@
     {
       "description": "Match dependencies in Makefile that are properly annotated with `# renovate: datasource={} depName={}.`",
       "customType": "regex",
-      "fileMatch": ["Makefile"],
+      "managerFilePatterns": [
+        "/Makefile/"
+      ],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\n.+=\\s*(?<currentValue>.*)\\n"
       ]
@@ -38,9 +52,9 @@
     {
       "description": "Match versions in config/image/oss and config/image/enterprise kustomize files that are properly annotated with `# renovate: datasource={} versioning={} depName={} packageName={}`.",
       "customType": "regex",
-      "fileMatch": [
-        "^config/image/enterprise/.*\\.yaml$",
-        "^config/image/oss/.*\\.yaml$"
+      "managerFilePatterns": [
+        "/^config/image/enterprise/.*\\.yaml$/",
+        "/^config/image/oss/.*\\.yaml$/"
       ],
       "matchStrings": [
         "'(?<currentValue>.+)' # renovate: datasource=(?<datasource>.*) versioning=(?<versioning>.*) depName=(?<depName>.+) (packageName=(?<packageName>.+))"
@@ -49,7 +63,9 @@
     {
       "description": "Match versions in Dockerfile.* that are properly annotated with `# renovate: datasource={} depName={}`.",
       "customType": "regex",
-      "fileMatch": ["^Dockerfile.*$"],
+      "managerFilePatterns": [
+        "/^Dockerfile.*$/"
+      ],
       "matchStrings": [
         "# renovate: datasource=(?<datasource>.*) depName=(?<depName>.+)\\n.*@(?<currentValue>.*)"
       ]
@@ -64,41 +80,67 @@
   "packageRules": [
     {
       "description": "Ignore minor updates if depName has `@only-patch` suffix.",
-      "matchUpdateTypes": ["minor"],
+      "matchUpdateTypes": [
+        "minor"
+      ],
       "enabled": false,
-      "matchDepNames": ["/.*@only-patch/"]
+      "matchDepNames": [
+        "/.*@only-patch/"
+      ]
     },
     {
       "description": "Add 'renovate/auto-regenerate' label to a PR if it changes kustomize files to trigger regenerate_on_deps_bump.yaml workflow.",
-      "matchManagers": ["kustomize"],
-      "addLabels": ["renovate/auto-regenerate"]
+      "matchManagers": [
+        "kustomize"
+      ],
+      "addLabels": [
+        "renovate/auto-regenerate"
+      ]
     },
     {
       "description": "Add 'renovate/auto-regenerate' label to a PR if it changes kustomize files containing images to trigger regenerate_on_deps_bump.yaml workflow.",
-      "addLabels": ["renovate/auto-regenerate"],
-      "matchDepNames": ["/.*@regenerate/"]
+      "addLabels": [
+        "renovate/auto-regenerate"
+      ],
+      "matchDepNames": [
+        "/.*@regenerate/"
+      ]
     },
     {
       "description": "Add 'renovate/auto-regenerate' label to a PR if it changes go.mod files to trigger regenerate_on_deps_bump.yaml workflow.",
-      "matchManagers": ["gomod"],
-      "addLabels": ["renovate/auto-regenerate"]
+      "matchManagers": [
+        "gomod"
+      ],
+      "addLabels": [
+        "renovate/auto-regenerate"
+      ]
     },
     {
       "description": "Ignore all go.mod dependencies as majority of them is handled by dependabot.",
-      "matchManagers": ["gomod"],
+      "matchManagers": [
+        "gomod"
+      ],
       "enabled": false
     },
     {
       "description": "Enable go dependency - github.com/kong/kubernetes-configuration/v2 - which is not handled by dependabot.",
-      "matchManagers": ["gomod"],
+      "matchManagers": [
+        "gomod"
+      ],
       "enabled": true,
-      "matchPackageNames": ["github.com/kong/kubernetes-configuration/v2"],
+      "matchPackageNames": [
+        "github.com/kong/kubernetes-configuration/v2"
+      ],
       "ignoreUnstable": false
     },
     {
       "description": "Custom extractVersion for kustomize.",
-      "matchManagers": ["custom.regex"],
-      "matchPackageNames": ["kubernetes-sigs/kustomize"],
+      "matchManagers": [
+        "custom.regex"
+      ],
+      "matchPackageNames": [
+        "kubernetes-sigs/kustomize"
+      ],
       "extractVersion": "^kustomize\\/v(?<version>\\d+\\.\\d+\\.\\d+)$"
     }
   ]

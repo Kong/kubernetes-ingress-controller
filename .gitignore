@@ -90,3 +90,6 @@ TODO
 .DS_Store
 .AppleDouble
 .LSOverride
+
+# Claude AI context file (development notes)
+CLAUDE_CONTEXT.md

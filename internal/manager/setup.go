@@ -5,16 +5,19 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/avast/retry-go/v4"
 	"github.com/go-logr/logr"
+	"github.com/google/uuid"
 	"github.com/samber/lo"
 	"github.com/samber/mo"
 	corev1 "k8s.io/api/core/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/leaderelection/resourcelock"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -36,6 +39,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/k8s"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	konnectLicense "github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/license"
+	etcdelection "github.com/kong/kubernetes-ingress-controller/v3/internal/leaderelection/etcd"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/license"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/store"
@@ -50,8 +54,10 @@ import (
 // Controller Manager - Setup Utility Functions
 // -----------------------------------------------------------------------------
 
-func setupManagerOptions(ctx context.Context, logger logr.Logger, c *managercfg.Config, dbmode dpconf.DBMode) ctrl.Options {
+func setupManagerOptions(ctx context.Context, logger logr.Logger, c *managercfg.Config, dbmode dpconf.DBMode) (ctrl.Options, error) {
 	logger.Info("Building the manager runtime scheme and loading apis into the scheme")
+
+	leaderElectionEnabled := leaderElectionEnabled(logger, *c, dbmode)
 
 	// configure the general manager options
 	managerOpts := ctrl.Options{
@@ -79,13 +85,30 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *managercfg.
 			}(),
 		},
 		WebhookServer:    webhook.NewServer(webhook.Options{Port: 9443}),
-		LeaderElection:   leaderElectionEnabled(logger, *c, dbmode),
+		LeaderElection:   leaderElectionEnabled,
 		LeaderElectionID: c.LeaderElectionID,
 		Cache: cache.Options{
 			SyncPeriod: &c.SyncPeriod,
 		},
 		Logger:    ctrl.LoggerFrom(ctx),
 		NewClient: newManagerClient,
+	}
+
+	// Configure leader election backend if leader election is enabled.
+	if leaderElectionEnabled {
+		lock, err := setupLeaderElectionLock(logger, c)
+		if err != nil {
+			return ctrl.Options{}, fmt.Errorf("failed to setup leader election lock: %w", err)
+		}
+		if lock != nil {
+			// When using a custom resource lock (e.g., etcd), we set the LeaderElectionResourceLockInterface
+			// and disable the default leader election since we're providing our own lock.
+			managerOpts.LeaderElectionResourceLockInterface = lock
+			logger.Info("Using custom leader election backend",
+				"backend", c.LeaderElectionBackend,
+				"electionID", c.LeaderElectionID,
+			)
+		}
 	}
 
 	// If there are no configured watch namespaces, then we're watching ALL namespaces,
@@ -119,7 +142,82 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *managercfg.
 		managerOpts.LeaderElectionNamespace = c.LeaderElectionNamespace
 	}
 
-	return managerOpts
+	return managerOpts, nil
+}
+
+// setupLeaderElectionLock creates the appropriate leader election lock based on configuration.
+// Returns nil if using the default Kubernetes Lease-based leader election.
+func setupLeaderElectionLock(logger logr.Logger, c *managercfg.Config) (resourcelock.Interface, error) {
+	backend := c.LeaderElectionBackend
+	if backend == "" {
+		backend = managercfg.LeaderElectionBackendLease
+	}
+
+	switch backend {
+	case managercfg.LeaderElectionBackendLease:
+		// Use default Kubernetes Lease-based leader election (controller-runtime handles this).
+		logger.Info("Using Kubernetes Lease API for leader election")
+		return nil, nil
+
+	case managercfg.LeaderElectionBackendEtcd:
+		logger.Info("Using etcd for leader election")
+		return setupEtcdLeaderElectionLock(logger, c)
+
+	default:
+		return nil, fmt.Errorf("unsupported leader election backend: %s (supported: %s, %s)",
+			backend, managercfg.LeaderElectionBackendLease, managercfg.LeaderElectionBackendEtcd)
+	}
+}
+
+// setupEtcdLeaderElectionLock creates an etcd-based leader election lock.
+func setupEtcdLeaderElectionLock(logger logr.Logger, c *managercfg.Config) (resourcelock.Interface, error) {
+	// Load etcd configuration from environment variables.
+	etcdCfg, err := etcdelection.NewConfigFromEnv()
+	if err != nil {
+		return nil, fmt.Errorf("failed to load etcd configuration from environment: %w", err)
+	}
+
+	if err := etcdCfg.Validate(); err != nil {
+		return nil, fmt.Errorf("invalid etcd configuration: %w", err)
+	}
+
+	// Generate identity the same way as controller-runtime: hostname_UUID
+	// This matches the format used by Kubernetes Lease-based leader election.
+	identity, err := generateLeaderElectionIdentity()
+	if err != nil {
+		return nil, fmt.Errorf("failed to generate leader election identity: %w", err)
+	}
+
+	// Default lease duration (15 seconds is standard for Kubernetes leader election).
+	leaseDuration := 15 * time.Second
+
+	lock, err := etcdelection.NewEtcdLockFromConfig(etcdCfg, c.LeaderElectionID, identity, leaseDuration)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create etcd leader election lock: %w", err)
+	}
+
+	logger.Info("Created etcd leader election lock",
+		"endpoints", etcdCfg.Endpoints,
+		"electionID", c.LeaderElectionID,
+		"identity", identity,
+	)
+
+	return lock, nil
+}
+
+// generateLeaderElectionIdentity generates a unique identity for leader election.
+// The format is "hostname_UUID", which matches controller-runtime's default behavior.
+// In Kubernetes, the hostname is typically the pod name.
+func generateLeaderElectionIdentity() (string, error) {
+	hostname, err := os.Hostname()
+	if err != nil {
+		return "", fmt.Errorf("failed to get hostname: %w", err)
+	}
+
+	// Generate a UUID to ensure uniqueness even if hostname is reused.
+	id := uuid.New().String()
+
+	return fmt.Sprintf("%s_%s", hostname, id), nil
 }
 
 func leaderElectionEnabled(logger logr.Logger, c managercfg.Config, dbmode dpconf.DBMode) bool {

@@ -96,6 +96,7 @@ func (c *CLIConfig) bindFlagSet() {
 
 	// Kong Proxy and Proxy Cache configurations
 	flagSet.StringVar(&c.APIServerHost, "apiserver-host", "", `The Kubernetes API server URL. If not set, the controller will use cluster config discovery.`)
+	flagSet.BoolVar(&c.EnableClientSideThrottling, "enable-client-side-throttling", true, "Enable client-side rate limiting for Kubernetes API requests. When disabled, relies solely on API Priority and Fairness (APF).")
 	flagSet.IntVar(&c.APIServerQPS, "apiserver-qps", 100, "The Kubernetes API RateLimiter maximum queries per second.")
 	flagSet.IntVar(&c.APIServerBurst, "apiserver-burst", 300, "The Kubernetes API RateLimiter maximum burst queries per second.")
 	flagSet.StringVar(&c.MetricsAddr, "metrics-bind-address", fmt.Sprintf(":%v", consts.MetricsPort), "The address the metric endpoint binds to.")
@@ -115,6 +116,9 @@ func (c *CLIConfig) bindFlagSet() {
 	flagSet.StringVar(&c.LeaderElectionNamespace, "election-namespace", "", `Leader election namespace to use when running outside a cluster.`)
 	flagSet.StringVar(&c.LeaderElectionForce, "force-leader-election", "", `Set to "enabled" or "disabled" to force a leader election behavior. Behavior is normally determined automatically from other settings.`)
 	_ = flagSet.MarkHidden("force-leader-election")
+	flagSet.DurationVar(&c.LeaderElectionLeaseDuration, "leader-election-lease-duration", 15*time.Second, "Leader election lease duration. This is the duration that non-leader candidates will wait to force acquire leadership.")
+	flagSet.DurationVar(&c.LeaderElectionRenewDeadline, "leader-election-renew-deadline", 10*time.Second, "Leader election renew deadline. This is the duration the acting leader will retry refreshing leadership before giving up.")
+	flagSet.DurationVar(&c.LeaderElectionRetryPeriod, "leader-election-retry-period", 2*time.Second, "Leader election retry period. This is the duration the LeaderElector clients should wait between tries of actions.")
 	flagSet.StringSliceVar(&c.FilterTags, "kong-admin-filter-tag", []string{"managed-by-ingress-controller"},
 		"Tag(s) in comma-separated format (or specify this flag multiple times). They are used to manage and filter entities in Kong. "+
 			"This setting will be silently ignored if the Kong instance has no tags support.")

@@ -23,6 +23,12 @@ func (c *Config) Validate() error {
 	if err := c.validateGatewayDiscovery(); err != nil {
 		return fmt.Errorf("invalid gateway discovery configuration: %w", err)
 	}
+	if err := c.validateClientSideThrottling(); err != nil {
+		return fmt.Errorf("invalid client-side throttling configuration: %w", err)
+	}
+	if err := c.validateLeaderElection(); err != nil {
+		return fmt.Errorf("invalid leader election configuration: %w", err)
+	}
 
 	return nil
 }
@@ -83,6 +89,46 @@ func (c *Config) validateGatewayDiscovery() error {
 	if c.GatewayDiscoveryReadinessCheckTimeout >= c.GatewayDiscoveryReadinessCheckInterval {
 		return fmt.Errorf("Readiness check timeout must be less than readiness check recociliation interval")
 	}
+	return nil
+}
+
+func (c *Config) validateClientSideThrottling() error {
+	// Only validate QPS and Burst when client-side throttling is enabled
+	if !c.EnableClientSideThrottling {
+		return nil
+	}
+
+	if c.APIServerQPS <= 0 {
+		return fmt.Errorf("apiserver-qps must be positive when client-side throttling is enabled, got %d", c.APIServerQPS)
+	}
+	if c.APIServerBurst <= 0 {
+		return fmt.Errorf("apiserver-burst must be positive when client-side throttling is enabled, got %d", c.APIServerBurst)
+	}
+
+	return nil
+}
+
+func (c *Config) validateLeaderElection() error {
+	if c.LeaderElectionLeaseDuration <= 0 {
+		return fmt.Errorf("leader-election-lease-duration must be positive, got %s", c.LeaderElectionLeaseDuration)
+	}
+	if c.LeaderElectionRenewDeadline <= 0 {
+		return fmt.Errorf("leader-election-renew-deadline must be positive, got %s", c.LeaderElectionRenewDeadline)
+	}
+	if c.LeaderElectionRetryPeriod <= 0 {
+		return fmt.Errorf("leader-election-retry-period must be positive, got %s", c.LeaderElectionRetryPeriod)
+	}
+
+	// Validate timing constraints as per Kubernetes leader election requirements
+	if c.LeaderElectionRenewDeadline >= c.LeaderElectionLeaseDuration {
+		return fmt.Errorf("leader-election-renew-deadline (%s) must be less than leader-election-lease-duration (%s)",
+			c.LeaderElectionRenewDeadline, c.LeaderElectionLeaseDuration)
+	}
+	if c.LeaderElectionRetryPeriod >= c.LeaderElectionRenewDeadline {
+		return fmt.Errorf("leader-election-retry-period (%s) must be less than leader-election-renew-deadline (%s)",
+			c.LeaderElectionRetryPeriod, c.LeaderElectionRenewDeadline)
+	}
+
 	return nil
 }
 

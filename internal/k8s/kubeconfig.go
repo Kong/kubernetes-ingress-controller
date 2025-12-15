@@ -28,9 +28,12 @@ func GetKubeconfig(c managercfg.Config) (*rest.Config, error) {
 	// Set the user agent so it's possible to identify the controller in the API server logs.
 	config.UserAgent = metadata.UserAgent()
 
-	// Configure K8s client rate-limiting.
-	config.QPS = float32(c.APIServerQPS)
-	config.Burst = c.APIServerBurst
+	// Configure K8s client rate-limiting only if client-side throttling is enabled.
+	// When disabled, rely solely on API Priority and Fairness (APF) for request throttling.
+	if c.EnableClientSideThrottling {
+		config.QPS = float32(c.APIServerQPS)
+		config.Burst = c.APIServerBurst
+	}
 
 	if c.APIServerCertData != nil {
 		config.CertData = c.APIServerCertData

@@ -78,9 +78,12 @@ func setupManagerOptions(ctx context.Context, logger logr.Logger, c *managercfg.
 				}
 			}(),
 		},
-		WebhookServer:    webhook.NewServer(webhook.Options{Port: 9443}),
-		LeaderElection:   leaderElectionEnabled(logger, *c, dbmode),
-		LeaderElectionID: c.LeaderElectionID,
+		WebhookServer:      webhook.NewServer(webhook.Options{Port: 9443}),
+		LeaderElection:     leaderElectionEnabled(logger, *c, dbmode),
+		LeaderElectionID:   c.LeaderElectionID,
+		LeaseDuration:      &c.LeaderElectionLeaseDuration,
+		RenewDeadline:      &c.LeaderElectionRenewDeadline,
+		RetryPeriod:        &c.LeaderElectionRetryPeriod,
 		Cache: cache.Options{
 			SyncPeriod: &c.SyncPeriod,
 		},

@@ -49,6 +49,7 @@ type Config struct {
 
 	// Kong Proxy configurations
 	APIServerHost                          string
+	EnableClientSideThrottling             bool
 	APIServerQPS                           int
 	APIServerBurst                         int
 	APIServerCAData                        []byte
@@ -72,12 +73,15 @@ type Config struct {
 	KubeRestConfig *rest.Config
 
 	// Kubernetes configurations
-	KubeconfigPath           string
-	IngressClassName         string
-	LeaderElectionNamespace  string
-	LeaderElectionID         string
-	LeaderElectionForce      string
-	Concurrency              int
+	KubeconfigPath                 string
+	IngressClassName               string
+	LeaderElectionNamespace        string
+	LeaderElectionID               string
+	LeaderElectionForce            string
+	LeaderElectionLeaseDuration    time.Duration
+	LeaderElectionRenewDeadline    time.Duration
+	LeaderElectionRetryPeriod      time.Duration
+	Concurrency                    int
 	FilterTags               []string
 	WatchNamespaces          []string
 	GatewayAPIControllerName string

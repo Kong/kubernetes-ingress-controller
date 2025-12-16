@@ -157,8 +157,8 @@ jobs:
         id: run_validate_kong_image
         run: |
           gh workflow run ${WORKFLOW} --ref ${KIC_BRANCH} \
-            -f issue_number=${ISSUE_NUMBER} \
-            -f kong_image_repo=${TEST_KONG_IMAGE_REPO} \
-            -f kong_image_tag=${TEST_KONG_IMAGE_TAG} \
-            -f kong_effective_version=${TEST_KONG_IMAGE_VERSION} \
-            -f e2e_controller_image_tag=${KIC_IMAGE_TAG}
+            -f issue-number=${ISSUE_NUMBER} \
+            -f kong-image-repo=${TEST_KONG_IMAGE_REPO} \
+            -f kong-image-tag=${TEST_KONG_IMAGE_TAG} \
+            -f kong-effective-version=${TEST_KONG_IMAGE_VERSION} \
+            -f e2e-controller-image-tag=${KIC_IMAGE_TAG}

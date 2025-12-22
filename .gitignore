@@ -93,3 +93,10 @@ TODO
 
 # Claude AI context file (development notes)
 CLAUDE_CONTEXT.md
+CONTEXT_RESUME.md
+
+# Ephemeral test file (remove before commit)
+test_etcd_election.go
+
+# Dev deployment manifest for etcd (remove before commit or move to examples/)
+deploy/etcd-election-datastore.yaml

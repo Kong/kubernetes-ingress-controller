@@ -188,21 +188,39 @@ func setupEtcdLeaderElectionLock(logger logr.Logger, c *managercfg.Config) (reso
 		return nil, fmt.Errorf("failed to generate leader election identity: %w", err)
 	}
 
+	// Build election ID with namespace for isolation in multi-tenant environments.
+	// Format: {namespace}/{election-id} or just {election-id} if no namespace specified.
+	electionID := buildNamespacedElectionID(c.LeaderElectionNamespace, c.LeaderElectionID)
+
 	// Default lease duration (15 seconds is standard for Kubernetes leader election).
 	leaseDuration := 15 * time.Second
 
-	lock, err := etcdelection.NewEtcdLockFromConfig(etcdCfg, c.LeaderElectionID, identity, leaseDuration)
+	lock, err := etcdelection.NewEtcdLockFromConfig(etcdCfg, electionID, identity, leaseDuration)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create etcd leader election lock: %w", err)
 	}
 
 	logger.Info("Created etcd leader election lock",
 		"endpoints", etcdCfg.Endpoints,
-		"electionID", c.LeaderElectionID,
+		"namespace", c.LeaderElectionNamespace,
+		"electionID", electionID,
 		"identity", identity,
 	)
 
 	return lock, nil
+}
+
+// buildNamespacedElectionID creates an election ID that includes namespace for isolation.
+// This ensures different namespaces don't compete for the same leader lock in etcd.
+func buildNamespacedElectionID(namespace, electionID string) string {
+	if namespace == "" {
+		// Try to get namespace from environment (set by Kubernetes downward API)
+		namespace = os.Getenv("POD_NAMESPACE")
+	}
+	if namespace != "" {
+		return fmt.Sprintf("%s/%s", namespace, electionID)
+	}
+	return electionID
 }
 
 // generateLeaderElectionIdentity generates a unique identity for leader election.

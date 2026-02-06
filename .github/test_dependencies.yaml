@@ -5,7 +5,7 @@ e2e:
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
     - 'v1.32.5'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.31.9'
+    - 'v1.31.14'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
     - 'v1.30.13'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker

@@ -372,6 +372,10 @@ rows:
     type: '`string`'
     description: "Konnect TLS client key file path."
     default: ""
+  - flag: '`--konnect-config-sync-concurrency`'
+    type: '`int`'
+    description: "Max number of concurrent requests sent to Konnect when syncing configuration."
+    default: '`4`'
   - flag: '`--konnect-upload-config-period`'
     type: '`duration`'
     description: "Period of uploading Kong configuration."

@@ -118,6 +118,12 @@ Adding a new version? You'll need three changes:
 
 ## Unreleased
 
+### Added
+
+- Add `--konnect-config-sync-concurrency` to configure Konnect sync concurrency
+  separately from gateway Admin API concurrency.
+  [#7834](https://github.com/Kong/kubernetes-ingress-controller/pull/7834)
+
 ### Fixed
 
 - Do not cleanup `null`s in the configuration of plugins with Kong running in

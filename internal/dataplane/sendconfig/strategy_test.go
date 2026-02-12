@@ -48,29 +48,34 @@ func TestDefaultUpdateStrategyResolver_ResolveUpdateStrategy(t *testing.T) {
 	testCases := []struct {
 		isKonnect                     bool
 		inMemory                      bool
+		konnectConcurrency            int
 		expectedStrategyType          string
 		expectKonnectControlPlaneCall bool
 	}{
 		{
 			isKonnect:                     true,
 			inMemory:                      false,
+			konnectConcurrency:            4,
 			expectedStrategyType:          "WithBackoff(DBMode)",
 			expectKonnectControlPlaneCall: true,
 		},
 		{
 			isKonnect:                     true,
 			inMemory:                      true,
+			konnectConcurrency:            4,
 			expectedStrategyType:          "WithBackoff(DBMode)",
 			expectKonnectControlPlaneCall: true,
 		},
 		{
 			isKonnect:            false,
 			inMemory:             false,
+			konnectConcurrency:   0,
 			expectedStrategyType: "DBMode",
 		},
 		{
 			isKonnect:            false,
 			inMemory:             true,
+			konnectConcurrency:   0,
 			expectedStrategyType: "InMemory",
 		},
 	}
@@ -89,7 +94,9 @@ func TestDefaultUpdateStrategyResolver_ResolveUpdateStrategy(t *testing.T) {
 			}
 
 			resolver := sendconfig.NewDefaultUpdateStrategyResolver(sendconfig.Config{
-				InMemory: tc.inMemory,
+				InMemory:           tc.inMemory,
+				Concurrency:        10,
+				KonnectConcurrency: tc.konnectConcurrency,
 			}, zapr.NewLogger(zap.NewNop()))
 
 			strategy := resolver.ResolveUpdateStrategy(updateClient, nil)

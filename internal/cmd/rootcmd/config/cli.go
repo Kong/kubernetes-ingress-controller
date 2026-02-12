@@ -215,6 +215,7 @@ func (c *CLIConfig) bindFlagSet() {
 	flagSet.StringVar(&c.Konnect.TLSClient.Key, "konnect-tls-client-key", "", "Konnect TLS client key.")
 	flagSet.StringVar(&c.Konnect.TLSClient.KeyFile, "konnect-tls-client-key-file", "", "Konnect TLS client key file path.")
 	flagSet.DurationVar(&c.Konnect.UploadConfigPeriod, "konnect-upload-config-period", managercfg.DefaultKonnectConfigUploadPeriod, "Period of uploading Kong configuration.")
+	flagSet.IntVar(&c.Konnect.ConfigSyncConcurrency, "konnect-config-sync-concurrency", managercfg.DefaultKonnectConfigSyncConcurrency, "Max number of concurrent requests sent to Konnect when syncing configuration.")
 	flagSet.DurationVar(&c.Konnect.RefreshNodePeriod, "konnect-refresh-node-period", konnect.DefaultRefreshNodePeriod, "Period of uploading status of KIC and controlled Kong instances.")
 	flagSet.BoolVar(&c.Konnect.ConsumersSyncDisabled, "konnect-disable-consumers-sync", false, "Disable synchronization of consumers with Konnect.")
 

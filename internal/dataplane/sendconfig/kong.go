@@ -16,6 +16,8 @@ type Config struct {
 
 	// Concurrency defines how many concurrent goroutines should be used when syncing configuration in DB-mode.
 	Concurrency int
+	// KonnectConcurrency defines how many concurrent goroutines should be used when syncing configuration to Konnect in DB-mode.
+	KonnectConcurrency int
 
 	// FilterTags are tags used to manage and filter entities in Kong.
 	FilterTags []string

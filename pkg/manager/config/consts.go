@@ -25,4 +25,6 @@ const (
 	MinKonnectConfigUploadPeriod = 10 * time.Second
 	// DefaultKonnectConfigUploadPeriod is the default period between operations to upload Kong configuration to Konnect.
 	DefaultKonnectConfigUploadPeriod = 30 * time.Second
+	// DefaultKonnectConfigSyncConcurrency is the default number of concurrent requests for Konnect config synchronization.
+	DefaultKonnectConfigSyncConcurrency = 4
 )

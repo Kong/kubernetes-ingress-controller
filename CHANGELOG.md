@@ -120,6 +120,9 @@ Adding a new version? You'll need three changes:
 
 ### Fixed
 
+- Separate Konnect config sync concurrency from gateway Admin API concurrency via
+  `--konnect-config-sync-concurrency` to reduce Konnect 429 rate-limit errors.
+  [#7834](https://github.com/Kong/kubernetes-ingress-controller/pull/7834)
 - Do not cleanup `null`s in the configuration of plugins with Kong running in
   DBLess mode in the translator of ingress-controller. This enables user to use
   explicit `null`s in plugins.

@@ -324,6 +324,10 @@ rows:
     type: '`string`'
     description: "Base address of Konnect API."
     default: '`https://us.kic.api.konghq.com`'
+  - flag: '`--konnect-config-sync-concurrency`'
+    type: '`int`'
+    description: "Max number of concurrent requests sent to Konnect when syncing configuration."
+    default: '`4`'
   - flag: '`--konnect-control-plane-id`'
     type: '`string`'
     description: "An ID of a control plane that is to be synchronized with data plane configuration."

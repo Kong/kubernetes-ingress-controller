@@ -69,6 +69,7 @@
 | `--kong-admin-url` | `strings` | Kong Admin URL(s) in comma-separated format (or specify this flag multiple times) to connect to in the format "protocol://address:port". | `[http://localhost:8001]` |
 | `--kong-workspace` | `string` | Kong Enterprise workspace to configure. Leave this empty if not using Kong workspaces. |  |
 | `--konnect-address` | `string` | Base address of Konnect API. | `https://us.kic.api.konghq.com` |
+| `--konnect-config-sync-concurrency` | `int` | Max number of concurrent requests sent to Konnect when syncing configuration. | `4` |
 | `--konnect-control-plane-id` | `string` | An ID of a control plane that is to be synchronized with data plane configuration. |  |
 | `--konnect-disable-consumers-sync` | `bool` | Disable synchronization of consumers with Konnect. | `false` |
 | `--konnect-initial-license-polling-period` | `duration` | Polling period to be used before the first license is retrieved. | `1m0s` |

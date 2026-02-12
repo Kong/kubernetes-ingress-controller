@@ -20,6 +20,7 @@ func TestConfigValidate(t *testing.T) {
 					ConfigSynchronizationEnabled: true,
 					ControlPlaneID:               "fbd3036f-0f1c-4e98-b71c-d4cd61213f90",
 					Address:                      "https://us.kic.api.konghq.tech",
+					ConfigSyncConcurrency:        managercfg.DefaultKonnectConfigSyncConcurrency,
 					TLSClient: managercfg.TLSClientConfig{
 						// We do not set valid cert or key, and it's still considered valid as at this level we only care
 						// about them being not empty. Their validity is to be verified later on by the Admin API client

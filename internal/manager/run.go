@@ -151,6 +151,7 @@ func New(
 		Version:                       kongSemVersion,
 		InMemory:                      dbMode.IsDBLessMode(),
 		Concurrency:                   c.Concurrency,
+		KonnectConcurrency:            c.Konnect.ConfigSyncConcurrency,
 		FilterTags:                    c.FilterTags,
 		SkipCACertificates:            c.SkipCACertificates,
 		EnableReverseSync:             c.EnableReverseSync,

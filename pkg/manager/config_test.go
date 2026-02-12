@@ -108,6 +108,7 @@ func TestNewConfig(t *testing.T) {
 				Address:                     "https://us.kic.api.konghq.com",
 				InitialLicensePollingPeriod: license.DefaultInitialPollingPeriod,
 				LicensePollingPeriod:        license.DefaultPollingPeriod,
+				ConfigSyncConcurrency:       managercfg.DefaultKonnectConfigSyncConcurrency,
 				UploadConfigPeriod:          managercfg.DefaultKonnectConfigUploadPeriod,
 				RefreshNodePeriod:           konnect.DefaultRefreshNodePeriod,
 			},

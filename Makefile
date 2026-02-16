@@ -48,7 +48,7 @@ mise:
 	@mise -V >/dev/null || (echo "mise - https://github.com/jdx/mise - not found. Please install it." && exit 1)
 
 .PHONY: tools
-tools: controller-gen kustomize client-gen golangci-lint.download gotestsum crd-ref-docs skaffold staticcheck.download
+tools: controller-gen kustomize golangci-lint.download gotestsum crd-ref-docs skaffold staticcheck.download
 
 export MISE_DATA_DIR = $(PROJECT_DIR)/bin/
 
@@ -85,13 +85,6 @@ KUSTOMIZE = $(PROJECT_DIR)/bin/installs/kustomize/$(KUSTOMIZE_VERSION)/bin/kusto
 kustomize: mise yq ## Download kustomize locally if necessary.
 	@$(MAKE) mise-plugin-install DEP=kustomize
 	@$(MAKE) mise-install DEP_VER=kustomize@$(KUSTOMIZE_VERSION)
-
-CLIENT_GEN_VERSION = $(shell $(YQ) -ojson -r '.kube-code-generator' < $(TOOLS_VERSIONS_FILE))
-CLIENT_GEN = $(PROJECT_DIR)/bin/installs/kube-code-generator/$(CLIENT_GEN_VERSION)/bin/client-gen
-.PHONY: client-gen
-client-gen: mise yq ## Download client-gen locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=kube-code-generator
-	@$(MAKE) mise-install DEP_VER=kube-code-generator@$(CLIENT_GEN_VERSION)
 
 GOLANGCI_LINT_VERSION = $(shell $(YQ) -ojson -r '.golangci-lint' < $(TOOLS_VERSIONS_FILE))
 GOLANGCI_LINT = $(PROJECT_DIR)/bin/installs/golangci-lint/$(GOLANGCI_LINT_VERSION)/bin/golangci-lint

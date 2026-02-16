@@ -50,6 +50,7 @@ func TestKongIngressValidationWebhook(t *testing.T) {
 
 		assert.NoError(t, result.Error())
 		expectedWarnings := []string{
+			"configuration.konghq.com/v1 KongIngress is deprecated",
 			"'upstream' is DEPRECATED and will be removed in a future version. Use a KongUpstreamPolicy resource instead.",
 		}
 		receivedWarnings := lo.Map(result.Warnings(), func(item net.WarningHeader, _ int) string {

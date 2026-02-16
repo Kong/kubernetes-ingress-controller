@@ -1,6 +1,6 @@
 module github.com/kong/kubernetes-ingress-controller/v3
 
-go 1.25.4
+go 1.25.7
 
 //
 //  Error parsing file: /home/runner/work/kubernetes-ingress-controller/kubernetes-ingress-controller/go.mod.
@@ -17,7 +17,7 @@ go 1.25.4
 
 require (
 	cloud.google.com/go/container v1.43.0
-	github.com/Kong/sdk-konnect-go v0.2.26
+	github.com/Kong/sdk-konnect-go v0.3.1
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/avast/retry-go/v4 v4.6.1
 	github.com/blang/semver/v4 v4.0.0
@@ -29,9 +29,9 @@ require (
 	github.com/google/pprof v0.0.0-20241210010833-40e02aabc2ad
 	github.com/google/uuid v1.6.0
 	github.com/jpillora/backoff v1.0.0
-	github.com/kong/go-database-reconciler v1.23.0
-	github.com/kong/go-kong v0.66.1
-	github.com/kong/kubernetes-configuration v1.3.3
+	github.com/kong/go-database-reconciler v1.31.6
+	github.com/kong/go-kong v0.72.1
+	github.com/kong/kubernetes-configuration v1.5.2
 	github.com/kong/kubernetes-telemetry v0.1.9
 	github.com/kong/kubernetes-testing-framework v0.47.2
 	github.com/lithammer/dedent v1.1.0
@@ -52,9 +52,9 @@ require (
 	go.uber.org/goleak v1.3.0
 	go.uber.org/zap v1.27.0
 	google.golang.org/api v0.235.0
-	k8s.io/api v0.33.1
+	k8s.io/api v0.33.2
 	k8s.io/apiextensions-apiserver v0.33.1
-	k8s.io/apimachinery v0.33.1
+	k8s.io/apimachinery v0.33.3
 	k8s.io/client-go v0.33.1
 	k8s.io/component-base v0.33.1
 	sigs.k8s.io/controller-runtime v0.21.0
@@ -62,7 +62,7 @@ require (
 	sigs.k8s.io/gateway-api v1.3.0
 	sigs.k8s.io/kustomize/api v0.19.0
 	sigs.k8s.io/kustomize/kyaml v0.19.0
-	sigs.k8s.io/yaml v1.4.0
+	sigs.k8s.io/yaml v1.5.0
 )
 
 require (
@@ -72,7 +72,8 @@ require (
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/ebitengine/purego v0.8.2 // indirect
 	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731 // indirect
-	github.com/fsnotify/fsnotify v1.7.0 // indirect
+	github.com/ettle/strcase v0.2.0 // indirect
+	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/google/cel-go v0.23.2 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.24.0 // indirect
 	github.com/moby/go-archive v0.1.0 // indirect
@@ -84,6 +85,8 @@ require (
 	go.opentelemetry.io/otel/exporters/otlp/otlptrace/otlptracegrpc v1.33.0 // indirect
 	go.opentelemetry.io/otel/sdk v1.35.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.4.0 // indirect
+	go.yaml.in/yaml/v2 v2.4.2 // indirect
+	go.yaml.in/yaml/v3 v3.0.3 // indirect
 	k8s.io/apiserver v0.33.1 // indirect
 	k8s.io/component-helpers v0.33.1 // indirect
 	sigs.k8s.io/apiserver-network-proxy/konnectivity-client v0.31.2 // indirect
@@ -195,7 +198,7 @@ require (
 	github.com/shopspring/decimal v1.4.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/sourcegraph/conc v0.3.0
-	github.com/spf13/cast v1.7.0 // indirect
+	github.com/spf13/cast v1.7.1 // indirect
 	github.com/ssgelm/cookiejarparser v1.0.1 // indirect
 	github.com/tidwall/gjson v1.18.0
 	github.com/tidwall/match v1.1.1 // indirect

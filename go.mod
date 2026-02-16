@@ -1,6 +1,6 @@
 module github.com/kong/kubernetes-ingress-controller/v3
 
-go 1.25.4
+go 1.25.7
 
 //
 //  Error parsing file: /home/runner/work/kubernetes-ingress-controller/kubernetes-ingress-controller/go.mod.
@@ -30,8 +30,8 @@ require (
 	github.com/google/pprof v0.0.0-20241210010833-40e02aabc2ad
 	github.com/google/uuid v1.6.0
 	github.com/jpillora/backoff v1.0.0
-	github.com/kong/go-database-reconciler v1.24.2
-	github.com/kong/go-kong v0.67.0
+	github.com/kong/go-database-reconciler v1.31.6
+	github.com/kong/go-kong v0.72.1
 	github.com/kong/kubernetes-configuration v1.5.2
 	github.com/kong/kubernetes-telemetry v0.1.10
 	github.com/kong/kubernetes-testing-framework v0.47.2
@@ -55,7 +55,7 @@ require (
 	google.golang.org/api v0.239.0
 	k8s.io/api v0.33.2
 	k8s.io/apiextensions-apiserver v0.33.2
-	k8s.io/apimachinery v0.33.2
+	k8s.io/apimachinery v0.33.3
 	k8s.io/client-go v0.33.2
 	k8s.io/component-base v0.33.2
 	sigs.k8s.io/controller-runtime v0.21.0
@@ -74,6 +74,7 @@ require (
 	github.com/containerd/errdefs/pkg v0.3.0 // indirect
 	github.com/ebitengine/purego v0.8.2 // indirect
 	github.com/ericlagergren/decimal v0.0.0-20240411145413-00de7ca16731 // indirect
+	github.com/ettle/strcase v0.2.0 // indirect
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
 	github.com/google/cel-go v0.23.2 // indirect
 	github.com/grpc-ecosystem/grpc-gateway/v2 v2.24.0 // indirect

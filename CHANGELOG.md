@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.4.11](#3411)
  - [3.4.10](#3410)
  - [3.4.9](#349)
  - [3.4.8](#348)
@@ -109,6 +110,16 @@ Adding a new version? You'll need three changes:
  - [0.1.0](#010)
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
+
+## [3.4.11]
+
+> Release date: 2025-02-17
+
+### Fixed
+
+- Add headers to mark the synchronization loop run in requests sent to Konnect in
+  configuration synchronization for better tracing.
+  [#7838](https://github.com/Kong/kubernetes-ingress-controller/pull/7838)
 
 ## [3.4.10]
 
@@ -4141,6 +4152,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.4.11]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.10...v3.4.11
 [3.4.10]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.9...v3.4.10
 [3.4.9]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.8...v3.4.9
 [3.4.8]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.7...v3.4.8

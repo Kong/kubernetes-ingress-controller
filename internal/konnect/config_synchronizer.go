@@ -5,8 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"sync"
+	"sync/atomic"
+	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/google/uuid"
 	"github.com/kong/go-database-reconciler/pkg/file"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/mo"
@@ -18,6 +21,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/deckgen"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/tracing"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/logging"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
@@ -45,6 +49,11 @@ type ConfigSynchronizer struct {
 
 	targetKongState mo.Option[TargetKongState]
 	configLock      sync.RWMutex
+
+	// synchronizerID is the identifier to mark the ConfigSynchronizer instance.
+	synchronizerID string
+	// serialNumber is the serial number to mark the loop round of config synchronization.
+	serialNumber atomic.Uint32
 }
 
 // TargetKongState wraps the Kong state to be uploaded to Konnect and indicates whether the configuration is a fallback
@@ -74,11 +83,15 @@ type ConfigSynchronizerParams struct {
 	ConfigChangeDetector   sendconfig.ConfigurationChangeDetector
 	ConfigStatusNotifier   clients.ConfigStatusNotifier
 	MetricsRecorder        metrics.Recorder
+	SynchronizerID         string
 }
 
 func NewConfigSynchronizer(p ConfigSynchronizerParams) *ConfigSynchronizer {
+	if p.SynchronizerID == "" {
+		p.SynchronizerID = uuid.NewString()
+	}
 	return &ConfigSynchronizer{
-		logger:                 p.Logger,
+		logger:                 p.Logger.WithValues("synchronizerID", p.SynchronizerID),
 		kongConfig:             p.KongConfig,
 		syncTicker:             p.ConfigUploadTicker,
 		konnectClientFactory:   p.KonnectClientFactory,
@@ -86,6 +99,7 @@ func NewConfigSynchronizer(p ConfigSynchronizerParams) *ConfigSynchronizer {
 		configChangeDetector:   p.ConfigChangeDetector,
 		configStatusNotifier:   p.ConfigStatusNotifier,
 		metricsRecorder:        p.MetricsRecorder,
+		synchronizerID:         p.SynchronizerID,
 	}
 }
 
@@ -94,6 +108,7 @@ var _ manager.LeaderElectionRunnable = &ConfigSynchronizer{}
 // Start starts the loop to receive configuration and upload configuration to Konnect.
 func (s *ConfigSynchronizer) Start(ctx context.Context) error {
 	s.logger.Info("Starting Konnect configuration synchronizer")
+	ctx = context.WithValue(ctx, tracing.SynchronizerIDKey, s.synchronizerID)
 
 	konnectAdminClient, err := s.konnectClientFactory.NewKonnectClient(ctx)
 	if err != nil {
@@ -199,26 +214,36 @@ func (s *ConfigSynchronizer) run(ctx context.Context) {
 }
 
 func (s *ConfigSynchronizer) handleConfigSynchronizationTick(ctx context.Context) {
-	s.logger.V(logging.DebugLevel).Info("Start uploading configuration to Konnect")
+	// Add values about the sync round in the context.
+	serialNumber := s.serialNumber.Add(1)
+	startTimestamp := time.Now().Unix()
+	syncRoundID := uuid.NewSHA1(uuid.Nil, fmt.Appendf([]byte{}, "%s:%d:%d", s.synchronizerID, serialNumber, startTimestamp))
+	ctx = context.WithValue(ctx, tracing.SyncSerialNumberKey, serialNumber)
+	ctx = context.WithValue(ctx, tracing.SyncStartTimestampKey, startTimestamp)
+	ctx = context.WithValue(ctx, tracing.SyncRoundIDKey, syncRoundID)
+	logger := s.logger.WithValues("syncRoundID", syncRoundID, "serialNumber", serialNumber)
+
+	logger.V(logging.DebugLevel).Info("Start uploading configuration to Konnect")
 
 	// Get the latest configuration copy to upload to Konnect. We don't want to hold the lock for a long time to prevent
 	// blocking the update of the configuration.
 	targetCfg, ok := s.currentContent(ctx)
 	if !ok {
-		s.logger.Info("No configuration received yet, skipping Konnect configuration synchronization")
+		logger.Info("No configuration received yet, skipping Konnect configuration synchronization")
 		return
 	}
 
 	// Upload the configuration to Konnect.
-	if err := s.uploadConfig(ctx, s.konnectAdminClient, targetCfg); err != nil {
-		s.logger.Error(err, "Failed to upload configuration to Konnect")
-		logKonnectErrors(s.logger, err)
+	if err := s.uploadConfig(ctx, logger, s.konnectAdminClient, targetCfg); err != nil {
+		logger.Error(err, "Failed to upload configuration to Konnect")
+		logKonnectErrors(logger, err)
 	}
 }
 
 // uploadConfig sends the given configuration to Konnect.
 func (s *ConfigSynchronizer) uploadConfig(
 	ctx context.Context,
+	logger logr.Logger,
 	client *adminapi.KonnectClient,
 	targetContent TargetContent,
 ) error {
@@ -229,7 +254,7 @@ func (s *ConfigSynchronizer) uploadConfig(
 
 	newSHA, err := sendconfig.PerformUpdate(
 		ctx,
-		s.logger,
+		logger,
 		client,
 		s.kongConfig,
 		targetContent.Content,

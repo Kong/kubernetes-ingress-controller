@@ -109,6 +109,7 @@ func TestNewConfig(t *testing.T) {
 				InitialLicensePollingPeriod: license.DefaultInitialPollingPeriod,
 				LicensePollingPeriod:        license.DefaultPollingPeriod,
 				LicenseStorageEnabled:       true,
+				ConfigSyncConcurrency:       managercfg.DefaultKonnectConfigSyncConcurrency,
 				UploadConfigPeriod:          managercfg.DefaultKonnectConfigUploadPeriod,
 				RefreshNodePeriod:           konnect.DefaultRefreshNodePeriod,
 			},

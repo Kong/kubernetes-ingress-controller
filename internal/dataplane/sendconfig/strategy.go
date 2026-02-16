@@ -101,13 +101,17 @@ func (r DefaultUpdateStrategyResolver) resolveUpdateStrategy(
 	// In case the client communicates with Konnect Admin API, we know it has to use DB-mode. There's no need to check
 	// config.InMemory that is meant for regular Kong Gateway clients.
 	if client.IsKonnect() {
+		concurrency := r.config.KonnectConcurrency
+		if concurrency == 0 {
+			concurrency = r.config.Concurrency
+		}
 		return NewUpdateStrategyDBModeKonnect(
 			adminAPIClient,
 			dump.Config{
 				KonnectControlPlane: client.KonnectControlPlane(),
 			},
 			r.config.Version,
-			r.config.Concurrency,
+			concurrency,
 			r.logger,
 		)
 	}

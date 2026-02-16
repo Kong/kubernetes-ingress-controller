@@ -117,6 +117,9 @@ Adding a new version? You'll need three changes:
 
 ### Fixed
 
+- Separate Konnect config sync concurrency from gateway Admin API concurrency via
+  `--konnect-config-sync-concurrency` to reduce Konnect 429 rate-limit errors.
+  [#7834](https://github.com/Kong/kubernetes-ingress-controller/pull/7834)
 - Add headers to mark the synchronization loop run in requests sent to Konnect in
   configuration synchronization for better tracing.
   [#7838](https://github.com/Kong/kubernetes-ingress-controller/pull/7838)

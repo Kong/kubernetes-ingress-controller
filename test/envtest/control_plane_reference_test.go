@@ -48,7 +48,7 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 		}
 		konnectCPRef = &commonv1alpha1.ControlPlaneRef{
 			Type:      commonv1alpha1.ControlPlaneRefKonnectID,
-			KonnectID: lo.ToPtr("konnect-id"),
+			KonnectID: lo.ToPtr(commonv1alpha1.KonnectIDType("konnect-id")),
 		}
 
 		validConsumer = func() *configurationv1.KongConsumer {
@@ -118,7 +118,7 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 			name:                            "KongConsumer - with ControlPlaneRef != kic",
 			object:                          validConsumer(),
 			controlPlaneRef:                 konnectCPRef,
-			expectedErrorOnCreationContains: "is invalid: spec.controlPlaneRef: Invalid value: \"object\": 'konnectID' type is not supported",
+			expectedErrorOnCreationContains: "spec.controlPlaneRef: Invalid value: \"object\": 'konnectID' type is not supported",
 		},
 		{
 			name:   "KongConsumerGroup - without ControlPlaneRef",
@@ -133,7 +133,7 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 			name:                            "KongConsumerGroup - with ControlPlaneRef != kic",
 			object:                          validConsumerGroup(),
 			controlPlaneRef:                 konnectCPRef,
-			expectedErrorOnCreationContains: "is invalid: spec.controlPlaneRef: Invalid value: \"object\": 'konnectID' type is not supported",
+			expectedErrorOnCreationContains: "spec.controlPlaneRef: Invalid value: \"object\": 'konnectID' type is not supported",
 		},
 		{
 			name:   "KongVault - without ControlPlaneRef",
@@ -148,7 +148,7 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 			name:                            "KongVault - with ControlPlaneRef != kic",
 			object:                          validVault(),
 			controlPlaneRef:                 konnectCPRef,
-			expectedErrorOnCreationContains: "is invalid: spec.controlPlaneRef: Invalid value: \"object\": 'konnectID' type is not supported",
+			expectedErrorOnCreationContains: "spec.controlPlaneRef: Invalid value: \"object\": 'konnectID' type is not supported",
 		},
 	}
 

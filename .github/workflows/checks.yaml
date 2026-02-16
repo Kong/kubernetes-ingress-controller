@@ -25,6 +25,9 @@ on:
 permissions:
   contents: read
 
+env:
+  MISE_VERBOSE: 1
+
 jobs:
   # NOTE: this job checks if we're up to date with base branch. This is useful
   # because merging a PR which branch was up to date with the base branch does

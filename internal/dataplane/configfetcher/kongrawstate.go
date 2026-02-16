@@ -123,10 +123,10 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *kongstate.KongState 
 		for _, basicAuth := range rawstate.BasicAuths {
 			if basicAuth.Consumer != nil {
 				if *basicAuth.Consumer.ID == *consumer.ID {
-					sanitizeAuth(basicAuth)
+					sanitizeAuth(&basicAuth.BasicAuth)
 					kongState.Consumers[i].BasicAuths = append(kongState.Consumers[i].BasicAuths,
 						&kongstate.BasicAuth{
-							BasicAuth: *basicAuth,
+							BasicAuth: basicAuth.BasicAuth,
 						},
 					)
 				}

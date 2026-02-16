@@ -405,7 +405,7 @@ func TestCRDValidations(t *testing.T) {
 						Header: lo.ToPtr("header-name"), // Could be any of the hashOn fields.
 					},
 				})
-				require.ErrorContains(t, err, `spec.algorithm must be set to "consistent-hashing" when spec.hashOn is set.`)
+				require.ErrorContains(t, err, `spec.algorithm must be set to either 'consistent-hashing' or 'sticky-sessions' when spec.hashOn is set.`)
 			},
 		},
 		{

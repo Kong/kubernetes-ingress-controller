@@ -8,10 +8,12 @@ Adding a new version? You'll need three changes:
   This is all the way at the bottom. It's the thing we always forget.
 --->
 
+- [3.5.4](#354)
 - [3.5.3](#353)
 - [3.5.2](#352)
 - [3.5.1](#351)
 - [3.5.0](#350)
+- [3.4.11](#3411)
 - [3.4.10](#3410)
 - [3.4.9](#349)
 - [3.4.8](#348)
@@ -116,7 +118,9 @@ Adding a new version? You'll need three changes:
 - [0.0.5](#005)
 - [0.0.4 and prior](#004-and-prior)
 
-## Unreleased
+## [3.5.4]
+
+> Release date: 2026-02-17
 
 ### Fixed
 
@@ -227,6 +231,19 @@ Adding a new version? You'll need three changes:
   can be used for both hash_on (always) and hash_fallack (when primary hashing
   source is different than cookie).
   [#7582](https://github.com/Kong/kubernetes-ingress-controller/pull/7582)
+
+## [3.4.11]
+
+> Release date: 2025-02-17
+
+### Fixed
+
+- Separate Konnect config sync concurrency from gateway Admin API concurrency via
+  `--konnect-config-sync-concurrency` to reduce Konnect 429 rate-limit errors.
+  [#7834](https://github.com/Kong/kubernetes-ingress-controller/pull/7834)
+- Add headers to mark the synchronization loop run in requests sent to Konnect in
+  configuration synchronization for better tracing.
+  [#7838](https://github.com/Kong/kubernetes-ingress-controller/pull/7838)
 
 ## [3.4.10]
 
@@ -4267,10 +4284,12 @@ Please read the changelog and test in your environment.
 - The initial versions were rapildy iterated to deliver
   a working ingress controller.
 
+[3.5.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.3...v3.5.4
 [3.5.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.2...v3.5.3
 [3.5.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.1...v3.5.2
 [3.5.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.0...v3.5.1
 [3.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.7...v3.5.0
+[3.4.11]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.10...v3.4.11
 [3.4.10]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.9...v3.4.10
 [3.4.9]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.8...v3.4.9
 [3.4.8]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.7...v3.4.8

@@ -115,6 +115,9 @@ func (c *CLIConfig) bindFlagSet() {
 	flagSet.StringVar(&c.LeaderElectionNamespace, "election-namespace", "", `Leader election namespace to use when running outside a cluster.`)
 	flagSet.StringVar(&c.LeaderElectionForce, "force-leader-election", "", `Set to "enabled" or "disabled" to force a leader election behavior. Behavior is normally determined automatically from other settings.`)
 	_ = flagSet.MarkHidden("force-leader-election")
+	flagSet.StringVar(&c.LeaderElectionBackend, "leader-election-backend", managercfg.LeaderElectionBackendLease,
+		`Backend to use for leader election. Options: "lease" (Kubernetes Lease API, default), "etcd" (direct etcd). `+
+			`When using "etcd", configure via environment variables: ETCD_ENDPOINTS (required), ETCD_CERT_FILE, ETCD_KEY_FILE, ETCD_CA_FILE, ETCD_USERNAME, ETCD_PASSWORD.`)
 	flagSet.StringSliceVar(&c.FilterTags, "kong-admin-filter-tag", []string{"managed-by-ingress-controller"},
 		"Tag(s) in comma-separated format (or specify this flag multiple times). They are used to manage and filter entities in Kong. "+
 			"This setting will be silently ignored if the Kong instance has no tags support.")

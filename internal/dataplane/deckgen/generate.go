@@ -32,6 +32,11 @@ type GenerateDeckContentParams struct {
 	// the configuration is empty. It is used to workaround behavior in Kong where sending an empty configuration
 	// does not make its `GET /status/ready` endpoint return 200s.
 	AppendStubEntityWhenConfigEmpty bool
+
+	// InMemory indicates whether the generated deck content is intended to be used in-memory.
+	// This is used to determine whether to include certain fields in the generated content
+	// that are not relevant for in-memory use but are required for db based / konnect configurations.
+	InMemory bool
 }
 
 // ToDeckContent generates a decK configuration from `k8sState` and auxiliary parameters.
@@ -125,7 +130,7 @@ func ToDeckContent(
 	})
 
 	for _, c := range k8sState.Certificates {
-		cert := GetFCertificateFromKongCert(c.Certificate)
+		cert := GetFCertificateFromKongCert(params.InMemory, c.Certificate)
 		content.Certificates = append(content.Certificates, cert)
 	}
 	sort.SliceStable(content.Certificates, func(i, j int) bool {

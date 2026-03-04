@@ -32,7 +32,7 @@ func GenerateSHA(targetContent *file.Content, customEntities map[string][]custom
 }
 
 // GetFCertificateFromKongCert converts a kong.Certificate to a file.FCertificate.
-func GetFCertificateFromKongCert(kongCert kong.Certificate) file.FCertificate {
+func GetFCertificateFromKongCert(inmemory bool, kongCert kong.Certificate) file.FCertificate {
 	var res file.FCertificate
 	if kongCert.ID != nil {
 		res.ID = kong.String(*kongCert.ID)
@@ -43,17 +43,17 @@ func GetFCertificateFromKongCert(kongCert kong.Certificate) file.FCertificate {
 	if kongCert.Cert != nil {
 		res.Cert = kong.String(*kongCert.Cert)
 	}
-	res.SNIs = getCertsSNIs(kongCert)
+	res.SNIs = getCertsSNIs(inmemory, kongCert)
 	return res
 }
 
-func getCertsSNIs(kongCert kong.Certificate) []kong.SNI {
+func getCertsSNIs(inmemory bool, kongCert kong.Certificate) []kong.SNI {
 	snis := make([]kong.SNI, 0, len(kongCert.SNIs))
 	for _, sni := range kongCert.SNIs {
 		kongSNI := kong.SNI{
 			Name: sni,
 		}
-		if kongCert.ID != nil {
+		if !inmemory && kongCert.ID != nil {
 			kongSNI.Certificate = &kong.Certificate{
 				ID: kongCert.ID,
 			}

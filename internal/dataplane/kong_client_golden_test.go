@@ -262,7 +262,9 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 	translatorConfig := translator.Config{
 		ClusterDomain: consts.DefaultClusterDomain,
 	}
-	p, err := translator.NewTranslator(logger, s, "", tc.featureFlags, fakeSchemaServiceProvier{}, translatorConfig)
+	p, err := translator.NewTranslator(logger, s, "", tc.featureFlags, fakeSchemaServiceProvier{},
+		translatorConfig,
+	)
 	require.NoError(t, err, "failed creating translator")
 
 	// Start a mock Admin API server and create an Admin API client for inspecting the configuration.

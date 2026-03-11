@@ -15,6 +15,9 @@ Custom Resource Definitions (CRDs) and Kubernetes-native tooling.
 
 [**Features**](#features) | [**Get started**](#get-started) | [**Documentation**](#documentation) | [**main branch builds**](#main-branch-builds) | [**Seeking help**](#seeking-help)
 
+## KIC and Kong Operator
+All new development of Kong products on Kubernetes will land in the [Kong Operator][ko-landing].  The Operator combines the functionality of KIC and Kong Gateway Operator into a single way to deploy, manage and configure Kong products.  We will continue to support KIC based on the [KIC Support page][kic-support], but all new feature requests should be made against the [Kong Operator GitHub page][ko-github].
+
 ## Features
 
 - **Gateway API support**
@@ -71,7 +74,7 @@ to start using Kong in your Kubernetes cluster.
 
 ## Get started (using Operator) 
 
-As an alternative to Helm, you can also install Kong Ingress Controller using the **Kong Gateway Operator** by following this [quick start guide][kgo-guide].
+As an alternative to Helm, you can also install Kong Ingress Controller using the **Kong Operator** by following this [quick start guide][kgo-guide].
 
 ## Container images
 
@@ -168,3 +171,6 @@ preview features can be found in [FEATURE_PREVIEW_DOCUMENTATION.md][fpreview].
 [docs-konghq-kic-guides]: https://developer.konghq.com/how-to/?products=kic
 
 [kgo-guide]: https://developer.konghq.com/operator/dataplanes/get-started/kic/install/
+[ko-landing]: https://developer.konghq.com/operator/
+[kic-support]: https://developer.konghq.com/kubernetes-ingress-controller/support/
+[ko-github]: https://github.com/Kong/kong-operator

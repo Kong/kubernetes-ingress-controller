@@ -1218,6 +1218,7 @@ func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
 
 			require.NoError(t, err)
 			require.Equal(t, tc.routeName, *route.Name, "Should have expected route name")
+			require.ElementsMatch(t, lo.ToSlicePtr([]string{"http", "https"}), route.Protocols)
 			require.True(t, route.ExpressionRoutes, "Should be expression route")
 			require.Equal(t, tc.routeExpresion, *route.Expression, "Should translate to expected expression")
 			require.Equal(t, tc.priority, *route.Priority, "Should have expected priority")

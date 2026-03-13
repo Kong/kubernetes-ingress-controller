@@ -130,7 +130,9 @@ func pruneTestCaseDirectory(t *testing.T, path string) {
 
 	for _, fileInDirectory := range filesInDirectory {
 		// First, let's skip the files we want to keep.
-		if fileInDirectory.Name() == inFileName || strings.HasSuffix(fileInDirectory.Name(), settingsFileSuffix) {
+		if fileInDirectory.Name() == inFileName ||
+			strings.HasSuffix(fileInDirectory.Name(), settingsFileSuffix) ||
+			strings.HasSuffix(fileInDirectory.Name(), ".txt") {
 			continue
 		}
 
@@ -262,7 +264,9 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 	translatorConfig := translator.Config{
 		ClusterDomain: consts.DefaultClusterDomain,
 	}
-	p, err := translator.NewTranslator(logger, s, "", tc.featureFlags, fakeSchemaServiceProvier{}, translatorConfig)
+	p, err := translator.NewTranslator(logger, s, "", tc.featureFlags, fakeSchemaServiceProvier{},
+		translatorConfig,
+	)
 	require.NoError(t, err, "failed creating translator")
 
 	// Start a mock Admin API server and create an Admin API client for inspecting the configuration.

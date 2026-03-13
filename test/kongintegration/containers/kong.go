@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/avast/retry-go/v4"
+	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -55,6 +56,7 @@ func KongWithNetwork(networkName string) KongOpt {
 // Kong represents a docker container running Kong.
 type Kong struct {
 	container testcontainers.Container
+	version   kong.Version
 }
 
 // NewKong spawns a docker container running Kong (its image is determined by environment variables).
@@ -129,6 +131,7 @@ func NewKong(ctx context.Context, t *testing.T, opts ...KongOpt) Kong {
 				if err != nil {
 					return err
 				}
+				kong.version = kongVersion
 
 				t.Logf("using Kong instance (version: %q) reachable at %s", kongVersion, adminURL)
 				return nil
@@ -166,6 +169,11 @@ func (c Kong) ProxyURL(ctx context.Context, t *testing.T) string {
 
 func (c Kong) Terminate(ctx context.Context) error {
 	return c.container.Terminate(ctx)
+}
+
+// Version returns the Kong version of the container.
+func (c Kong) Version() kong.Version {
+	return c.version
 }
 
 // kongImageUnderTest returns the Kong image to be used for integration tests. If both TEST_KONG_IMAGE and

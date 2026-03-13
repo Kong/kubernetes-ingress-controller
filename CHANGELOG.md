@@ -112,6 +112,15 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## Unreleased
+
+> Release date: TBA
+
+### Fixed
+
+- Fixed an issue with SNI generation in dbless mode.
+  [#7853](https://github.com/Kong/kubernetes-ingress-controller/pull/7853)
+
 ## [3.5.4]
 
 > Release date: 2026-02-17

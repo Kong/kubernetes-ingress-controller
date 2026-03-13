@@ -131,7 +131,9 @@ func pruneTestCaseDirectory(t *testing.T, path string) {
 
 	for _, fileInDirectory := range filesInDirectory {
 		// First, let's skip the files we want to keep.
-		if fileInDirectory.Name() == inFileName || strings.HasSuffix(fileInDirectory.Name(), settingsFileSuffix) {
+		if fileInDirectory.Name() == inFileName ||
+			strings.HasSuffix(fileInDirectory.Name(), settingsFileSuffix) ||
+			strings.HasSuffix(fileInDirectory.Name(), ".txt") {
 			continue
 		}
 
@@ -260,7 +262,7 @@ func runKongClientGoldenTest(t *testing.T, tc kongClientGoldenTestCase) {
 	// Create the translator.
 	logger := zapr.NewLogger(zap.NewNop())
 	s := store.New(cacheStores, "kong", logger)
-	p, err := translator.NewTranslator(logger, s, "", semver.MustParse("3.9.1"), tc.featureFlags, fakeSchemaServiceProvier{},
+	p, err := translator.NewTranslator(logger, s, "", semver.MustParse("3.12.0"), tc.featureFlags, fakeSchemaServiceProvier{},
 		translator.Config{
 			ClusterDomain:      consts.DefaultClusterDomain,
 			EnableDrainSupport: consts.DefaultEnableDrainSupport,

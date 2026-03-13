@@ -131,7 +131,9 @@ func pruneTestCaseDirectory(t *testing.T, path string) {
 
 	for _, fileInDirectory := range filesInDirectory {
 		// First, let's skip the files we want to keep.
-		if fileInDirectory.Name() == inFileName || strings.HasSuffix(fileInDirectory.Name(), settingsFileSuffix) {
+		if fileInDirectory.Name() == inFileName ||
+			strings.HasSuffix(fileInDirectory.Name(), settingsFileSuffix) ||
+			strings.HasSuffix(fileInDirectory.Name(), ".txt") {
 			continue
 		}
 

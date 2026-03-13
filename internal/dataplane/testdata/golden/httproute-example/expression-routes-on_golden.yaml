@@ -15,6 +15,9 @@ services:
     name: httproute.default.httproute-testing._.3.0
     preserve_host: true
     priority: 35184414035967
+    protocols:
+    - http
+    - https
     strip_path: true
     tags:
     - k8s-name:httproute-testing
@@ -43,6 +46,9 @@ services:
     name: httproute.default.httproute-testing._.2.0
     preserve_host: true
     priority: 35184430813183
+    protocols:
+    - http
+    - https
     strip_path: true
     tags:
     - k8s-name:httproute-testing
@@ -57,6 +63,9 @@ services:
     name: httproute.default.httproute-testing._.1.0
     preserve_host: true
     priority: 35184405647359
+    protocols:
+    - http
+    - https
     strip_path: true
     tags:
     - k8s-name:httproute-testing
@@ -86,6 +95,9 @@ services:
     name: httproute.default.httproute-testing._.0.0
     preserve_host: true
     priority: 35184514699263
+    protocols:
+    - http
+    - https
     strip_path: true
     tags:
     - k8s-name:httproute-testing

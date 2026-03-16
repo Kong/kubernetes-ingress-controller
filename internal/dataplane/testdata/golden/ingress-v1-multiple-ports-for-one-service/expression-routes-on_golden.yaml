@@ -16,6 +16,9 @@ services:
     name: foo-namespace.foo.foo-svc.example.net.8000
     preserve_host: true
     priority: 57178899611649
+    protocols:
+    - http
+    - https
     request_buffering: true
     response_buffering: true
     strip_path: false
@@ -49,6 +52,9 @@ services:
     name: foo-namespace.foo.foo-svc.example.com.80
     preserve_host: true
     priority: 57178899611649
+    protocols:
+    - http
+    - https
     request_buffering: true
     response_buffering: true
     strip_path: false

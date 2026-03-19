@@ -360,6 +360,7 @@ func TestGetDefaultBackendService(t *testing.T) {
 				require.Equal(t, tc.expectedServiceHost, *svc.Host)
 				require.Len(t, svc.Routes, 1)
 				route := svc.Routes[0]
+				require.ElementsMatch(t, lo.ToSlicePtr([]string{"http", "https"}), route.Protocols)
 				if tc.featureFlags.ExpressionRoutes {
 					require.Equal(t, `(http.path ^= "/") && ((net.protocol == "http") || (net.protocol == "https"))`, *route.Expression)
 					require.Equal(t, subtranslator.IngressDefaultBackendPriority, *route.Priority)

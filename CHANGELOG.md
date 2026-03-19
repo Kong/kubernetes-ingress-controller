@@ -118,6 +118,10 @@ Adding a new version? You'll need three changes:
 
 ### Fixed
 
+- Set `protocols` field to `[http,https]` in translated routes in expression
+  router mode.
+  [#7860](https://github.com/Kong/kubernetes-ingress-controller/pull/7860)
+
 - Fixed an issue with SNI generation in dbless mode.
   [#7853](https://github.com/Kong/kubernetes-ingress-controller/pull/7853)
 

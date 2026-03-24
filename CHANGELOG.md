@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.4.12](#3412)
  - [3.4.11](#3411)
  - [3.4.10](#3410)
  - [3.4.9](#349)
@@ -111,16 +112,15 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## Unreleased
+## [3.4.12]
 
-> Release date: TBA
+> Release date: 2026-03-24
 
 ### Fixed
 
 - Set `protocols` field to `[http,https]` in translated routes in expression
   router mode.
   [#7860](https://github.com/Kong/kubernetes-ingress-controller/pull/7860)
-
 - Fixed an issue with SNI generation in dbless mode.
   [#7853](https://github.com/Kong/kubernetes-ingress-controller/pull/7853)
 
@@ -4168,6 +4168,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.4.12]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.11...v3.4.12
 [3.4.11]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.10...v3.4.11
 [3.4.10]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.9...v3.4.10
 [3.4.9]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.8...v3.4.9

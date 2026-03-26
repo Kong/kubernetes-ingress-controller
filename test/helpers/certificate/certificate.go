@@ -1,6 +1,8 @@
 package certificate
 
 import (
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/tls"
@@ -168,6 +170,80 @@ func CertToPEMFormat(tlsCert tls.Certificate) (cert []byte, key []byte) {
 		Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
 	}
 
+	return pem.EncodeToMemory(certBlock), pem.EncodeToMemory(keyBlock)
+}
+
+// MustGenerateECDSACert generates a tls.Certificate using an ECDSA P-256 key.
+func MustGenerateECDSACert(opts ...SelfSignedCertificateOption) tls.Certificate {
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to generate ECDSA key: %s", err))
+	}
+
+	options := certificateOptions{}
+	for _, opt := range opts {
+		options = opt(options)
+	}
+
+	notBefore := time.Now()
+	notAfter := notBefore.AddDate(1, 0, 0)
+	if options.Expired {
+		notBefore = notBefore.AddDate(-2, 0, 0)
+		notAfter = notAfter.AddDate(-2, 0, 0)
+	}
+
+	serialNumber, err := rand.Int(rand.Reader, big.NewInt(0).Exp(big.NewInt(2), big.NewInt(130), nil))
+	if err != nil {
+		panic(fmt.Sprintf("Failed to generate serial number: %s", err))
+	}
+
+	template := &x509.Certificate{
+		SerialNumber: serialNumber,
+		Subject: pkix.Name{
+			Organization:  []string{"Kong HQ"},
+			Country:       []string{"US"},
+			Province:      []string{"California"},
+			Locality:      []string{"San Francisco"},
+			StreetAddress: []string{"150 Spear Street, Suite 1600"},
+			PostalCode:    []string{"94105"},
+			CommonName:    options.CommonName,
+		},
+		NotBefore:             notBefore,
+		NotAfter:              notAfter,
+		DNSNames:              options.DNSNames,
+		BasicConstraintsValid: true,
+		IsCA:                  options.CATrue,
+		KeyUsage:              options.Usage,
+		MaxPathLen:            options.MaxPathLen,
+	}
+
+	derBytes, err := x509.CreateCertificate(rand.Reader, template, template, &privateKey.PublicKey, privateKey)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to create x509 certificate: %s", err))
+	}
+
+	return tls.Certificate{
+		Certificate: [][]byte{derBytes},
+		PrivateKey:  privateKey,
+	}
+}
+
+// MustGenerateECDSACertPEMFormat generates an ECDSA certificate and returns cert and key in PEM format.
+func MustGenerateECDSACertPEMFormat(opts ...SelfSignedCertificateOption) (cert []byte, key []byte) {
+	tlsCert := MustGenerateECDSACert(opts...)
+	certBlock := &pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: tlsCert.Certificate[0],
+	}
+	privateKey := tlsCert.PrivateKey.(*ecdsa.PrivateKey)
+	keyBytes, err := x509.MarshalECPrivateKey(privateKey)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to marshal ECDSA private key: %s", err))
+	}
+	keyBlock := &pem.Block{
+		Type:  "EC PRIVATE KEY",
+		Bytes: keyBytes,
+	}
 	return pem.EncodeToMemory(certBlock), pem.EncodeToMemory(keyBlock)
 }
 

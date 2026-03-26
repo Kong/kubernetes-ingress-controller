@@ -12,6 +12,45 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers/certificate"
 )
 
+func TestGetCertAlgorithm(t *testing.T) {
+	rsaCert, _ := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("rsa.example.com"))
+	ecdsaCert, _ := certificate.MustGenerateECDSACertPEMFormat(certificate.WithCommonName("ecdsa.example.com"))
+
+	algo, err := getCertAlgorithm(string(rsaCert))
+	require.NoError(t, err)
+	require.Equal(t, "RSA", algo.String())
+
+	algo, err = getCertAlgorithm(string(ecdsaCert))
+	require.NoError(t, err)
+	require.Equal(t, "ECDSA", algo.String())
+
+	_, err = getCertAlgorithm("not a pem block")
+	require.Error(t, err)
+}
+
+func TestVerifyCertSANsMatch(t *testing.T) {
+	opts := []certificate.SelfSignedCertificateOption{
+		certificate.WithCommonName("example.com"),
+		certificate.WithDNSNames("example.com", "www.example.com"),
+	}
+	rsaCert, _ := certificate.MustGenerateCertPEMFormat(opts...)
+	ecdsaCert, _ := certificate.MustGenerateECDSACertPEMFormat(opts...)
+
+	// same CN and SANs — should pass
+	require.NoError(t, verifyCertSANsMatch(string(rsaCert), string(ecdsaCert)))
+
+	// different CN — should fail
+	other, _ := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("other.com"))
+	require.Error(t, verifyCertSANsMatch(string(rsaCert), string(other)))
+
+	// different SANs — should fail
+	diffSAN, _ := certificate.MustGenerateCertPEMFormat(
+		certificate.WithCommonName("example.com"),
+		certificate.WithDNSNames("example.com"),
+	)
+	require.Error(t, verifyCertSANsMatch(string(rsaCert), string(diffSAN)))
+}
+
 func TestMergeCerts(t *testing.T) {
 	crt1, key1 := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("foo.com"))
 	crt2, key2 := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("bar.com"))

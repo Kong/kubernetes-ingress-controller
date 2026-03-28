@@ -122,6 +122,13 @@ Adding a new version? You'll need three changes:
 
 > Release date: TBA
 
+### Added
+
+- Support two `certificateRefs` per Gateway Listener (one RSA, one ECDSA),
+  populating Kong's `cert_alt`/`key_alt` fields to enable algorithm-based
+  certificate selection during the TLS handshake.
+  [#7890](https://github.com/Kong/kubernetes-ingress-controller/pull/7870)
+
 ### Fixed
 
 - Set `protocols` field to `[http,https]` in translated routes in expression
@@ -134,13 +141,6 @@ Adding a new version? You'll need three changes:
 ## [3.5.4]
 
 > Release date: 2026-02-17
-
-### Added
-
-- Support two `certificateRefs` per Gateway Listener (one RSA, one ECDSA),
-  populating Kong's `cert_alt`/`key_alt` fields to enable algorithm-based
-  certificate selection during the TLS handshake.
-  [#7890](https://github.com/Kong/kubernetes-ingress-controller/pull/7870)
 
 ### Fixed
 

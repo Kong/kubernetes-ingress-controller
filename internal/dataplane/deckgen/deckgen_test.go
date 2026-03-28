@@ -12,22 +12,19 @@ import (
 
 func TestGetFCertificateFromKongCert(t *testing.T) {
 	testCases := []struct {
-		name     string
-		inmemory bool
-		cert     kong.Certificate
-		want     file.FCertificate
+		name string
+		cert kong.Certificate
+		want file.FCertificate
 	}{
 		{
-			name:     "empty certificate",
-			inmemory: false,
-			cert:     kong.Certificate{},
+			name: "empty certificate",
+			cert: kong.Certificate{},
 			want: file.FCertificate{
 				SNIs: []kong.SNI{},
 			},
 		},
 		{
-			name:     "all fields set, inmemory=true, SNIs have no certificate ref",
-			inmemory: true,
+			name: "all fields set, SNIs have certificate ref",
 			cert: kong.Certificate{
 				ID:   kong.String("cert-id"),
 				Key:  kong.String("cert-key"),
@@ -39,35 +36,19 @@ func TestGetFCertificateFromKongCert(t *testing.T) {
 				Key:  kong.String("cert-key"),
 				Cert: kong.String("cert-pem"),
 				SNIs: []kong.SNI{
-					{Name: kong.String("example.com")},
-					{Name: kong.String("other.com")},
-				},
-			},
-		},
-		{
-			name:     "all fields set, inmemory=false, SNIs have certificate ref",
-			inmemory: false,
-			cert: kong.Certificate{
-				ID:   kong.String("cert-id"),
-				Key:  kong.String("cert-key"),
-				Cert: kong.String("cert-pem"),
-				SNIs: []*string{kong.String("example.com")},
-			},
-			want: file.FCertificate{
-				ID:   kong.String("cert-id"),
-				Key:  kong.String("cert-key"),
-				Cert: kong.String("cert-pem"),
-				SNIs: []kong.SNI{
 					{
 						Name:        kong.String("example.com"),
+						Certificate: &kong.Certificate{ID: kong.String("cert-id")},
+					},
+					{
+						Name:        kong.String("other.com"),
 						Certificate: &kong.Certificate{ID: kong.String("cert-id")},
 					},
 				},
 			},
 		},
 		{
-			name:     "nil ID, inmemory=false, SNIs have no certificate ref",
-			inmemory: false,
+			name: "nil ID, SNIs have no certificate ref",
 			cert: kong.Certificate{
 				Key:  kong.String("cert-key"),
 				Cert: kong.String("cert-pem"),
@@ -82,8 +63,7 @@ func TestGetFCertificateFromKongCert(t *testing.T) {
 			},
 		},
 		{
-			name:     "no SNIs",
-			inmemory: false,
+			name: "no SNIs",
 			cert: kong.Certificate{
 				ID:   kong.String("cert-id"),
 				Key:  kong.String("cert-key"),
@@ -100,7 +80,7 @@ func TestGetFCertificateFromKongCert(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := deckgen.GetFCertificateFromKongCert(tc.inmemory, tc.cert)
+			got := deckgen.GetFCertificateFromKongCert(tc.cert)
 			require.Equal(t, tc.want, got)
 		})
 	}

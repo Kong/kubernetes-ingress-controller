@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.4.13](#3413)
  - [3.4.12](#3412)
  - [3.4.11](#3411)
  - [3.4.10](#3410)
@@ -111,6 +112,23 @@ Adding a new version? You'll need three changes:
  - [0.1.0](#010)
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
+
+## [3.4.13]
+
+> Release date: 2026-03-31
+
+### Fixed
+
+- Reverted the change from 3.4.12 which incorrectly changed the logic for creating
+  SNI certificates in the translator so that certificate back references are not
+  set in the generated configuration. This caused broken configurations for users
+  running Kong 3.9 (for 3.10+ the SNI certificate backreference is optional).
+  [#7875](https://github.com/Kong/kubernetes-ingress-controller/pull/7875)
+
+### Changed
+
+- Bump Go to 1.25.8
+  [#7874](https://github.com/Kong/kubernetes-ingress-controller/pull/7874)
 
 ## [3.4.12]
 
@@ -4168,6 +4186,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.4.13]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.12...v3.4.13
 [3.4.12]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.11...v3.4.12
 [3.4.11]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.10...v3.4.11
 [3.4.10]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.9...v3.4.10

@@ -8,11 +8,15 @@ Adding a new version? You'll need three changes:
   This is all the way at the bottom. It's the thing we always forget.
 --->
 
+- [3.5.6](#356)
+- [3.5.5](#355)
 - [3.5.4](#354)
 - [3.5.3](#353)
 - [3.5.2](#352)
 - [3.5.1](#351)
 - [3.5.0](#350)
+- [3.4.13](#3413)
+- [3.4.12](#3412)
 - [3.4.11](#3411)
 - [3.4.10](#3410)
 - [3.4.9](#349)
@@ -118,16 +122,32 @@ Adding a new version? You'll need three changes:
 - [0.0.5](#005)
 - [0.0.4 and prior](#004-and-prior)
 
-## Unreleased
+## [3.5.6]
 
-> Release date: TBA
+> Release date: 2026-03-31
+
+### Fixed
+
+- Reverted the change from 3.4.12 which incorrectly changed the logic for creating
+  SNI certificates in the translator so that certificate back references are not
+  set in the generated configuration. This caused broken configurations for users
+  running Kong 3.9 (for 3.10+ the SNI certificate backreference is optional).
+  [#7873](https://github.com/Kong/kubernetes-ingress-controller/pull/7873)
+
+### Changed
+
+- Bump Go to 1.25.8
+  [#7876](https://github.com/Kong/kubernetes-ingress-controller/pull/7876)
+
+## [3.5.5]
+
+> Release date: 2026-03-24
 
 ### Fixed
 
 - Set `protocols` field to `[http,https]` in translated routes in expression
   router mode.
   [#7860](https://github.com/Kong/kubernetes-ingress-controller/pull/7860)
-
 - Fixed an issue with SNI generation in dbless mode.
   [#7853](https://github.com/Kong/kubernetes-ingress-controller/pull/7853)
 
@@ -244,6 +264,35 @@ Adding a new version? You'll need three changes:
   can be used for both hash_on (always) and hash_fallack (when primary hashing
   source is different than cookie).
   [#7582](https://github.com/Kong/kubernetes-ingress-controller/pull/7582)
+
+## [3.4.13]
+
+> Release date: 2026-03-31
+
+### Fixed
+
+- Reverted the change from 3.4.12 which incorrectly changed the logic for creating
+  SNI certificates in the translator so that certificate back references are not
+  set in the generated configuration. This caused broken configurations for users
+  running Kong 3.9 (for 3.10+ the SNI certificate backreference is optional).
+  [#7875](https://github.com/Kong/kubernetes-ingress-controller/pull/7875)
+
+### Changed
+
+- Bump Go to 1.25.8
+  [#7874](https://github.com/Kong/kubernetes-ingress-controller/pull/7874)
+
+## [3.4.12]
+
+> Release date: 2026-03-24
+
+### Fixed
+
+- Set `protocols` field to `[http,https]` in translated routes in expression
+  router mode.
+  [#7860](https://github.com/Kong/kubernetes-ingress-controller/pull/7860)
+- Fixed an issue with SNI generation in dbless mode.
+  [#7853](https://github.com/Kong/kubernetes-ingress-controller/pull/7853)
 
 ## [3.4.11]
 
@@ -4288,7 +4337,7 @@ Please read the changelog and test in your environment.
 
 > Release date: 2018/06/02
 
-#### Added
+### Added
 
 - Add support for Kong Enterprise Edition 0.32 and above
 
@@ -4297,11 +4346,15 @@ Please read the changelog and test in your environment.
 - The initial versions were rapildy iterated to deliver
   a working ingress controller.
 
+[3.5.6]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.5...v3.5.6
+[3.5.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.4...v3.5.5
 [3.5.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.3...v3.5.4
 [3.5.3]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.2...v3.5.3
 [3.5.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.1...v3.5.2
 [3.5.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.0...v3.5.1
 [3.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.7...v3.5.0
+[3.4.13]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.12...v3.4.13
+[3.4.12]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.11...v3.4.12
 [3.4.11]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.10...v3.4.11
 [3.4.10]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.9...v3.4.10
 [3.4.9]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.8...v3.4.9

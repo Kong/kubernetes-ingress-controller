@@ -9,6 +9,14 @@ const (
 	LeaderElectionDisabled = "disabled"
 )
 
+// LeaderElectionBackend constants define the available backends for leader election.
+const (
+	// LeaderElectionBackendLease uses Kubernetes Lease API for leader election (default).
+	LeaderElectionBackendLease = "lease"
+	// LeaderElectionBackendEtcd uses etcd directly for leader election.
+	LeaderElectionBackendEtcd = "etcd"
+)
+
 const (
 	// DefaultDataPlanesReadinessReconciliationInterval is the interval at which the manager will run DPs readiness reconciliation loop.
 	// It's the same as the default interval of a Kubernetes container's readiness probe.

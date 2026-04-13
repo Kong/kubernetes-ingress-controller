@@ -44,7 +44,9 @@ var (
 
 const (
 	defaultOldKICImageRepo = "kong/kubernetes-ingress-controller"
-	defaultOldKICImageTag  = "3.4.4"
+	// Use the version that sets routes' protocol to `http,https` explicitly
+	// to be compatible with newer version of Kong gateway that sets the default protocols to `https` only.
+	defaultOldKICImageTag = "3.4.12"
 )
 
 func TestUpgradeKICWithExistingPlugins(t *testing.T) {

@@ -39,8 +39,7 @@ func GenerateKongExpressionRoutesFromGRPCRouteRule(grpcroute *gatewayapi.GRPCRou
 		r := kongstate.Route{
 			Ingress: ingressObjectInfo,
 			Route: kong.Route{
-				Name:      kong.String(routeName),
-				Protocols: kong.StringSlice("http", "https"),
+				Name: kong.String(routeName),
 			},
 			ExpressionRoutes: true,
 		}
@@ -63,8 +62,7 @@ func GenerateKongExpressionRoutesFromGRPCRouteRule(grpcroute *gatewayapi.GRPCRou
 		r := kongstate.Route{
 			Ingress: ingressObjectInfo,
 			Route: kong.Route{
-				Name:      kong.String(routeName),
-				Protocols: kong.StringSlice("http", "https"),
+				Name: kong.String(routeName),
 			},
 			ExpressionRoutes: true,
 		}
@@ -479,7 +477,6 @@ func KongExpressionRouteFromSplitGRPCRouteMatchWithPriority(
 	r := kongstate.Route{
 		Route: kong.Route{
 			Name:         kong.String(routeName),
-			Protocols:    kong.StringSlice("http", "https"),
 			PreserveHost: kong.Bool(true),
 			Tags:         tags,
 		},

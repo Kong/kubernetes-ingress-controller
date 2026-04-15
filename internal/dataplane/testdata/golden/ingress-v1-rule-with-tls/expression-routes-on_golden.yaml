@@ -91,9 +91,6 @@ services:
     name: bar-namespace.ing-with-tls.foo-svc.example.com.80
     preserve_host: true
     priority: 57178899677185
-    protocols:
-    - http
-    - https
     request_buffering: true
     response_buffering: true
     strip_path: false

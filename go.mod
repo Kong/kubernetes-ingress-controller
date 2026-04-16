@@ -34,7 +34,7 @@ require (
 	github.com/kong/go-kong v0.67.0
 	github.com/kong/kubernetes-configuration/v2 v2.0.0-alpha.1
 	github.com/kong/kubernetes-telemetry v0.1.10
-	github.com/kong/kubernetes-testing-framework v0.47.3-0.20260416165604-e2f69c03ba9a
+	github.com/kong/kubernetes-testing-framework v0.47.2-patch.3
 	github.com/lithammer/dedent v1.1.0
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/moul/pb v0.0.0-20220425114252-bca18df4138c

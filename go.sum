@@ -236,8 +236,8 @@ github.com/kong/kubernetes-configuration v1.5.2 h1:E7aL+M7/wnqOkG3WXcO0Kx4Ru/7IM
 github.com/kong/kubernetes-configuration v1.5.2/go.mod h1:DuPOhI2Ljm0EFE/rlL21DiURiqrcnc2Fs/rxVmeWNd0=
 github.com/kong/kubernetes-telemetry v0.1.10 h1:V+/Lco8VFY/CzoELwOPcGTyg0zbj/HAvoFkH50UsKYs=
 github.com/kong/kubernetes-telemetry v0.1.10/go.mod h1:/r/FevTOGegCqaxXCJyGkbE1E3IcYUGJd7xX7D73s2Y=
-github.com/kong/kubernetes-testing-framework v0.47.2-patch.1 h1:CTBxsL4+FZqlu/IihLGVIt07LGc1ZTpZwZymiX6QfKc=
-github.com/kong/kubernetes-testing-framework v0.47.2-patch.1/go.mod h1:DJ5btl/srdIM03tg3f+jS9Izu7xkRkciAM69Ptqun1I=
+github.com/kong/kubernetes-testing-framework v0.47.2-patch.3 h1:iNrLVAFc+i74Sp8PxLILbBEumr0FvWlCDx2VigFsLvk=
+github.com/kong/kubernetes-testing-framework v0.47.2-patch.3/go.mod h1:DJ5btl/srdIM03tg3f+jS9Izu7xkRkciAM69Ptqun1I=
 github.com/kong/semver/v4 v4.0.1 h1:DIcNR8W3gfx0KabFBADPalxxsp+q/5COwIFkkhrFQ2Y=
 github.com/kong/semver/v4 v4.0.1/go.mod h1:LImQ0oT15pJvSns/hs2laLca2zcYoHu5EsSNY0J6/QA=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=

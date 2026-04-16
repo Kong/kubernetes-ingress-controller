@@ -668,7 +668,7 @@ func verifyEnterpriseWithPostgres(ctx context.Context, t *testing.T, env environ
 type licenseOutput struct {
 	License struct {
 		Customer   string `json:"customer"`
-		Dataplanes string `json:"dataplanes"`
+		Dataplanes string `json:"dataplanes,omitempty"`
 		Creation   string `json:"license_creation_date"`
 		Seats      string `json:"admin_seats"`
 		Product    string `json:"product_subscription"`

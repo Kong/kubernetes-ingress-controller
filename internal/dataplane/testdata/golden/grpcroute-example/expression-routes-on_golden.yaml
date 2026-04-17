@@ -19,9 +19,6 @@ services:
     name: grpcroute.default.grpcbin.example.com.2.0
     preserve_host: true
     priority: 26766487871743
-    protocols:
-    - http
-    - https
     tags:
     - k8s-name:grpcbin
     - k8s-namespace:default
@@ -57,9 +54,6 @@ services:
     name: grpcroute.default.grpcbin.example.com.1.0
     preserve_host: true
     priority: 26766487904511
-    protocols:
-    - http
-    - https
     tags:
     - k8s-name:grpcbin
     - k8s-namespace:default
@@ -95,9 +89,6 @@ services:
     name: grpcroute.default.grpcbin.example.com.0.0
     preserve_host: true
     priority: 26766487929087
-    protocols:
-    - http
-    - https
     tags:
     - k8s-name:grpcbin
     - k8s-namespace:default

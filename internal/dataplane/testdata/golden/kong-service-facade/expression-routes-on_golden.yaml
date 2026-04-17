@@ -35,9 +35,6 @@ services:
     name: default.beta
     preserve_host: true
     priority: 0
-    protocols:
-    - http
-    - https
     request_buffering: true
     response_buffering: true
     strip_path: false
@@ -70,9 +67,6 @@ services:
     name: default.beta..svc-facade-beta.svc.facade
     preserve_host: true
     priority: 54975581454341
-    protocols:
-    - http
-    - https
     request_buffering: true
     response_buffering: true
     strip_path: false
@@ -105,9 +99,6 @@ services:
     name: default.alpha..svc-facade-alpha.svc.facade
     preserve_host: true
     priority: 54975581454342
-    protocols:
-    - http
-    - https
     request_buffering: true
     response_buffering: true
     strip_path: false

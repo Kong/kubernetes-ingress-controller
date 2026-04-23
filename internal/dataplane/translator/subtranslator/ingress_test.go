@@ -339,7 +339,7 @@ func TestTranslateIngress(t *testing.T) {
 							Paths:             kong.StringSlice("~/api$"),
 							PreserveHost:      kong.Bool(true),
 							Protocols:         kong.StringSlice("http", "https"),
-							RegexPriority:     kong.Int(0),
+							RegexPriority:     kong.Int(len("/api")),
 							StripPath:         kong.Bool(false),
 							ResponseBuffering: kong.Bool(true),
 							RequestBuffering:  kong.Bool(true),
@@ -704,7 +704,7 @@ func TestTranslateIngress(t *testing.T) {
 							),
 							PreserveHost:      kong.Bool(true),
 							Protocols:         kong.StringSlice("http", "https"),
-							RegexPriority:     kong.Int(0),
+							RegexPriority:     kong.Int(len("/other/path/1")),
 							StripPath:         kong.Bool(false),
 							ResponseBuffering: kong.Bool(true),
 							RequestBuffering:  kong.Bool(true),
@@ -847,7 +847,7 @@ func TestTranslateIngress(t *testing.T) {
 							),
 							PreserveHost:      kong.Bool(true),
 							Protocols:         kong.StringSlice("http", "https"),
-							RegexPriority:     kong.Int(0),
+							RegexPriority:     kong.Int(len("/other/path/1")),
 							StripPath:         kong.Bool(false),
 							ResponseBuffering: kong.Bool(true),
 							RequestBuffering:  kong.Bool(true),
@@ -1605,6 +1605,79 @@ func TestTranslateIngress(t *testing.T) {
 			require.Empty(t, diff, "expected no difference between expected and translated ingress")
 		})
 	}
+}
+
+func TestTranslateIngress_ExactPathRegexPriority(t *testing.T) {
+	ingresses := []*netv1.Ingress{{
+		TypeMeta: ingressTypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "app",
+			Namespace: corev1.NamespaceDefault,
+		},
+		Spec: netv1.IngressSpec{
+			Rules: []netv1.IngressRule{{
+				Host: "example.com",
+				IngressRuleValue: netv1.IngressRuleValue{
+					HTTP: &netv1.HTTPIngressRuleValue{
+						Paths: []netv1.HTTPIngressPath{{
+							Path:     "/",
+							PathType: &pathTypePrefix,
+							Backend: netv1.IngressBackend{
+								Service: &netv1.IngressServiceBackend{
+									Name: "app",
+									Port: netv1.ServiceBackendPort{Number: 80},
+								},
+							},
+						}},
+					},
+				},
+			}},
+		},
+	}, {
+		TypeMeta: ingressTypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "solver",
+			Namespace: corev1.NamespaceDefault,
+		},
+		Spec: netv1.IngressSpec{
+			Rules: []netv1.IngressRule{{
+				Host: "example.com",
+				IngressRuleValue: netv1.IngressRuleValue{
+					HTTP: &netv1.HTTPIngressRuleValue{
+						Paths: []netv1.HTTPIngressPath{{
+							Path:     "/.well-known/acme-challenge/token",
+							PathType: &pathTypeExact,
+							Backend: netv1.IngressBackend{
+								Service: &netv1.IngressServiceBackend{
+									Name: "solver",
+									Port: netv1.ServiceBackendPort{Number: 8089},
+								},
+							},
+						}},
+					},
+				},
+			}},
+		},
+	}}
+
+	translatedServices := TranslateIngresses(
+		ingresses,
+		configurationv1alpha1.IngressClassParametersSpec{},
+		TranslateIngressFeatureFlags{},
+		noopObjectsCollector{},
+		failures.NewResourceFailuresCollector(logr.Discard()),
+		lo.Must(store.NewFakeStore(store.FakeObjects{})),
+	)
+
+	require.Contains(t, translatedServices, "default.app.80")
+	require.Contains(t, translatedServices, "default.solver.8089")
+
+	appRoute := translatedServices["default.app.80"].Routes[0]
+	solverRoute := translatedServices["default.solver.8089"].Routes[0]
+	require.NotNil(t, appRoute.RegexPriority)
+	require.NotNil(t, solverRoute.RegexPriority)
+	require.Greater(t, *solverRoute.RegexPriority, *appRoute.RegexPriority)
+	require.Equal(t, len("/.well-known/acme-challenge/token"), *solverRoute.RegexPriority)
 }
 
 func TestTranslateIngress_KongServiceFacadeFailures(t *testing.T) {

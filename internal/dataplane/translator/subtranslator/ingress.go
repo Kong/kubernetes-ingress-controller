@@ -441,6 +441,7 @@ func (m *ingressTranslationMeta) translateIntoKongRoute() *kongstate.Route {
 			paths[i] = m.addRegexPrefixFn(*path)
 		}
 		route.Paths = append(route.Paths, paths...)
+		route.RegexPriority = kong.Int(max(*route.RegexPriority, regexPriorityFromIngressPath(httpIngressPath)))
 	}
 
 	return route
@@ -493,6 +494,14 @@ func PathsFromIngressPaths(httpIngressPath netv1.HTTPIngressPath) []*string {
 
 	routePaths = append(routePaths, routeRegexPaths...)
 	return kong.StringSlice(routePaths...)
+}
+
+func regexPriorityFromIngressPath(httpIngressPath netv1.HTTPIngressPath) int {
+	if httpIngressPath.PathType == nil || *httpIngressPath.PathType != netv1.PathTypeExact {
+		return 0
+	}
+
+	return len(httpIngressPath.Path)
 }
 
 func flattenMultipleSlashes(path string) string {

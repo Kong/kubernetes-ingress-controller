@@ -234,8 +234,8 @@ func (i *ingressTranslationIndex) Translate() map[string]kongstate.Service {
 			route := meta.translateIntoKongExpressionRoute()
 			kongStateService.Routes = append(kongStateService.Routes, *route)
 		} else {
-			route := meta.translateIntoKongRoute()
-			kongStateService.Routes = append(kongStateService.Routes, *route)
+			routes := meta.translateIntoKongRoutes()
+			kongStateService.Routes = append(kongStateService.Routes, routes...)
 		}
 		sort.SliceStable(kongStateService.Routes, func(i, j int) bool {
 			return *kongStateService.Routes[i].Name < *kongStateService.Routes[j].Name
@@ -409,13 +409,38 @@ func (m *ingressTranslationMeta) generateKongServiceName() string {
 	)
 }
 
-func (m *ingressTranslationMeta) translateIntoKongRoute() *kongstate.Route {
+func (m *ingressTranslationMeta) translateIntoKongRoutes() []kongstate.Route {
+	pathsByRegexPriority := map[int][]netv1.HTTPIngressPath{}
+	regexPriorities := []int{}
+	for _, path := range m.paths {
+		regexPriority := regexPriorityFromIngressPath(path)
+		if _, ok := pathsByRegexPriority[regexPriority]; !ok {
+			regexPriorities = append(regexPriorities, regexPriority)
+		}
+		pathsByRegexPriority[regexPriority] = append(pathsByRegexPriority[regexPriority], path)
+	}
+	sort.Ints(regexPriorities)
+
+	routes := make([]kongstate.Route, 0, len(regexPriorities))
+	for _, regexPriority := range regexPriorities {
+		route := m.translateIntoKongRoute(
+			pathsByRegexPriority[regexPriority],
+			routeNameSuffixFromRegexPriority(regexPriority, len(regexPriorities)),
+		)
+		routes = append(routes, *route)
+	}
+
+	return routes
+}
+
+func (m *ingressTranslationMeta) translateIntoKongRoute(paths []netv1.HTTPIngressPath, routeNameSuffix string) *kongstate.Route {
 	ingressHost := m.ingressHost
 	if strings.Contains(ingressHost, "*") {
 		// '_' is not allowed in host, so we use '_' to replace '*' since '*' is not allowed in Kong.
 		ingressHost = strings.ReplaceAll(ingressHost, "*", "_")
 	}
 	routeName := m.backend.intoKongRouteName(k8stypes.NamespacedName{Namespace: m.ingressNamespace, Name: m.ingressName}, ingressHost)
+	routeName += routeNameSuffix
 
 	route := &kongstate.Route{
 		Ingress: util.FromK8sObject(m.parentIngress),
@@ -435,12 +460,12 @@ func (m *ingressTranslationMeta) translateIntoKongRoute() *kongstate.Route {
 		route.Hosts = append(route.Hosts, kong.String(m.ingressHost))
 	}
 
-	for _, httpIngressPath := range m.paths {
-		paths := PathsFromIngressPaths(httpIngressPath)
-		for i, path := range paths {
-			paths[i] = m.addRegexPrefixFn(*path)
+	for _, httpIngressPath := range paths {
+		routePaths := PathsFromIngressPaths(httpIngressPath)
+		for i, path := range routePaths {
+			routePaths[i] = m.addRegexPrefixFn(*path)
 		}
-		route.Paths = append(route.Paths, paths...)
+		route.Paths = append(route.Paths, routePaths...)
 		route.RegexPriority = kong.Int(max(*route.RegexPriority, regexPriorityFromIngressPath(httpIngressPath)))
 	}
 
@@ -502,6 +527,14 @@ func regexPriorityFromIngressPath(httpIngressPath netv1.HTTPIngressPath) int {
 	}
 
 	return len(httpIngressPath.Path)
+}
+
+func routeNameSuffixFromRegexPriority(regexPriority int, routeCount int) string {
+	if routeCount == 1 || regexPriority == 0 {
+		return ""
+	}
+
+	return fmt.Sprintf(".exact.%d", regexPriority)
 }
 
 func flattenMultipleSlashes(path string) string {

@@ -339,7 +339,7 @@ func TestTranslateIngress(t *testing.T) {
 							Paths:             kong.StringSlice("~/api$"),
 							PreserveHost:      kong.Bool(true),
 							Protocols:         kong.StringSlice("http", "https"),
-							RegexPriority:     kong.Int(0),
+							RegexPriority:     kong.Int(len("/api")),
 							StripPath:         kong.Bool(false),
 							ResponseBuffering: kong.Bool(true),
 							RequestBuffering:  kong.Bool(true),
@@ -692,13 +692,30 @@ func TestTranslateIngress(t *testing.T) {
 							GroupVersionKind: ingressGVK,
 						},
 						Route: kong.Route{
+							Name:              kong.String("default.test-ingress.test-service.konghq.com.80.exact.13"),
+							Hosts:             kong.StringSlice("konghq.com"),
+							Paths:             kong.StringSlice("~/other/path/1$"),
+							PreserveHost:      kong.Bool(true),
+							Protocols:         kong.StringSlice("http", "https"),
+							RegexPriority:     kong.Int(len("/other/path/1")),
+							StripPath:         kong.Bool(false),
+							ResponseBuffering: kong.Bool(true),
+							RequestBuffering:  kong.Bool(true),
+							Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default", "k8s-kind:Ingress", "k8s-group:networking.k8s.io", "k8s-version:v1"),
+						},
+					}, {
+						Ingress: util.K8sObjectInfo{
+							Name:             "test-ingress",
+							Namespace:        corev1.NamespaceDefault,
+							GroupVersionKind: ingressGVK,
+						},
+						Route: kong.Route{
 							Name:  kong.String("default.test-ingress.test-service.konghq.com.80"),
 							Hosts: kong.StringSlice("konghq.com"),
 							Paths: kong.StringSlice(
 								"/v1/api",
 								"/v2/api",
 								"/v3/api",
-								"~/other/path/1$",
 								"/other/path/2",
 								"/",
 							),
@@ -836,12 +853,28 @@ func TestTranslateIngress(t *testing.T) {
 							GroupVersionKind: ingressGVK,
 						},
 						Route: kong.Route{
+							Name:              kong.String("default.test-ingress.test-service..80.exact.13"),
+							Paths:             kong.StringSlice("~/other/path/1$"),
+							PreserveHost:      kong.Bool(true),
+							Protocols:         kong.StringSlice("http", "https"),
+							RegexPriority:     kong.Int(len("/other/path/1")),
+							StripPath:         kong.Bool(false),
+							ResponseBuffering: kong.Bool(true),
+							RequestBuffering:  kong.Bool(true),
+							Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default", "k8s-kind:Ingress", "k8s-group:networking.k8s.io", "k8s-version:v1"),
+						},
+					}, {
+						Ingress: util.K8sObjectInfo{
+							Name:             "test-ingress",
+							Namespace:        corev1.NamespaceDefault,
+							GroupVersionKind: ingressGVK,
+						},
+						Route: kong.Route{
 							Name: kong.String("default.test-ingress.test-service..80"),
 							Paths: kong.StringSlice(
 								"/v1/api",
 								"/v2/api",
 								"/v3/api",
-								"~/other/path/1$",
 								"/other/path/2",
 								"/",
 							),
@@ -1605,6 +1638,162 @@ func TestTranslateIngress(t *testing.T) {
 			require.Empty(t, diff, "expected no difference between expected and translated ingress")
 		})
 	}
+}
+
+func TestTranslateIngress_ExactPathRegexPriority(t *testing.T) {
+	ingresses := []*netv1.Ingress{{
+		TypeMeta: ingressTypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "app",
+			Namespace: corev1.NamespaceDefault,
+		},
+		Spec: netv1.IngressSpec{
+			Rules: []netv1.IngressRule{{
+				Host: "example.com",
+				IngressRuleValue: netv1.IngressRuleValue{
+					HTTP: &netv1.HTTPIngressRuleValue{
+						Paths: []netv1.HTTPIngressPath{{
+							Path:     "/",
+							PathType: &pathTypePrefix,
+							Backend: netv1.IngressBackend{
+								Service: &netv1.IngressServiceBackend{
+									Name: "app",
+									Port: netv1.ServiceBackendPort{Number: 80},
+								},
+							},
+						}},
+					},
+				},
+			}},
+		},
+	}, {
+		TypeMeta: ingressTypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "solver",
+			Namespace: corev1.NamespaceDefault,
+		},
+		Spec: netv1.IngressSpec{
+			Rules: []netv1.IngressRule{{
+				Host: "example.com",
+				IngressRuleValue: netv1.IngressRuleValue{
+					HTTP: &netv1.HTTPIngressRuleValue{
+						Paths: []netv1.HTTPIngressPath{{
+							Path:     "/.well-known/acme-challenge/token",
+							PathType: &pathTypeExact,
+							Backend: netv1.IngressBackend{
+								Service: &netv1.IngressServiceBackend{
+									Name: "solver",
+									Port: netv1.ServiceBackendPort{Number: 8089},
+								},
+							},
+						}},
+					},
+				},
+			}},
+		},
+	}}
+
+	translatedServices := TranslateIngresses(
+		ingresses,
+		configurationv1alpha1.IngressClassParametersSpec{},
+		TranslateIngressFeatureFlags{},
+		noopObjectsCollector{},
+		failures.NewResourceFailuresCollector(logr.Discard()),
+		lo.Must(store.NewFakeStore(store.FakeObjects{})),
+	)
+
+	require.Contains(t, translatedServices, "default.app.80")
+	require.Contains(t, translatedServices, "default.solver.8089")
+
+	appRoute := translatedServices["default.app.80"].Routes[0]
+	solverRoute := translatedServices["default.solver.8089"].Routes[0]
+	require.NotNil(t, appRoute.RegexPriority)
+	require.NotNil(t, solverRoute.RegexPriority)
+	require.Greater(t, *solverRoute.RegexPriority, *appRoute.RegexPriority)
+	require.Equal(t, len("/.well-known/acme-challenge/token"), *solverRoute.RegexPriority)
+}
+
+func TestTranslateIngress_ExactPathRegexPriorityDoesNotApplyToPrefixPaths(t *testing.T) {
+	ingresses := []*netv1.Ingress{{
+		TypeMeta: ingressTypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "app",
+			Namespace: corev1.NamespaceDefault,
+		},
+		Spec: netv1.IngressSpec{
+			Rules: []netv1.IngressRule{{
+				Host: "example.com",
+				IngressRuleValue: netv1.IngressRuleValue{
+					HTTP: &netv1.HTTPIngressRuleValue{
+						Paths: []netv1.HTTPIngressPath{{
+							Path:     "/very/long/path",
+							PathType: &pathTypeExact,
+							Backend: netv1.IngressBackend{
+								Service: &netv1.IngressServiceBackend{
+									Name: "mixed",
+									Port: netv1.ServiceBackendPort{Number: 80},
+								},
+							},
+						}, {
+							Path:     "/api",
+							PathType: &pathTypePrefix,
+							Backend: netv1.IngressBackend{
+								Service: &netv1.IngressServiceBackend{
+									Name: "mixed",
+									Port: netv1.ServiceBackendPort{Number: 80},
+								},
+							},
+						}, {
+							Path:     "/api",
+							PathType: &pathTypeExact,
+							Backend: netv1.IngressBackend{
+								Service: &netv1.IngressServiceBackend{
+									Name: "api",
+									Port: netv1.ServiceBackendPort{Number: 80},
+								},
+							},
+						}},
+					},
+				},
+			}},
+		},
+	}}
+
+	translatedServices := TranslateIngresses(
+		ingresses,
+		configurationv1alpha1.IngressClassParametersSpec{},
+		TranslateIngressFeatureFlags{},
+		noopObjectsCollector{},
+		failures.NewResourceFailuresCollector(logr.Discard()),
+		lo.Must(store.NewFakeStore(store.FakeObjects{})),
+	)
+
+	require.Contains(t, translatedServices, "default.mixed.80")
+	require.Contains(t, translatedServices, "default.api.80")
+	require.Len(t, translatedServices["default.mixed.80"].Routes, 2)
+
+	mixedPrefixRoute := requireRouteWithPath(t, translatedServices["default.mixed.80"].Routes, "~/api$")
+	mixedExactRoute := requireRouteWithPath(t, translatedServices["default.mixed.80"].Routes, "~/very/long/path$")
+	apiExactRoute := requireRouteWithPath(t, translatedServices["default.api.80"].Routes, "~/api$")
+
+	require.Equal(t, 0, *mixedPrefixRoute.RegexPriority)
+	require.Equal(t, len("/very/long/path"), *mixedExactRoute.RegexPriority)
+	require.Equal(t, len("/api"), *apiExactRoute.RegexPriority)
+}
+
+func requireRouteWithPath(t *testing.T, routes []kongstate.Route, expectedPath string) kongstate.Route {
+	t.Helper()
+
+	for _, route := range routes {
+		for _, path := range route.Paths {
+			if path != nil && *path == expectedPath {
+				return route
+			}
+		}
+	}
+
+	require.FailNowf(t, "missing route path", "expected to find route path %q", expectedPath)
+	return kongstate.Route{}
 }
 
 func TestTranslateIngress_KongServiceFacadeFailures(t *testing.T) {

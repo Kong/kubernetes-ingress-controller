@@ -33,7 +33,7 @@ func TestHTTPRouteRewriteExample(t *testing.T) {
 			func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 				cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 				cluster := GetClusterFromCtx(ctx)
-				proxyURL := GetHTTPURLFromCtx(ctx)
+				proxyURL := GetHTTPSURLFromCtx(ctx)
 
 				t.Logf("applying yaml manifest %s", httprouteURLRewriteExampleManifests)
 				manifest, err := os.ReadFile(httprouteURLRewriteExampleManifests)
@@ -47,9 +47,9 @@ func TestHTTPRouteRewriteExample(t *testing.T) {
 				helpers.EventuallyGETPath(
 					t,
 					proxyURL,
-					proxyURL.Host,
+					proxyURL.String(),
 					"/full-path-prefix",
-					nil,
+					&helpers.HTTPSOptions{InsecureSkipVerify: true},
 					http.StatusOK,
 					"hello",
 					nil,
@@ -61,9 +61,9 @@ func TestHTTPRouteRewriteExample(t *testing.T) {
 				helpers.EventuallyGETPath(
 					t,
 					proxyURL,
-					proxyURL.Host,
+					proxyURL.String(),
 					"/old-prefix?msg=hello",
-					nil,
+					&helpers.HTTPSOptions{InsecureSkipVerify: true},
 					http.StatusOK,
 					"hello",
 					nil,

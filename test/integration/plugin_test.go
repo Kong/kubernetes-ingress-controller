@@ -67,9 +67,9 @@ func TestPluginEssentials(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational")
 	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_plugin_essentials", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s/test_plugin_essentials", proxyHTTPSURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPSURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -131,9 +131,9 @@ func TestPluginEssentials(t *testing.T) {
 
 	t.Logf("validating that plugin %s was successfully configured", kongplugin.Name)
 	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_plugin_essentials", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s/test_plugin_essentials", proxyHTTPSURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPSURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -153,9 +153,9 @@ func TestPluginEssentials(t *testing.T) {
 
 	t.Logf("validating that clusterplugin %s was successfully configured", kongclusterplugin.Name)
 	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_plugin_essentials", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s/test_plugin_essentials", proxyHTTPSURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPSURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -164,7 +164,7 @@ func TestPluginEssentials(t *testing.T) {
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
-	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPURL, proxyHTTPURL.Host, "/test_plugin_essentials", ingressWait, waitTick, nil)
+	helpers.EventuallyGETPath(t, nil, proxyHTTPSURL.String(), "/test_plugin_essentials", &helpers.HTTPSOptions{InsecureSkipVerify: true}, http.StatusNotFound, "no Route matched with those values", nil, ingressWait, waitTick)
 }
 
 func TestPluginConfigPatch(t *testing.T) {
@@ -196,9 +196,9 @@ func TestPluginConfigPatch(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational")
 	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_plugin_config_patch", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s/test_plugin_config_patch", proxyHTTPSURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPSURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -298,9 +298,9 @@ func TestPluginConfigPatch(t *testing.T) {
 
 	t.Logf("validating that plugin %s was successfully configured", kongplugin.Name)
 	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_plugin_config_patch", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s/test_plugin_config_patch", proxyHTTPSURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPSURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -321,9 +321,9 @@ func TestPluginConfigPatch(t *testing.T) {
 
 	t.Logf("validating that clusterplugin %s was successfully configured", kongclusterplugin.Name)
 	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_plugin_config_patch", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s/test_plugin_config_patch", proxyHTTPSURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPSURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -333,7 +333,7 @@ func TestPluginConfigPatch(t *testing.T) {
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
-	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPURL, proxyHTTPURL.Host, "/test_plugin_config_patch", ingressWait, waitTick, nil)
+	helpers.EventuallyGETPath(t, nil, proxyHTTPSURL.String(), "/test_plugin_config_patch", &helpers.HTTPSOptions{InsecureSkipVerify: true}, http.StatusNotFound, "no Route matched with those values", nil, ingressWait, waitTick)
 }
 
 func TestPluginOrdering(t *testing.T) {
@@ -367,9 +367,9 @@ func TestPluginOrdering(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational")
 	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_plugin_ordering", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s/test_plugin_ordering", proxyHTTPSURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPSURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -425,9 +425,9 @@ func TestPluginOrdering(t *testing.T) {
 
 	t.Logf("validating that plugin %s was successfully configured", termplugin.Name)
 	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_plugin_ordering", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s/test_plugin_ordering", proxyHTTPSURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPSURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -447,9 +447,9 @@ func TestPluginOrdering(t *testing.T) {
 
 	t.Logf("validating that plugin %s was successfully configured", authplugin.Name)
 	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_plugin_ordering", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s/test_plugin_ordering", proxyHTTPSURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPSURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -469,9 +469,9 @@ func TestPluginOrdering(t *testing.T) {
 
 	t.Logf("validating that plugin %s now takes precedence", termplugin.Name)
 	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_plugin_ordering", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s/test_plugin_ordering", proxyHTTPSURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPSURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -480,7 +480,9 @@ func TestPluginOrdering(t *testing.T) {
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
-	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPURL, proxyHTTPURL.Host, "/test_plugin_ordering", ingressWait, waitTick, nil)
+	helpers.EventuallyExpectHTTP404WithNoRoute(
+		t, proxyHTTPSURL, proxyHTTPSURL.String(), "/test_plugin_ordering", &helpers.HTTPSOptions{InsecureSkipVerify: true}, ingressWait, waitTick, nil,
+	)
 }
 
 // TestPluginCrossNamespaceReference creates an Ingress in one namespace and a KongConsumer in another. It tests that
@@ -522,7 +524,7 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational")
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_plugin_reference", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s/test_plugin_reference", proxyHTTPSURL))
 		if !assert.NoError(c, err) {
 			return
 		}
@@ -635,8 +637,8 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 
 	t.Logf("validating that plugin %s is not configured without a grant", kongplugin.Name)
 	assert.Never(t, func() bool {
-		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.String(), "/test_plugin_reference?key=thirtytangas", nil)
-		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
+		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPSURL.String(), "/test_plugin_reference?key=thirtytangas", nil)
+		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPSURL.Host), helpers.WithInsecureSkipVerify()).Do(req)
 		if err != nil {
 			return false
 		}
@@ -672,8 +674,8 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 
 	t.Logf("validating that plugin %s is not configured with an incorrectly configured referencegrant", kongplugin.Name)
 	assert.Never(t, func() bool {
-		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.String(), "/test_plugin_reference?key=thirtytangas", nil)
-		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
+		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPSURL.String(), "/test_plugin_reference?key=thirtytangas", nil)
+		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPSURL.Host), helpers.WithInsecureSkipVerify()).Do(req)
 		if err != nil {
 			return false
 		}
@@ -708,8 +710,8 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 
 	t.Logf("validating that plugin %s was successfully configured", kongplugin.Name)
 	assert.EventuallyWithT(t, func(c *assert.CollectT) {
-		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.String(), "/test_plugin_reference?apikey=thirtytangas", nil)
-		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
+		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPSURL.String(), "/test_plugin_reference?apikey=thirtytangas", nil)
+		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPSURL.Host), helpers.WithInsecureSkipVerify()).Do(req)
 		if !assert.NoError(c, err) {
 			return
 		}
@@ -748,9 +750,9 @@ func TestPluginNullInConfig(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational")
 	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_plugin_null_in_config", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s/test_plugin_null_in_config", proxyHTTPSURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPSURL, err)
 			return false
 		}
 		defer resp.Body.Close()

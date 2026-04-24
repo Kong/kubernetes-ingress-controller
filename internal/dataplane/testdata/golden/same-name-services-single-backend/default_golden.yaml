@@ -17,9 +17,6 @@ services:
     - ~/test$
     - /test/
     preserve_host: true
-    protocols:
-    - http
-    - https
     strip_path: true
     tags:
     - k8s-name:test

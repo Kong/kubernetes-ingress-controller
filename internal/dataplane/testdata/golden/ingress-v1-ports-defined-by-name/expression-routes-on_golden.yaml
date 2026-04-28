@@ -16,9 +16,6 @@ services:
     name: foo-namespace.regex-prefix.foo-svc.example.com.http
     preserve_host: true
     priority: 57178899611649
-    protocols:
-    - http
-    - https
     request_buffering: true
     response_buffering: true
     strip_path: false

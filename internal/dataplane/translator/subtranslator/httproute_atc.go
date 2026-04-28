@@ -499,7 +499,6 @@ func kongExpressionRouteFromHTTPRouteMatchWithPriority(
 		Route: kong.Route{
 			Name:         kong.String(routeName),
 			PreserveHost: kong.Bool(true),
-			Protocols:    kong.StringSlice("http", "https"),
 			// stripPath needs to be disabled by default to be conformant with the Gateway API
 			StripPath: kong.Bool(false),
 			Tags:      tags,

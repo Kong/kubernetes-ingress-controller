@@ -77,6 +77,7 @@ type Config struct {
 	LeaderElectionNamespace  string
 	LeaderElectionID         string
 	LeaderElectionForce      string
+	LeaderElectionBackend    string // "lease" (default) or "etcd"
 	Concurrency              int
 	FilterTags               []string
 	WatchNamespaces          []string

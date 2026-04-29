@@ -3,6 +3,8 @@ package translator
 import (
 	"fmt"
 
+	"github.com/kong/go-kong/kong"
+
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/translator/subtranslator"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/gatewayapi"
 )
@@ -125,9 +127,11 @@ func (t *Translator) ingressRulesFromGRPCRouteWithPriority(
 		t.getProtocolForKongService(grpcRoute),
 		grpcBackendRefsToBackendRefs(grpcRouteRule.BackendRefs)...,
 	)
+	route := subtranslator.KongExpressionRouteFromSplitGRPCRouteMatchWithPriority(splitGRPCRouteMatchWithPriority)
+	route.Protocols = t.getProtocolsForKongRoute(grpcRoute)
 	kongService.Routes = append(
 		kongService.Routes,
-		subtranslator.KongExpressionRouteFromSplitGRPCRouteMatchWithPriority(splitGRPCRouteMatchWithPriority),
+		route,
 	)
 	// cache the service to avoid duplicates in further loop iterations
 	rules.ServiceNameToServices[serviceName] = kongService
@@ -151,4 +155,19 @@ func (t *Translator) getProtocolForKongService(grpcRoute *gatewayapi.GRPCRoute) 
 		return "grpc"
 	}
 	return "grpcs"
+}
+
+// getProtocolsForKongRoute returns Kong route protocols for a GRPCRoute based on attached Gateway listeners.
+// When no listener can be resolved, we keep compatibility with previous behavior and allow both grpc and grpcs.
+func (t *Translator) getProtocolsForKongRoute(grpcRoute *gatewayapi.GRPCRoute) []*string {
+	protocols := make([]string, 0, 2)
+
+	if len(t.getGatewayListeningPorts(grpcRoute.Namespace, gatewayapi.HTTPProtocolType, grpcRoute.Spec.ParentRefs)) > 0 {
+		protocols = append(protocols, "grpc")
+	}
+	if len(t.getGatewayListeningPorts(grpcRoute.Namespace, gatewayapi.HTTPSProtocolType, grpcRoute.Spec.ParentRefs)) > 0 {
+		protocols = append(protocols, "grpcs")
+	}
+
+	return kong.StringSlice(protocols...)
 }

@@ -21,8 +21,9 @@ import (
 )
 
 type httpClientCfg struct {
-	resolveHostTo string
-	rootCAs       *x509.CertPool
+	resolveHostTo      string
+	rootCAs            *x509.CertPool
+	insecureSkipVerify bool
 }
 
 // HTTPClientOption is a functional option for configuring the HTTP client.
@@ -42,6 +43,12 @@ func WithRootCAs(rootCAs *x509.CertPool) HTTPClientOption {
 	}
 }
 
+func WithInsecureSkipVerify() HTTPClientOption {
+	return func(opts *httpClientCfg) {
+		opts.insecureSkipVerify = true
+	}
+}
+
 // DefaultHTTPClient returns a client that should be used by default in tests.
 // All defaults that should be propagated to tests for use should be changed in here.
 func DefaultHTTPClient(opts ...HTTPClientOption) *http.Client {
@@ -56,6 +63,14 @@ func DefaultHTTPClient(opts ...HTTPClientOption) *http.Client {
 			RootCAs:    cfg.rootCAs,
 			MinVersion: tls.VersionTLS12,
 		}
+	}
+	if cfg.insecureSkipVerify {
+		if tr.TLSClientConfig == nil {
+			tr.TLSClientConfig = &tls.Config{
+				MinVersion: tls.VersionTLS12,
+			}
+		}
+		tr.TLSClientConfig.InsecureSkipVerify = true
 	}
 	// It provides the equivalent of `curl --resolve` for the client.
 	if cfg.resolveHostTo != "" {
@@ -111,6 +126,11 @@ func MustHTTPRequest(t *testing.T, method string, host, path string, headers map
 // Testing Utility Functions - Various HTTP related
 // -----------------------------------------------------------------------------
 
+type HTTPSOptions struct {
+	InsecureSkipVerify bool
+	CertPool           *x509.CertPool
+}
+
 // EventuallyGETPath makes a GET request to the Kong proxy multiple times until
 // either the request starts to respond with the given status code and contents
 // present in the response body, or until timeout occurs according to ingressWait
@@ -118,14 +138,15 @@ func MustHTTPRequest(t *testing.T, method string, host, path string, headers map
 // doesn't eventually succeed the calling test will fail and stop.
 // Parameter proxyURL is the URL of Kong Gateway proxy (set nil when it's not different
 // from parameter host). Parameter host, path and headers are used to make the GET request.
-// Parameter certPool is used to validate the server certificate (nil to use system one).
+// Parameter httpsOpts is used to set a cert pool for validating the server certificate
+// or skipping the verification entirely (leave nil to use system one).
 // Response is expected to have the given statusCode and contain the passed bodyContent.
 func EventuallyGETPath(
 	t *testing.T,
 	proxyURL *url.URL,
 	host string,
 	path string,
-	certPool *x509.CertPool,
+	httpsOpts *HTTPSOptions,
 	statusCode int,
 	bodyContent string,
 	requestHeaders map[string]string,
@@ -138,8 +159,13 @@ func EventuallyGETPath(
 	if proxyURL != nil {
 		clientOptions = append(clientOptions, WithResolveHostTo(proxyURL.Host))
 	}
-	if certPool != nil {
-		clientOptions = append(clientOptions, WithRootCAs(certPool))
+	if httpsOpts != nil {
+		if httpsOpts.CertPool != nil {
+			clientOptions = append(clientOptions, WithRootCAs(httpsOpts.CertPool))
+		}
+		if httpsOpts.InsecureSkipVerify {
+			clientOptions = append(clientOptions, WithInsecureSkipVerify())
+		}
 	}
 	client := DefaultHTTPClient(clientOptions...)
 
@@ -179,6 +205,7 @@ func EventuallyExpectHTTP404WithNoRoute(
 	proxyURL *url.URL,
 	host string,
 	path string,
+	httpsOpts *HTTPSOptions,
 	waitDuration time.Duration,
 	waitTick time.Duration,
 	headers map[string]string,
@@ -188,7 +215,7 @@ func EventuallyExpectHTTP404WithNoRoute(
 		proxyURL,
 		host,
 		path,
-		nil,
+		httpsOpts,
 		http.StatusNotFound,
 		"no Route matched with those values",
 		headers,

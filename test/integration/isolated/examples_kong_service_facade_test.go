@@ -67,7 +67,7 @@ func TestKongServiceFacadeExample(t *testing.T) {
 		}).
 		Assess("basic-auth and key-auth plugins are applied to KongServiceFacades as expected", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			var (
-				proxyURL = GetHTTPURLFromCtx(ctx)
+				proxyURL = GetHTTPSURLFromCtx(ctx)
 
 				keyAuthSecuredEndpoint = fmt.Sprintf("%s%s", proxyURL, "/alpha")
 				keyAuthValidKey        = "alice-password"
@@ -77,7 +77,7 @@ func TestKongServiceFacadeExample(t *testing.T) {
 				basicAuthValidPassword   = "bob-password"
 			)
 
-			httpClient := helpers.DefaultHTTPClient()
+			httpClient := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify())
 			respondsWithExpectedStatusCode := func(t *testing.T, req *http.Request, expectedStatusCode int) {
 				require.Eventually(t, func() bool {
 					res, err := httpClient.Do(req)

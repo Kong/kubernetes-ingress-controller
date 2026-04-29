@@ -62,9 +62,9 @@ func TestCustomVault(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational")
 	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_custom_vault", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s/test_custom_vault", proxyHTTPSURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPSURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -133,9 +133,9 @@ func TestCustomVault(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	require.Eventuallyf(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_custom_vault/headers", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s/test_custom_vault/headers", proxyHTTPSURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPSURL, err)
 			return false
 		}
 		defer resp.Body.Close()

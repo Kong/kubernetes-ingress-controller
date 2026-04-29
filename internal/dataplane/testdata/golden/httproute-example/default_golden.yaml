@@ -17,9 +17,6 @@ services:
     - ~/nginx$
     - /nginx/
     preserve_host: true
-    protocols:
-    - http
-    - https
     strip_path: true
     tags:
     - k8s-name:httproute-testing
@@ -52,9 +49,6 @@ services:
     - ~/content$
     - /content/
     preserve_host: true
-    protocols:
-    - http
-    - https
     strip_path: true
     tags:
     - k8s-name:httproute-testing
@@ -87,9 +81,6 @@ services:
     - ~/httproute-testing$
     - /httproute-testing/
     preserve_host: true
-    protocols:
-    - http
-    - https
     strip_path: true
     tags:
     - k8s-name:httproute-testing

@@ -57,9 +57,9 @@ func TestConsumerCredential(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational")
 	require.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_consumer_credential", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s/test_consumer_credential", proxyHTTPSURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPSURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -99,9 +99,9 @@ func TestConsumerCredential(t *testing.T) {
 
 	t.Logf("validating that plugin %s was successfully configured", kongplugin.Name)
 	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient().Get(fmt.Sprintf("%s/test_consumer_credential", proxyHTTPURL))
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s/test_consumer_credential", proxyHTTPSURL))
 		if err != nil {
-			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPURL, err)
+			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPSURL, err)
 			return false
 		}
 		defer resp.Body.Close()
@@ -143,9 +143,9 @@ func TestConsumerCredential(t *testing.T) {
 
 	t.Logf("validating that consumer has access")
 	assert.Eventually(t, func() bool {
-		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPURL.Host, "/test_consumer_credential", nil)
+		req := helpers.MustHTTPRequest(t, http.MethodGet, proxyHTTPSURL.String(), "/test_consumer_credential", nil)
 		req.SetBasicAuth("test_consumer_credential", "test_consumer_credential")
-		resp, err := helpers.DefaultHTTPClient(helpers.WithResolveHostTo(proxyHTTPURL.Host)).Do(req)
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Do(req)
 		if err != nil {
 			return false
 		}
@@ -160,9 +160,9 @@ func TestConsumerCredential(t *testing.T) {
 	_, err = env.Cluster().Client().CoreV1().Secrets(ns.Name).Update(ctx, credential, metav1.UpdateOptions{})
 	require.NoError(t, err)
 	assert.Eventually(t, func() bool {
-		req := helpers.MustHTTPRequest(t, "GET", proxyHTTPURL.String(), "/test_consumer_credential", nil)
+		req := helpers.MustHTTPRequest(t, "GET", proxyHTTPSURL.String(), "/test_consumer_credential", nil)
 		req.SetBasicAuth("new_consumer_credential", "test_consumer_credential")
-		resp, err := helpers.DefaultHTTPClient().Do(req)
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Do(req)
 		if err != nil {
 			return false
 		}
@@ -172,5 +172,5 @@ func TestConsumerCredential(t *testing.T) {
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
-	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPURL, proxyHTTPURL.Host, "/test_plugin_essentials", ingressWait, waitTick, nil)
+	helpers.EventuallyGETPath(t, nil, proxyHTTPSURL.String(), "/test_plugin_essentials", &helpers.HTTPSOptions{InsecureSkipVerify: true}, http.StatusNotFound, "no Route matched with those values", nil, ingressWait, waitTick)
 }

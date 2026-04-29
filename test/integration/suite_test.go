@@ -13,6 +13,7 @@ import (
 
 	"github.com/avast/retry-go/v4"
 	"github.com/blang/semver/v4"
+	kongversion "github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/metallb"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
@@ -33,6 +34,8 @@ import (
 // -----------------------------------------------------------------------------
 // Testing Main
 // -----------------------------------------------------------------------------
+
+var kongGatewayVersion kongversion.Version
 
 func TestMain(m *testing.M) {
 	var code int
@@ -147,6 +150,7 @@ func TestMain(m *testing.M) {
 				reqCtx, cancel := context.WithTimeout(ctx, test.RequestTimeout)
 				defer cancel()
 				kongVersion, err := helpers.ValidateMinimalSupportedKongVersion(reqCtx, proxyAdminURL, consts.KongTestPassword)
+				kongGatewayVersion = kongVersion
 				if err != nil {
 					return err
 				}
@@ -234,4 +238,8 @@ func TestMain(m *testing.M) {
 		defer cancel()
 		helpers.ExitOnErr(ctx, helpers.RemoveCluster(ctx, env.Cluster()))
 	}
+}
+
+func isKongGatewayVersionAtLeast3_14() bool {
+	return kongGatewayVersion.Major() >= 3 && kongGatewayVersion.Minor() >= 14
 }

@@ -108,6 +108,9 @@ metadata:
 spec:
   gatewayClassName: kong
   listeners:
+  - name: https
+    protocol: HTTPS
+    port: 443
   - name: http
     protocol: HTTP
     port: 80
@@ -121,6 +124,7 @@ metadata:
 spec:
   parentRefs:
   - name: kong
+    sectionName: https
   rules:
   - matches:
     - path:

@@ -17,9 +17,6 @@ services:
     - ~/httpbin-prod-only$
     - /httpbin-prod-only/
     preserve_host: true
-    protocols:
-    - http
-    - https
     strip_path: true
     tags:
     - k8s-name:httpbin
@@ -50,9 +47,6 @@ services:
     - ~/httpbin-with-test$
     - /httpbin-with-test/
     preserve_host: true
-    protocols:
-    - http
-    - https
     strip_path: true
     tags:
     - k8s-name:httpbin

@@ -266,7 +266,7 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 	t.Log("verifying that the tcpecho is responding properly over TLS")
 	require.Eventually(t, func() bool {
 		if err := tlsEchoResponds(proxyTLSURL, testUUID, tlsRouteHostname, certPool, true); err != nil {
-			t.Logf("failed accessing tcpecho at %s, err: %v", proxyTLSURL, err)
+			t.Logf("failed accessing tcpecho by SNI %s at %s, err: %v", tlsRouteHostname, proxyTLSURL, err)
 			return false
 		}
 		return true
@@ -275,8 +275,8 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 	t.Log("verifying that the tcpecho route can also serve certificates permitted by a ReferenceGrant with a named To")
 	require.Eventually(t, func() bool {
 		if err := tlsEchoResponds(proxyTLSURL, testUUID2, tlsRouteExtraHostname, certPool, true); err != nil {
-			t.Logf("failed accessing tcpecho at %s, err: %v", proxyTLSURL, err)
-			return true
+			t.Logf("failed accessing tcpecho by SNI %s at %s, err: %v", tlsRouteExtraHostname, proxyTLSURL, err)
+			return false
 		}
 		return true
 	}, ingressWait, waitTick)
@@ -288,25 +288,31 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Eventually(t, func() bool {
-		return tlsEchoResponds(proxyTLSURL, testUUID2, tlsRouteExtraHostname, certPool, true) != nil
+		if err := tlsEchoResponds(proxyTLSURL, testUUID2, tlsRouteExtraHostname, certPool, true); err != nil {
+			t.Logf("failed accessing tcpecho by SNI %s at %s as expected, err: %v", tlsRouteExtraHostname, proxyTLSURL, err)
+			return true
+		}
+		t.Logf("Still can access tcpecho by SNI %s at %s", tlsRouteExtraHostname, proxyTLSURL)
+		return false
 	}, ingressWait, waitTick)
 
 	t.Log("verifying that a Listener has the invalid ref status condition")
-	gateway, err = gatewayClient.GatewayV1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	invalid := false
-	for _, status := range gateway.Status.Listeners {
-		if ok := util.CheckCondition(
-			status.Conditions,
-			util.ConditionType(gatewayapi.ListenerConditionResolvedRefs),
-			util.ConditionReason(gatewayapi.ListenerReasonRefNotPermitted),
-			metav1.ConditionFalse,
-			gateway.Generation,
-		); ok {
-			invalid = true
+	require.Eventually(t, func() bool {
+		gateway, err = gatewayClient.GatewayV1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
+		require.NoError(t, err)
+		for _, status := range gateway.Status.Listeners {
+			if ok := util.CheckCondition(
+				status.Conditions,
+				util.ConditionType(gatewayapi.ListenerConditionResolvedRefs),
+				util.ConditionReason(gatewayapi.ListenerReasonRefNotPermitted),
+				metav1.ConditionFalse,
+				gateway.Generation,
+			); ok {
+				return true
+			}
 		}
-	}
-	require.True(t, invalid)
+		return false
+	}, ingressWait, waitTick)
 
 	t.Log("verifying the certificate returns when using a ReferenceGrant with no name restrictions")
 	grant.Spec.To[0].Name = nil

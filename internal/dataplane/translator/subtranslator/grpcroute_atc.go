@@ -16,67 +16,6 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
 
-// GenerateKongExpressionRoutesFromGRPCRouteRule generates expression based kong routes
-// from a single GRPCRouteRule.
-func GenerateKongExpressionRoutesFromGRPCRouteRule(grpcroute *gatewayapi.GRPCRoute, ruleNumber int) []kongstate.Route {
-	if ruleNumber >= len(grpcroute.Spec.Rules) {
-		return nil
-	}
-	rule := grpcroute.Spec.Rules[ruleNumber]
-
-	routes := make([]kongstate.Route, 0, len(rule.Matches))
-	// gather the k8s object information and hostnames from the grpcroute
-	ingressObjectInfo := util.FromK8sObject(grpcroute)
-
-	// generate a route to match hostnames only if there is no match in the rule.
-	if len(rule.Matches) == 0 {
-		routeName := fmt.Sprintf(
-			"grpcroute.%s.%s.%d.0",
-			grpcroute.Namespace,
-			grpcroute.Name,
-			ruleNumber,
-		)
-		r := kongstate.Route{
-			Ingress: ingressObjectInfo,
-			Route: kong.Route{
-				Name: kong.String(routeName),
-			},
-			ExpressionRoutes: true,
-		}
-		hostnames := getGRPCRouteHostnamesAsSliceOfStrings(grpcroute)
-		// assign an empty match to generate matchers by only hostnames and annotations.
-		matcher := generateMatcherFromGRPCMatch(gatewayapi.GRPCRouteMatch{}, hostnames, ingressObjectInfo.Annotations)
-		atc.ApplyExpression(&r.Route, matcher, 1)
-		return []kongstate.Route{r}
-	}
-
-	for matchNumber, match := range rule.Matches {
-		routeName := fmt.Sprintf(
-			"grpcroute.%s.%s.%d.%d",
-			grpcroute.Namespace,
-			grpcroute.Name,
-			ruleNumber,
-			matchNumber,
-		)
-
-		r := kongstate.Route{
-			Ingress: ingressObjectInfo,
-			Route: kong.Route{
-				Name: kong.String(routeName),
-			},
-			ExpressionRoutes: true,
-		}
-
-		hostnames := getGRPCRouteHostnamesAsSliceOfStrings(grpcroute)
-		matcher := generateMatcherFromGRPCMatch(match, hostnames, ingressObjectInfo.Annotations)
-
-		atc.ApplyExpression(&r.Route, matcher, 1)
-		routes = append(routes, r)
-	}
-
-	return routes
-}
-
 func generateMatcherFromGRPCMatch(match gatewayapi.GRPCRouteMatch, hostnames []string, metaAnnotations map[string]string) atc.Matcher {
 	routeMatcher := atc.And()
 
@@ -181,12 +120,6 @@ func headerMatcherFromGRPCHeaderMatches(headerMatches []gatewayapi.GRPCHeaderMat
 		matchers = append(matchers, headerMatcherFromHTTPHeaderMatch(httpHeaderMatch))
 	}
 	return atc.And(matchers...)
-}
-
-func getGRPCRouteHostnamesAsSliceOfStrings(grpcroute *gatewayapi.GRPCRoute) []string {
-	return lo.Map(grpcroute.Spec.Hostnames, func(h gatewayapi.Hostname, _ int) string {
-		return string(h)
-	})
 }
 
 // SplitGRPCRoute splits a GRPCRoute by hostname and match into multiple matches.

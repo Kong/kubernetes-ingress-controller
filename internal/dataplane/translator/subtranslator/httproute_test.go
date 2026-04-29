@@ -1769,10 +1769,7 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
 						Paths:        kong.StringSlice("~/foo$", "~/bar$", "~/baz$"),
 						PreserveHost: kong.Bool(true),
 						StripPath:    kong.Bool(false),
-						Protocols: []*string{
-							kong.String("http"),
-							kong.String("https"),
-						},
+						Protocols:    nil,
 						Tags: []*string{
 							kong.String("k8s-name:httproute-1"),
 							kong.String("k8s-namespace:default"),
@@ -1890,6 +1887,143 @@ func TestGenerateRequestRedirectUsingRedirectKongPlugin(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			require.Equal(t, tc.expectedKongPlugin, generateRequestRedirectUsingRedirectKongPlugin(tc.modifier))
+		})
+	}
+}
+
+func TestProtocolsFromHTTPRoutesGatewayListeners(t *testing.T) {
+	testCases := []struct {
+		name                 string
+		gateways             []*gatewayapi.Gateway
+		parentRefSectionName *gatewayapi.SectionName
+		expectedProtocols    []*string
+	}{
+		{
+			name: "gateway with only HTTP listener and no section name results in http protocol",
+			gateways: []*gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-gateway",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.GatewaySpec{
+						Listeners: []gatewayapi.Listener{
+							{
+								Name:     "http",
+								Protocol: gatewayapi.HTTPProtocolType,
+							},
+						},
+					},
+				},
+			},
+			parentRefSectionName: nil,
+			expectedProtocols:    kong.StringSlice("http"),
+		},
+		{
+			name: "gateway with only HTTPS listener and no section name results in https protocol",
+			gateways: []*gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-gateway",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.GatewaySpec{
+						Listeners: []gatewayapi.Listener{
+							{
+								Name:     "https",
+								Protocol: gatewayapi.HTTPSProtocolType,
+							},
+						},
+					},
+				},
+			},
+			parentRefSectionName: nil,
+			expectedProtocols:    kong.StringSlice("https"),
+		},
+		{
+			name: "gateway with both HTTP and HTTPS listeners and no section name results in both protocols",
+			gateways: []*gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-gateway",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.GatewaySpec{
+						Listeners: []gatewayapi.Listener{
+							{
+								Name:     "http",
+								Protocol: gatewayapi.HTTPProtocolType,
+							},
+							{
+								Name:     "https",
+								Protocol: gatewayapi.HTTPSProtocolType,
+							},
+						},
+					},
+				},
+			},
+			parentRefSectionName: nil,
+			expectedProtocols:    kong.StringSlice("http", "https"),
+		},
+		{
+			name: "gateway with both HTTP and HTTPS listeners and section name pointing to HTTP listener results in http protocol only",
+			gateways: []*gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "test-gateway",
+						Namespace: "default",
+					},
+					Spec: gatewayapi.GatewaySpec{
+						Listeners: []gatewayapi.Listener{
+							{
+								Name:     "http",
+								Protocol: gatewayapi.HTTPProtocolType,
+							},
+							{
+								Name:     "https",
+								Protocol: gatewayapi.HTTPSProtocolType,
+							},
+						},
+					},
+				},
+			},
+			parentRefSectionName: lo.ToPtr(gatewayapi.SectionName("http")),
+			expectedProtocols:    kong.StringSlice("http"),
+		},
+		{
+			name:                 "no matching gateway found falls back to https",
+			gateways:             nil,
+			parentRefSectionName: nil,
+			expectedProtocols:    nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fakeStore, err := store.NewFakeStore(store.FakeObjects{
+				Gateways: tc.gateways,
+			})
+			require.NoError(t, err)
+
+			route := &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "default",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
+							{
+								Name:        "test-gateway",
+								SectionName: tc.parentRefSectionName,
+							},
+						},
+					},
+				},
+			}
+
+			protocols := protocolsFromHTTPRoutesGatewayListeners(fakeStore, []*gatewayapi.HTTPRoute{route})
+			require.Equal(t, tc.expectedProtocols, protocols)
 		})
 	}
 }

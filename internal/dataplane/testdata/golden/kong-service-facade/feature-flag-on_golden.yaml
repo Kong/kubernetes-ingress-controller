@@ -35,9 +35,6 @@ services:
     paths:
     - /
     preserve_host: true
-    protocols:
-    - http
-    - https
     regex_priority: 0
     request_buffering: true
     response_buffering: true
@@ -72,9 +69,6 @@ services:
     paths:
     - ~/beta$
     preserve_host: true
-    protocols:
-    - http
-    - https
     regex_priority: 0
     request_buffering: true
     response_buffering: true
@@ -109,9 +103,6 @@ services:
     paths:
     - ~/alpha$
     preserve_host: true
-    protocols:
-    - http
-    - https
     regex_priority: 0
     request_buffering: true
     response_buffering: true

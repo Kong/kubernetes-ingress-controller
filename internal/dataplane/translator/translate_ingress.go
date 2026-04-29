@@ -257,12 +257,10 @@ func translateIngressDefaultBackendRoute(ingress *netv1.Ingress, tags []*string,
 	if expressionRoutes {
 		catchAllMatcher := atc.And(
 			atc.NewPredicateHTTPPath(atc.OpPrefixMatch, "/"),
-			atc.Or(atc.NewPredicateNetProtocol(atc.OpEqual, "http"), atc.NewPredicateNetProtocol(atc.OpEqual, "https")),
 		)
 		atc.ApplyExpression(&r.Route, catchAllMatcher, subtranslator.IngressDefaultBackendPriority)
 	} else {
 		r.Paths = kong.StringSlice("/")
-		r.Protocols = kong.StringSlice("http", "https")
 		r.RegexPriority = kong.Int(0)
 	}
 	return r

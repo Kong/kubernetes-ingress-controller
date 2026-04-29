@@ -28,8 +28,7 @@ services:
   read_timeout: 60000
   retries: 5
   routes:
-  - expression: (http.path ^= "/") && ((net.protocol == "http") || (net.protocol ==
-      "https"))
+  - expression: http.path ^= "/"
     https_redirect_status_code: 426
     id: 95255daa-88f8-504b-9098-9300d404c741
     name: default.beta

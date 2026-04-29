@@ -463,3 +463,141 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 		})
 	}
 }
+
+func TestGetProtocolsForKongRoute(t *testing.T) {
+	testCases := []struct {
+		name              string
+		parentRefs        []gatewayapi.ParentReference
+		gateways          []*gatewayapi.Gateway
+		expectedProtocols []*string
+	}{
+		{
+			name: "http listener returns grpc",
+			parentRefs: []gatewayapi.ParentReference{
+				{
+					Name: gatewayapi.ObjectName("gw-http"),
+				},
+			},
+			gateways: []*gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: "default",
+						Name:      "gw-http",
+					},
+					Spec: gatewayapi.GatewaySpec{
+						Listeners: []gatewayapi.Listener{
+							{
+								Name:     "http",
+								Protocol: gatewayapi.HTTPProtocolType,
+								Port:     80,
+							},
+						},
+					},
+				},
+			},
+			expectedProtocols: kong.StringSlice("grpc"),
+		},
+		{
+			name: "https listener returns grpcs",
+			parentRefs: []gatewayapi.ParentReference{
+				{
+					Name: gatewayapi.ObjectName("gw-https"),
+				},
+			},
+			gateways: []*gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-https"},
+					Spec: gatewayapi.GatewaySpec{
+						Listeners: []gatewayapi.Listener{
+							{
+								Name:     "https",
+								Protocol: gatewayapi.HTTPSProtocolType,
+								Port:     443,
+							},
+						},
+					},
+				},
+			},
+			expectedProtocols: kong.StringSlice("grpcs"),
+		},
+		{
+			name: "both listeners return grpc and grpcs",
+			parentRefs: []gatewayapi.ParentReference{
+				{
+					Name: gatewayapi.ObjectName("gw-both"),
+				},
+			},
+			gateways: []*gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-both"},
+					Spec: gatewayapi.GatewaySpec{
+						Listeners: []gatewayapi.Listener{
+							{
+								Name:     "http",
+								Protocol: gatewayapi.HTTPProtocolType,
+								Port:     80,
+							},
+							{
+								Name:     "https",
+								Protocol: gatewayapi.HTTPSProtocolType,
+								Port:     443,
+							},
+						},
+					},
+				},
+			},
+			expectedProtocols: kong.StringSlice("grpc", "grpcs"),
+		},
+		{
+			name: "missing gateway falls back to Kong Gateway default",
+			parentRefs: []gatewayapi.ParentReference{{
+				Name: gatewayapi.ObjectName("gw-missing"),
+			}},
+			expectedProtocols: nil,
+		},
+		{
+			name: "sectionName filters listener protocol",
+			parentRefs: []gatewayapi.ParentReference{{
+				Name:        gatewayapi.ObjectName("gw-section"),
+				SectionName: lo.ToPtr(gatewayapi.SectionName("https")),
+			}},
+			gateways: []*gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-section"},
+					Spec: gatewayapi.GatewaySpec{
+						Listeners: []gatewayapi.Listener{
+							{
+								Name:     "http",
+								Protocol: gatewayapi.HTTPProtocolType,
+								Port:     80,
+							},
+							{
+								Name:     "https",
+								Protocol: gatewayapi.HTTPSProtocolType,
+								Port:     443,
+							},
+						},
+					},
+				},
+			},
+			expectedProtocols: kong.StringSlice("grpcs"),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fakestore, err := store.NewFakeStore(store.FakeObjects{Gateways: tc.gateways})
+			require.NoError(t, err)
+
+			translator := mustNewTranslator(t, fakestore)
+			grpcRoute := &gatewayapi.GRPCRoute{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "grpcroute"},
+				Spec: gatewayapi.GRPCRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{ParentRefs: tc.parentRefs},
+				},
+			}
+
+			require.Equal(t, tc.expectedProtocols, translator.getProtocolsForKongRoute(grpcRoute))
+		})
+	}
+}

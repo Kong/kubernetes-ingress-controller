@@ -117,6 +117,7 @@ func TestUpgradeKICWithExistingPlugins(t *testing.T) {
 					echoPath, map[string]string{
 						"konghq.com/plugins": pluginName,
 					}, service)
+				ingress.Annotations["konghq.com/protocols"] = "http"
 				ingress.Spec.IngressClassName = lo.ToPtr(GetIngressClassFromCtx(ctx))
 				ingress, err = cluster.Client().NetworkingV1().Ingresses(namespace).Create(ctx, ingress, metav1.CreateOptions{})
 				assert.NoError(t, err)
@@ -134,9 +135,11 @@ func TestUpgradeKICWithExistingPlugins(t *testing.T) {
 					proxyURL.Host, echoPath)
 				helpers.EventuallyGETPath(
 					t, proxyURL,
-					proxyURL.Host,
+					proxyURL.String(),
 					echoPath,
-					nil,
+					&helpers.HTTPSOptions{
+						InsecureSkipVerify: true,
+					},
 					http.StatusOK,
 					testUUID.String(),
 					nil,
@@ -251,9 +254,11 @@ func TestUpgradeKICWithExistingPlugins(t *testing.T) {
 				proxyURL.Host, echoPath)
 			helpers.EventuallyGETPath(
 				t, proxyURL,
-				proxyURL.Host,
+				proxyURL.String(),
 				echoPath,
-				nil,
+				&helpers.HTTPSOptions{
+					InsecureSkipVerify: true,
+				},
 				http.StatusOK,
 				testUUID.String(),
 				nil,

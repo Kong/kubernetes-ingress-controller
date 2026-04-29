@@ -361,7 +361,7 @@ func TestGetDefaultBackendService(t *testing.T) {
 				require.Len(t, svc.Routes, 1)
 				route := svc.Routes[0]
 				if tc.featureFlags.ExpressionRoutes {
-					require.Equal(t, `(http.path ^= "/") && ((net.protocol == "http") || (net.protocol == "https"))`, *route.Expression)
+					require.Equal(t, `http.path ^= "/"`, *route.Expression)
 					require.Equal(t, subtranslator.IngressDefaultBackendPriority, *route.Priority)
 				} else {
 					require.Len(t, route.Paths, 1)

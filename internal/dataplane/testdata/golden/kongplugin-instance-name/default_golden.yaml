@@ -54,9 +54,6 @@ services:
     paths:
     - /httpbin
     preserve_host: true
-    protocols:
-    - http
-    - https
     regex_priority: 0
     request_buffering: true
     response_buffering: true
@@ -74,9 +71,6 @@ services:
     paths:
     - /httpbin-diff
     preserve_host: true
-    protocols:
-    - http
-    - https
     regex_priority: 0
     request_buffering: true
     response_buffering: true
@@ -110,9 +104,6 @@ services:
     paths:
     - /httpbin-other
     preserve_host: true
-    protocols:
-    - http
-    - https
     regex_priority: 0
     request_buffering: true
     response_buffering: true

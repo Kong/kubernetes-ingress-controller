@@ -125,6 +125,8 @@ Adding a new version? You'll need three changes:
   - For `HTTPRoute`, protocol now matches the attached Gateway listener protocol (and when `parentRef.sectionName` is set, it must match that specific listener). When `parentRef.sectionName` is not specified it binds to all `Gateway`s listeners.
   - For `Ingress`, default protocol relies on Kong Gateway, can be set explicitly via `konghq.com/protocols: "http"` (or `https`)
     annotation on particular `Ingress`.
+- Sanitize the plugin configuration when `--dump-sensitive-config` isn't set.
+  [#7912](https://github.com/Kong/kubernetes-ingress-controller/pull/7912)
 
 ## [3.4.13]
 

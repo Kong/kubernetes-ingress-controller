@@ -111,7 +111,7 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 				Upstreams:      []Upstream{{Upstream: kong.Upstream{ID: kong.String("1")}}},
 				Certificates:   []Certificate{{Certificate: kong.Certificate{ID: kong.String("1"), Key: redactedString}}},
 				CACertificates: []kong.CACertificate{{ID: kong.String("1")}},
-				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: kong.String("1"), Config: map[string]interface{}{"key": "secret"}}}}, // We don't redact plugins' config.
+				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: kong.String("1"), Config: map[string]any{"key": "{REDACTED}"}}}},
 				Consumers: []Consumer{
 					{
 						KeyAuths: []*KeyAuth{

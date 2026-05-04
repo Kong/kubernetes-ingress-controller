@@ -765,3 +765,158 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 		})
 	}
 }
+
+func TestPluginSanitizedCopy(t *testing.T) {
+	parent := &configurationv1.KongPlugin{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "plugin-parent",
+			Namespace: "default",
+		},
+	}
+
+	tests := []struct {
+		name      string
+		in        Plugin
+		want      Plugin
+		postCheck func(t *testing.T, in Plugin, got Plugin)
+	}{
+		{
+			name: "redacts all top level config values and preserves other fields",
+			in: Plugin{
+				Plugin: kong.Plugin{
+					ID:           kong.String("plugin-id"),
+					Name:         kong.String("rate-limiting"),
+					InstanceName: kong.String("instance-name"),
+					RunOn:        kong.String("first"),
+					Enabled:      kong.Bool(false),
+					Protocols:    kong.StringSlice("http", "https"),
+					Tags:         []*string{kong.String("tag-1"), kong.String("tag-2")},
+					Ordering: &kong.PluginOrdering{
+						Before: map[string][]string{
+							"access": {"key-auth"},
+						},
+					},
+					Config: kong.Configuration{
+						"string":  "secret",
+						"number":  123,
+						"boolean": true,
+						"object": map[string]any{
+							"nested": "secret",
+						},
+						"array": []any{"first", "second"},
+						"null":  nil,
+					},
+				},
+				K8sParent: parent,
+			},
+			want: Plugin{
+				Plugin: kong.Plugin{
+					ID:           kong.String("plugin-id"),
+					Name:         kong.String("rate-limiting"),
+					InstanceName: kong.String("instance-name"),
+					RunOn:        kong.String("first"),
+					Enabled:      kong.Bool(false),
+					Protocols:    kong.StringSlice("http", "https"),
+					Tags:         []*string{kong.String("tag-1"), kong.String("tag-2")},
+					Ordering: &kong.PluginOrdering{
+						Before: map[string][]string{
+							"access": {"key-auth"},
+						},
+					},
+					Config: kong.Configuration{
+						"string":  "{REDACTED}",
+						"number":  "{REDACTED}",
+						"boolean": "{REDACTED}",
+						"object":  "{REDACTED}",
+						"array":   "{REDACTED}",
+						"null":    "{REDACTED}",
+					},
+				},
+				K8sParent: parent,
+			},
+			postCheck: func(t *testing.T, in Plugin, got Plugin) {
+				assert.Equal(t, "secret", in.Config["string"])
+				assert.Equal(t, 123, in.Config["number"])
+				assert.Equal(t, true, in.Config["boolean"])
+				assert.Equal(t, map[string]any{"nested": "secret"}, in.Config["object"])
+				assert.Equal(t, []any{"first", "second"}, in.Config["array"])
+				assert.Nil(t, in.Config["null"])
+				assert.Same(t, in.K8sParent, got.K8sParent)
+			},
+		},
+		{
+			name: "keeps nil config nil",
+			in: Plugin{
+				Plugin: kong.Plugin{
+					Name: kong.String("key-auth"),
+				},
+			},
+			want: Plugin{
+				Plugin: kong.Plugin{
+					Name: kong.String("key-auth"),
+				},
+			},
+			postCheck: func(t *testing.T, in Plugin, got Plugin) {
+				assert.Nil(t, in.Config)
+				assert.Nil(t, got.Config)
+			},
+		},
+		{
+			name: "returns an isolated config map copy",
+			in: Plugin{
+				Plugin: kong.Plugin{
+					Name: kong.String("request-transformer"),
+					Config: kong.Configuration{
+						"add": "sensitive",
+					},
+				},
+			},
+			want: Plugin{
+				Plugin: kong.Plugin{
+					Name: kong.String("request-transformer"),
+					Config: kong.Configuration{
+						"add": "{REDACTED}",
+					},
+				},
+			},
+			postCheck: func(t *testing.T, in Plugin, got Plugin) {
+				got.Config["add"] = "changed"
+				got.Config["new"] = "new-value"
+				assert.Equal(t, "sensitive", in.Config["add"])
+				_, exists := in.Config["new"]
+				assert.False(t, exists)
+			},
+		},
+		{
+			name: "keeps empty config empty",
+			in: Plugin{
+				Plugin: kong.Plugin{
+					Name:   kong.String("cors"),
+					Config: kong.Configuration{},
+				},
+			},
+			want: Plugin{
+				Plugin: kong.Plugin{
+					Name:   kong.String("cors"),
+					Config: kong.Configuration{},
+				},
+			},
+			postCheck: func(t *testing.T, in Plugin, got Plugin) {
+				assert.Empty(t, in.Config)
+				assert.Empty(t, got.Config)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := tt.in.SanitizedCopy()
+
+			assert.Equal(t, tt.want, got)
+
+			if tt.postCheck != nil {
+				tt.postCheck(t, tt.in, got)
+			}
+		})
+	}
+}

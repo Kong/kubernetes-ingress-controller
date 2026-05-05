@@ -62,7 +62,14 @@ func (ks *KongState) SanitizedCopy(uuidGenerator util.UUIDGenerator) *KongState 
 			})
 		}(),
 		CACertificates: ks.CACertificates,
-		Plugins:        ks.Plugins,
+		Plugins: func() []Plugin {
+			if ks.Plugins == nil {
+				return nil
+			}
+			return lo.Map(ks.Plugins, func(p Plugin, _ int) Plugin {
+				return p.SanitizedCopy()
+			})
+		}(),
 		Consumers: func() []Consumer {
 			if ks.Consumers == nil {
 				return nil

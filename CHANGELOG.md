@@ -127,6 +127,9 @@ Adding a new version? You'll need three changes:
     annotation on particular `Ingress`.
 - Sanitize the plugin configuration when `--dump-sensitive-config` isn't set.
   [#7912](https://github.com/Kong/kubernetes-ingress-controller/pull/7912)
+    [#7901](https://github.com/Kong/kubernetes-ingress-controller/pull/7901)
+- More robust validation for `HTTPRoute`, when an unsupported feature is used, and the route refers to existing and non-existing `Gateway`, it will be rejected.
+  [#7913](https://github.com/Kong/kubernetes-ingress-controller/pull/7913)
 
 ## [3.4.13]
 

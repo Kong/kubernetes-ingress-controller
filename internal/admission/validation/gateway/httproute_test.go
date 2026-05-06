@@ -952,6 +952,47 @@ func TestValidateHTTPRoute(t *testing.T) {
 			},
 			valid: true,
 		},
+		{
+			msg: "HTTPRoute with unsupported filter when reference both existing and non-existing gateway should be rejected",
+			cachedObjects: []client.Object{
+				gatewayClass,
+				&gatewayapi.Gateway{
+					ObjectMeta: metav1.ObjectMeta{
+						Namespace: corev1.NamespaceDefault,
+						Name:      "existing-managed-gateway",
+					},
+					Spec: gatewayapi.GatewaySpec{GatewayClassName: gatewayClassName},
+				},
+			},
+			route: &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: corev1.NamespaceDefault,
+					Name:      "example-route",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
+							{
+								Name:      "non-existent-gateway",
+								Namespace: lo.ToPtr(gatewayapi.Namespace(corev1.NamespaceDefault)),
+							},
+							{
+								Name:      "existing-managed-gateway",
+								Namespace: lo.ToPtr(gatewayapi.Namespace(corev1.NamespaceDefault)),
+							},
+						},
+					},
+					Rules: []gatewayapi.HTTPRouteRule{{
+						Filters: []gatewayapi.HTTPRouteFilter{{
+							// RequestMirror is explicitly unsupported — should be rejected.
+							Type: gatewayapi.HTTPRouteFilterRequestMirror,
+						}},
+					}},
+				},
+			},
+			valid:         false,
+			validationMsg: "HTTPRoute spec did not pass validation: rules[0].filters[0]: filter type RequestMirror is unsupported",
+		},
 	} {
 		t.Run(tt.msg, func(t *testing.T) {
 			fakeClient := fakeclient.

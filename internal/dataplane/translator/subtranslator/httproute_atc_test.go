@@ -1062,10 +1062,10 @@ func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
 		priority              RoutePriorityType
 		supportRedirectPlugin bool
 
-		hasError       bool
-		routeName      string
-		routeExpresion string
-		tags           []string
+		hasError        bool
+		routeName       string
+		routeExpression string
+		tags            []string
 	}{
 		{
 			name: "exact path match without hostname",
@@ -1087,8 +1087,8 @@ func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
 			matchIndex: 0,
 			priority:   RoutePriorityType(1024),
 
-			routeName:      "httproute.default.exact-path-match._.0.0",
-			routeExpresion: `http.path == "/foo"`,
+			routeName:       "httproute.default.exact-path-match._.0.0",
+			routeExpression: `http.path == "/foo"`,
 			tags: []string{
 				"k8s-name:exact-path-match",
 				"k8s-namespace:default",
@@ -1116,8 +1116,8 @@ func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
 			matchIndex: 0,
 			priority:   RoutePriorityType(2048),
 
-			routeName:      "httproute.default.prefix-path-match-with-hostname.foo.com.0.0",
-			routeExpresion: `(http.host == "foo.com") && ((http.path == "/foo") || (http.path ^= "/foo/"))`,
+			routeName:       "httproute.default.prefix-path-match-with-hostname.foo.com.0.0",
+			routeExpression: `(http.host == "foo.com") && ((http.path == "/foo") || (http.path ^= "/foo/"))`,
 			tags: []string{
 				"k8s-name:prefix-path-match-with-hostname",
 				"k8s-namespace:default",
@@ -1156,8 +1156,8 @@ func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
 			matchIndex: 0,
 			priority:   RoutePriorityType(2048),
 
-			routeName:      "httproute.default.prefix-path-match-with-url-rewrite.foo.com.0.0",
-			routeExpresion: `(http.host == "foo.com") && ((http.path == "/foo") || (http.path ~ "^/foo(/.*)"))`,
+			routeName:       "httproute.default.prefix-path-match-with-url-rewrite.foo.com.0.0",
+			routeExpression: `(http.host == "foo.com") && ((http.path == "/foo") || (http.path ~ "^/foo(/.*)"))`,
 			tags: []string{
 				"k8s-name:prefix-path-match-with-url-rewrite",
 				"k8s-namespace:default",
@@ -1187,8 +1187,8 @@ func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
 			matchIndex: 0,
 			priority:   RoutePriorityType(1024),
 
-			routeName:      "httproute.default.regex-path-match-with-sni._.0.0",
-			routeExpresion: `(tls.sni == "foo.com") && (http.path ~ "^/users/[a-z0-9]+")`,
+			routeName:       "httproute.default.regex-path-match-with-sni._.0.0",
+			routeExpression: `(tls.sni == "foo.com") && (http.path ~ "^/users/[a-z0-9]+")`,
 			tags: []string{
 				"k8s-name:regex-path-match-with-sni",
 				"k8s-namespace:default",
@@ -1210,7 +1210,9 @@ func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
 				Priority: tc.priority,
 			}
 
-			route, err := kongExpressionRouteFromHTTPRouteMatchWithPriority(matchWithPriority, tc.supportRedirectPlugin)
+			route, err := kongExpressionRouteFromHTTPRouteMatchWithPriority(matchWithPriority, TranslateHTTPRouteRulesToKongRouteOptions{
+				SupportRedirectPlugin: tc.supportRedirectPlugin,
+			})
 			if tc.hasError {
 				require.Error(t, err)
 				return
@@ -1219,7 +1221,7 @@ func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, tc.routeName, *route.Name, "Should have expected route name")
 			require.True(t, route.ExpressionRoutes, "Should be expression route")
-			require.Equal(t, tc.routeExpresion, *route.Expression, "Should translate to expected expression")
+			require.Equal(t, tc.routeExpression, *route.Expression, "Should translate to expected expression")
 			require.Equal(t, tc.priority, *route.Priority, "Should have expected priority")
 			require.ElementsMatch(t, tc.tags, lo.FromSlicePtr(route.Tags), "Tags should be the same")
 		})

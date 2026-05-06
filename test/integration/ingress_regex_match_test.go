@@ -126,13 +126,18 @@ func TestIngressRegexMatchPath(t *testing.T) {
 				require.NoError(t, err)
 			}()
 
+			proxyURL := proxyHTTPURL
+			if isKongGatewayVersionAtLeast3_14() {
+				proxyURL = proxyHTTPSURL
+			}
+
 			t.Log("testing paths expected to match")
 			for _, path := range tc.matchPaths {
-				helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, path, nil, http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
+				helpers.EventuallyGETPath(t, proxyURL, proxyURL.String(), path, &helpers.HTTPSOptions{InsecureSkipVerify: true}, http.StatusOK, "<title>httpbin.org</title>", nil, ingressWait, waitTick)
 			}
 			t.Log("testing paths expected not to match")
 			for _, path := range tc.notMatchPaths {
-				helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPURL, proxyHTTPURL.Host, path, ingressWait, waitTick, nil)
+				helpers.EventuallyGETPath(t, proxyURL, proxyURL.String(), path, &helpers.HTTPSOptions{InsecureSkipVerify: true}, http.StatusNotFound, "no Route matched with those values", nil, ingressWait, waitTick)
 			}
 		})
 	}
@@ -218,14 +223,19 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 				require.NoError(t, err)
 			}()
 
+			proxyURL := proxyHTTPURL
+			if isKongGatewayVersionAtLeast3_14() {
+				proxyURL = proxyHTTPSURL
+			}
+
 			t.Log("testing headers expected to match")
 			for _, header := range tc.matchHeaders {
 				helpers.EventuallyGETPath(
 					t,
-					proxyHTTPURL,
-					proxyHTTPURL.Host,
+					proxyURL,
+					proxyURL.String(),
 					"/",
-					nil,
+					&helpers.HTTPSOptions{InsecureSkipVerify: true},
 					http.StatusOK,
 					"<title>httpbin.org</title>",
 					map[string]string{matchHeaderKey: header},
@@ -238,9 +248,10 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 			for _, header := range tc.notMatchHeaders {
 				helpers.EventuallyExpectHTTP404WithNoRoute(
 					t,
-					proxyHTTPURL,
-					proxyHTTPURL.Host,
+					proxyURL,
+					proxyURL.String(),
 					"/",
+					&helpers.HTTPSOptions{InsecureSkipVerify: true},
 					ingressWait,
 					waitTick,
 					map[string]string{matchHeaderKey: header},

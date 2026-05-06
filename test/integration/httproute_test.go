@@ -648,13 +648,18 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 	require.Error(t, testGetByHost(t, "another2.specific.io"))
 
 	t.Logf("update hostname in httproute to an unmatched host")
-	httpRoute, err = hClient.Get(ctx, httpRoute.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	httpRoute.Spec.Hostnames = []gatewayapi.Hostname{
-		gatewayapi.Hostname("another.specific.io"),
-	}
-	httpRoute, err = hClient.Update(ctx, httpRoute, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		httpRoute, err = hClient.Get(ctx, httpRoute.Name, metav1.GetOptions{})
+		if !assert.NoErrorf(t, err, "failed getting the HTTPRoute %s", httpRoute.Name) {
+			return
+		}
+		httpRoute.Spec.Hostnames = []gatewayapi.Hostname{
+			gatewayapi.Hostname("another.specific.io"),
+		}
+		httpRoute, err = hClient.Update(ctx, httpRoute, metav1.UpdateOptions{})
+		assert.NoErrorf(c, err, "failed updating the HTTPRoute %s", httpRoute.Name)
+	}, test.RequestTimeout, 100*time.Millisecond)
+
 	t.Logf("status of httproute should contain an 'Accepted' condition with 'False' status")
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		currentHTTPRoute, err := hClient.Get(ctx, httpRoute.Name, metav1.GetOptions{})

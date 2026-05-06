@@ -360,15 +360,17 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 			return ctx
 		}).
 		Assess("KongServiceFacades annotations work", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-			proxyURL := GetHTTPURLFromCtx(ctx)
+			proxyURL := GetHTTPSURLFromCtx(ctx)
 			expectContent := func(path, expectedMagicNumber string) {
 				t.Logf("asserting %s path returns expected image", path)
 				helpers.EventuallyGETPath(
 					t,
 					proxyURL,
-					proxyURL.Host,
+					proxyURL.String(),
 					path,
-					nil,
+					&helpers.HTTPSOptions{
+						InsecureSkipVerify: true,
+					},
 					http.StatusOK,
 					expectedMagicNumber,
 					nil,

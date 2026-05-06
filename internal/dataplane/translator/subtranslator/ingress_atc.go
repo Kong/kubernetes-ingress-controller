@@ -44,6 +44,7 @@ func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() *kongstate.R
 			Name:              kong.String(routeName),
 			StripPath:         kong.Bool(false),
 			PreserveHost:      kong.Bool(true),
+			Protocols:         ingressRouteProtocols(m.parentIngress.GetAnnotations()),
 			RequestBuffering:  kong.Bool(true),
 			ResponseBuffering: kong.Bool(true),
 			Tags:              m.ingressTags,

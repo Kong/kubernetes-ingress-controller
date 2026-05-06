@@ -105,7 +105,7 @@ func ensureHTTPRouteIsManagedByController(ctx context.Context, httproute *gatewa
 			Name:      string(parentRef.Name),
 		}, &gateway); err != nil {
 			if apierrors.IsNotFound(err) {
-				return false, nil
+				continue
 			}
 			return false, fmt.Errorf("failed to get Gateway: %w", err)
 		}

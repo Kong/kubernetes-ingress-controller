@@ -24,6 +24,7 @@ import (
 var commonSkippedTests = []string{
 	// Temporarily skipped due to update of GRPC client package
 	// causing failures in gRPC conformance tests.
+	// TODO: Re-enable these tests https://github.com/Kong/kubernetes-ingress-controller/issues/7919
 	tests.GRPCRouteHeaderMatching.ShortName,
 	tests.GRPCExactMethodMatching.ShortName,
 	tests.GRPCRouteListenerHostnameMatching.ShortName,

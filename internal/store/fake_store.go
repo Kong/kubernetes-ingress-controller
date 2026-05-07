@@ -124,6 +124,12 @@ func NewFakeStore(
 			return nil, err
 		}
 	}
+	gatewayClassStore := cache.NewStore(clusterWideKeyFunc)
+	for _, gwc := range objects.GatewayClasses {
+		if err := gatewayClassStore.Add(gwc); err != nil {
+			return nil, err
+		}
+	}
 	gatewayStore := cache.NewStore(namespacedKeyFunc)
 	for _, gw := range objects.Gateways {
 		if err := gatewayStore.Add(gw); err != nil {
@@ -250,6 +256,7 @@ func NewFakeStore(
 			GRPCRoute:                      grpcrouteStore,
 			ReferenceGrant:                 referencegrantStore,
 			Gateway:                        gatewayStore,
+			GatewayClass:                   gatewayClassStore,
 			BackendTLSPolicy:               backendTLSPolicyStore,
 			TCPIngress:                     tcpIngressStore,
 			UDPIngress:                     udpIngressStore,

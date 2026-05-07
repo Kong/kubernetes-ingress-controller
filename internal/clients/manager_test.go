@@ -418,8 +418,10 @@ func TestAdminAPIClientsManager_GatewayClientsChanges(t *testing.T) {
 
 	// Notify the first set of clients and make sure that the subscriber doesn't get notified as it was initial state.
 	m.Notify(ctx, firstClientsSet)
+	// Use Eventually because notificationsCountEventuallyEquals(0) returns immediately (count is already 0),
+	// so the manager goroutine may not have finished calling CheckReadiness yet.
+	require.Eventually(t, func() bool { return readinessChecker.CallsCount() == 1 }, time.Second, time.Millisecond, "expected readiness check on non-empty set of clients")
 	notificationsCountEventuallyEquals(0)
-	require.Equal(t, 1, readinessChecker.CallsCount(), "expected readiness check on non-empty set of clients")
 	requireLastReadinessCheckCall(readinessCheckCall{
 		AlreadyCreatedURLs: []string{testURL1},
 		PendingURLs:        []string{},
@@ -437,12 +439,14 @@ func TestAdminAPIClientsManager_GatewayClientsChanges(t *testing.T) {
 
 	// Notify the second set of clients without making the new one ready and make sure that the subscriber gets no notification.
 	m.Notify(ctx, secondClientsSet)
+	// Use Eventually because notificationsCountEventuallyEquals(1) returns immediately (count is already 1),
+	// so the manager goroutine may not have finished calling CheckReadiness yet.
+	require.Eventually(t, func() bool { return readinessChecker.CallsCount() == 2 }, time.Second, time.Millisecond, "expected readiness check on non-empty set of clients")
 	notificationsCountEventuallyEquals(1)
 	requireLastReadinessCheckCall(readinessCheckCall{
 		AlreadyCreatedURLs: []string{},
 		PendingURLs:        []string{testURL2},
 	})
-	require.Equal(t, 2, readinessChecker.CallsCount(), "expected readiness check on non-empty set of clients")
 
 	// Notify the second set of clients and make sure that the subscriber gets notified after the new one becomes ready.
 	readinessChecker.LetChecksReturn(clients.ReadinessCheckResult{ClientsTurnedReady: intoTurnedReady(testURL2)})

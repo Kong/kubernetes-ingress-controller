@@ -130,6 +130,8 @@ Adding a new version? You'll need three changes:
     [#7901](https://github.com/Kong/kubernetes-ingress-controller/pull/7901)
 - More robust validation for `HTTPRoute`, when an unsupported feature is used, and the route refers to existing and non-existing `Gateway`, it will be rejected.
   [#7913](https://github.com/Kong/kubernetes-ingress-controller/pull/7913)
+- implement `ReferenceGrant` checks for cross-namespace certificate references (managed and unmanaged gateways)
+  [#7920](https://github.com/Kong/kubernetes-ingress-controller/pull/7920)
 
 ## [3.4.13]
 

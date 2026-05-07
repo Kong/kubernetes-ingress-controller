@@ -115,6 +115,43 @@ func (t *Translator) getGatewayCerts() []certWrapper {
 						namespace = string(*ref.Namespace)
 					}
 
+					// check reference grant before translating certificate
+					// if the certificate is in the same namespace of the gateway, no ReferenceGrant is needed
+					// the check about if listener is marked as programmed happens only for "unmanaged" gateways, see above
+					// https://github.com/Kong/kubernetes-ingress-controller/pull/7666
+					if ref.Namespace != nil && string(*ref.Namespace) != gateway.Namespace {
+						referenceGrants, err := s.ListReferenceGrants()
+						if err != nil {
+							logger.Error(err, "Failed to list ReferenceGrants, skipping cross-namespace certificateRef",
+								"gateway", gateway.Name,
+								"listener", listener.Name,
+								"secret_namespace", string(*ref.Namespace),
+								"secret_name", string(ref.Name),
+							)
+							continue
+						}
+
+						allowedRefs := gatewayapi.GetPermittedForReferenceGrantFrom(
+							logger,
+							gatewayapi.ReferenceGrantFrom{
+								Group:     gatewayapi.V1Group,
+								Kind:      "Gateway",
+								Namespace: gatewayapi.Namespace(gateway.Namespace),
+							},
+							referenceGrants,
+						)
+
+						if !gatewayapi.NewRefCheckerForRoute(logger, gateway, ref).IsRefAllowedByGrant(allowedRefs) {
+							logger.Error(nil, "Cross-namespace certificateRef not permitted by ReferenceGrant, skipping",
+								"gateway", gateway.Name,
+								"listener", listener.Name,
+								"secret_namespace", string(*ref.Namespace),
+								"secret_name", string(ref.Name),
+							)
+							continue
+						}
+					}
+
 					// retrieve the Secret and extract the PEM strings
 					secret, err := s.GetSecret(namespace, string(ref.Name))
 					if err != nil {

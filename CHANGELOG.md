@@ -8,6 +8,7 @@ Adding a new version? You'll need three changes:
   This is all the way at the bottom. It's the thing we always forget.
 --->
 
+- [3.5.7](#357)
 - [3.5.6](#356)
 - [3.5.5](#355)
 - [3.5.4](#354)
@@ -15,6 +16,7 @@ Adding a new version? You'll need three changes:
 - [3.5.2](#352)
 - [3.5.1](#351)
 - [3.5.0](#350)
+- [3.4.14](#3414)
 - [3.4.13](#3413)
 - [3.4.12](#3412)
 - [3.4.11](#3411)
@@ -122,9 +124,9 @@ Adding a new version? You'll need three changes:
 - [0.0.5](#005)
 - [0.0.4 and prior](#004-and-prior)
 
-## Unreleased
+## [3.5.7]
 
-> Release date: TBD
+> Release date: 2026-05-11
 
 ### Fixed
 
@@ -139,7 +141,7 @@ Adding a new version? You'll need three changes:
     [#7901](https://github.com/Kong/kubernetes-ingress-controller/pull/7901)
 - More robust validation for `HTTPRoute`, when an unsupported feature is used, and the route refers to existing and non-existing `Gateway`, it will be rejected.
   [#7913](https://github.com/Kong/kubernetes-ingress-controller/pull/7913)
-- implement `ReferenceGrant` checks for cross-namespace certificate references (managed and unmanaged gateways)
+- Implement `ReferenceGrant` checks for cross-namespace certificate references (managed and unmanaged gateways).
   [#7920](https://github.com/Kong/kubernetes-ingress-controller/pull/7920)
 
 ### Changed
@@ -289,6 +291,31 @@ Adding a new version? You'll need three changes:
   can be used for both hash_on (always) and hash_fallack (when primary hashing
   source is different than cookie).
   [#7582](https://github.com/Kong/kubernetes-ingress-controller/pull/7582)
+
+## [3.4.14]
+
+> Release date: 2026-05-11
+
+### Fixed
+
+- **Changed (potentially breaking):** As part of our secure-by-default initiative, everything out of the box relies on
+  defaults from Kong Gateway. It may break existing configurations that relied on previous implicit protocol behavior
+  (access via http will result `426` status code.), when version of Kong Gateway will change.
+  - For `HTTPRoute`, protocol now matches the attached Gateway listener protocol (and when `parentRef.sectionName` is set, it must match that specific listener). When `parentRef.sectionName` is not specified it binds to all `Gateway`s listeners.
+  - For `Ingress`, default protocol relies on Kong Gateway, can be set explicitly via `konghq.com/protocols: "http"` (or `https`)
+    annotation on particular `Ingress`.
+- Sanitize the plugin configuration when `--dump-sensitive-config` isn't set.
+  [#7912](https://github.com/Kong/kubernetes-ingress-controller/pull/7912)
+    [#7901](https://github.com/Kong/kubernetes-ingress-controller/pull/7901)
+- More robust validation for `HTTPRoute`, when an unsupported feature is used, and the route refers to existing and non-existing `Gateway`, it will be rejected.
+  [#7913](https://github.com/Kong/kubernetes-ingress-controller/pull/7913)
+- Implement `ReferenceGrant` checks for cross-namespace certificate references (managed and unmanaged gateways).
+  [#7920](https://github.com/Kong/kubernetes-ingress-controller/pull/7920)
+
+### Changed
+
+- Bump Go to 1.25.10
+  [#7924](https://github.com/Kong/kubernetes-ingress-controller/pull/7924)
 
 ## [3.4.13]
 
@@ -4371,6 +4398,7 @@ Please read the changelog and test in your environment.
 - The initial versions were rapildy iterated to deliver
   a working ingress controller.
 
+[3.5.7]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.6...v3.5.7
 [3.5.6]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.5...v3.5.6
 [3.5.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.4...v3.5.5
 [3.5.4]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.3...v3.5.4
@@ -4378,6 +4406,7 @@ Please read the changelog and test in your environment.
 [3.5.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.1...v3.5.2
 [3.5.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.0...v3.5.1
 [3.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.7...v3.5.0
+[3.4.14]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.13...v3.4.14
 [3.4.13]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.12...v3.4.13
 [3.4.12]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.11...v3.4.12
 [3.4.11]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.10...v3.4.11

@@ -134,6 +134,11 @@ Adding a new version? You'll need three changes:
 - implement `ReferenceGrant` checks for cross-namespace certificate references (managed and unmanaged gateways)
   [#7920](https://github.com/Kong/kubernetes-ingress-controller/pull/7920)
 
+### Changed
+
+- Bump Go to 1.25.10
+  [#7924](https://github.com/Kong/kubernetes-ingress-controller/pull/7924)
+
 ## [3.5.6]
 
 > Release date: 2026-03-31

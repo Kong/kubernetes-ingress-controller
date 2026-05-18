@@ -459,6 +459,7 @@ func TestDefaultIngressClass(t *testing.T) {
 	t.Logf("creating a classless ingress for service %s", service.Name)
 	ingress := generators.NewIngressForService("/abbosiysaltanati", map[string]string{
 		annotations.AnnotationPrefix + annotations.StripPathKey: "true",
+		annotations.AnnotationPrefix + annotations.ProtocolsKey: "http",
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), kongDeployment.Namespace, ingress))
 

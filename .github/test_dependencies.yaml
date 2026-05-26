@@ -1,15 +1,15 @@
 e2e:
   kind:
     # renovate: datasource=docker depName=kindest/node versioning=docker
-    - 'v1.33.2'
+    - 'v1.35.1'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.32.5'
+    - 'v1.34.3'
+    # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
+    - 'v1.33.7'
+    # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
+    - 'v1.32.11'
     # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
     - 'v1.31.14'
-    # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.30.13'
-    # renovate: datasource=docker depName=kindest/node@only-patch packageName=kindest/node versioning=docker
-    - 'v1.29.14'
   gke:
     # renovate: datasource=custom.gke-rapid depName=gke versioning=semver
     - '1.35.3'
@@ -18,31 +18,31 @@ e2e:
   # used directly in the test matrix `include` section.
   istio:
     - # renovate: datasource=docker depName=kindest/node versioning=docker
-      kind: 'v1.33.2'
+      kind: 'v1.35.1'
       # renovate: datasource=docker depName=istio/istioctl versioning=docker
-      istio: '1.26.2'
+      istio: '1.30.0'
     - # renovate: datasource=docker depName=kindest/node@only-patch versioning=docker
-      kind: 'v1.30.8'
+      kind: 'v1.34.3'
       # renovate: datasource=docker depName=istio/istioctl@only-patch versioning=docker
-      istio: '1.23.3'
+      istio: '1.29.3'
     - # renovate: datasource=docker depName=kindest/node@only-patch versioning=docker
-      kind: 'v1.30.8'
+      kind: 'v1.33.7'
       # renovate: datasource=docker depName=istio/istioctl@only-patch versioning=docker
-      istio: '1.22.3'
+      istio: '1.28.7'
     - # renovate: datasource=docker depName=kindest/node@only-patch versioning=docker
-      kind: 'v1.29.12'
+      kind: 'v1.32.11'
       # renovate: datasource=docker depName=istio/istioctl@only-patch versioning=docker
-      istio: '1.21.2'
+      istio: '1.27.9'
 
   # renovate: datasource=helm depName=kuma registryUrl=https://kumahq.github.io/charts versioning=helm
-  kuma: '2.11.2'
+  kuma: '2.13.6'
 
 integration:
   helm:
     # renovate: datasource=helm depName=kong registryUrl=https://charts.konghq.com versioning=helm
     kong: '2.51.0'
   # renovate: datasource=docker depName=kindest/node versioning=docker
-  kind: 'v1.33.2'
+  kind: 'v1.35.1'
   # renovate: datasource=docker depName=kong versioning=docker
   kong-oss: '3.9.1'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker

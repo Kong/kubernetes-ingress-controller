@@ -9,6 +9,7 @@ Adding a new version? You'll need three changes:
 --->
 
 - [3.5.7](#357)
+- [3.5.7](#357)
 - [3.5.6](#356)
 - [3.5.5](#355)
 - [3.5.4](#354)
@@ -123,6 +124,20 @@ Adding a new version? You'll need three changes:
 - [0.1.0](#010)
 - [0.0.5](#005)
 - [0.0.4 and prior](#004-and-prior)
+
+## [3.5]
+
+> Release date: TBD
+
+### Fixed
+
+- Revert plugin config sanitization `--dump-sensitive-config` isn't set.
+  Due to plugin configuration being dependent on plugin type controller is not
+  able to make an informed decision whether a field is sensitive or not and more
+  importantly whether it has a constrained set of allowed values like e.g. HTTP methods.
+  Users are suggested to block network access to debug endpoints (which are disabled
+  by default) if plugin configuration can contain sensitive information.
+  [#7937](https://github.com/Kong/kubernetes-ingress-controller/pull/7937)
 
 ## [3.5.7]
 
@@ -4398,6 +4413,7 @@ Please read the changelog and test in your environment.
 - The initial versions were rapildy iterated to deliver
   a working ingress controller.
 
+[3.5.8]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.7...v3.5.8
 [3.5.7]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.6...v3.5.7
 [3.5.6]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.5...v3.5.6
 [3.5.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.4...v3.5.5
@@ -4511,5 +4527,3 @@ Please read the changelog and test in your environment.
 [0.1.1]: https://github.com/kong/kubernetes-ingress-controller/compare/0.1.0...0.1.1
 [0.2.0]: https://github.com/kong/kubernetes-ingress-controller/compare/0.1.0...0.2.0
 [0.1.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v0.0.5...0.1.0
-[v0.0.5]: https://github.com/kong/kubernetes-ingress-controller/compare/v0.0.4...v0.0.5
-[v0.0.4]: https://github.com/kong/kubernetes-ingress-controller/compare/7866a27f268c32c5618fba546da2c73ba74d4a46...v0.0.4

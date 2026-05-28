@@ -354,12 +354,3 @@ type PluginRelatedEntitiesRefs struct {
 	RelatedEntities      map[string]RelatedEntitiesRef
 	RouteAttachedService map[string]*Service
 }
-
-func (p *Plugin) SanitizedCopy() Plugin {
-	sanitized := p.DeepCopy()
-	// Replace all config values with a redaction marker.
-	for k := range sanitized.Config {
-		sanitized.Config[k] = "{REDACTED}"
-	}
-	return sanitized
-}

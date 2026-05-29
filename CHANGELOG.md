@@ -114,6 +114,21 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
+## [3.4.15]
+
+> Release date: TBD
+
+### Fixed
+
+- Revert plugin config sanitization `--dump-sensitive-config` isn't set.
+  Due to plugin configuration being dependent on plugin type controller is not
+  able to make an informed decision whether a field is sensitive or not and more
+  importantly whether it has a constrained set of allowed values like e.g. HTTP methods.
+  Users are suggested to block network access to debug endpoints (which are disabled
+  by default) if plugin configuration can contain sensitive information.
+  [#7937](https://github.com/Kong/kubernetes-ingress-controller/pull/7937)
+  [#7938](https://github.com/Kong/kubernetes-ingress-controller/pull/7938)
+
 ## [3.4.14]
 
 > Release date: 2026-05-11

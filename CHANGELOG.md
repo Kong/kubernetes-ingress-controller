@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.4.15](#3415)
  - [3.4.14](#3414)
  - [3.4.13](#3413)
  - [3.4.12](#3412)
@@ -116,7 +117,7 @@ Adding a new version? You'll need three changes:
 
 ## [3.4.15]
 
-> Release date: TBD
+> Release date: 2026-06-01
 
 ### Fixed
 
@@ -4182,12 +4183,11 @@ Please read the changelog and test in your environment.
    Thanks @NixM0nk3y for the patch!
    [#118](https://github.com/Kong/kubernetes-ingress-controller/pull/118)
 
-
 ## [0.1.0]
 
 > Release date: 2018/08/17
 
-#### Breaking Changes
+### Breaking Changes
 
  - :warning: **Declarative Consumers in Kong** Kong consumers can be
    declaratively configured via `KongConsumer` custom resources. Any consumers
@@ -4195,7 +4195,7 @@ Please read the changelog and test in your environment.
    resource will be deleted by the ingress controller.
    [#81](https://github.com/Kong/kubernetes-ingress-controller/pull/81)
 
-#### Added
+### Added
 
  - **Support Upstream TLS** Service in Kong can be configured to use HTTPS
    via `KongIngress` custom resource.
@@ -4204,7 +4204,7 @@ Please read the changelog and test in your environment.
    via `KongIngress` custom resource.
    [#64](https://github.com/Kong/kubernetes-ingress-controller/pull/64)
 
-#### Fixed
+### Fixed
 
  - Multiple SNIs are created in Kong if multiple hosts are specified in TLS
    section of an `Ingress` resource.
@@ -4213,12 +4213,11 @@ Please read the changelog and test in your environment.
    now updates the corresponding routing properties in Kong.
    [#92](https://github.com/Kong/kubernetes-ingress-controller/pull/92)
 
-
 ## [0.0.5]
 
 > Release date: 2018/06/02
 
-#### Added
+### Added
 
  - Add support for Kong Enterprise Edition 0.32 and above
 
@@ -4227,6 +4226,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.4.15]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.14...v3.4.15
 [3.4.14]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.13...v3.4.14
 [3.4.13]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.12...v3.4.13
 [3.4.12]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.11...v3.4.12

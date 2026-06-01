@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
@@ -11,12 +12,25 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
+func getKongVersion() (semver.Version, error) {
+	kongVersion, err := semver.Parse(testenv.KongEffectiveVersion())
+	if err == nil {
+		return kongVersion, nil
+	}
+	return semver.Parse(testenv.KongImageTag())
+}
+
 // GenerateKongBuilder returns a Kong KTF addon builder, a string slice
 // of controller arguments needed to interact with the addon and an error.
 func GenerateKongBuilder(_ context.Context) (*kong.Builder, []string, error) {
+	kongVersion, err := getKongVersion()
+	if err != nil {
+		return nil, nil, fmt.Errorf("could not determine Kong version: %w", err)
+	}
+
 	kongbuilder := kong.NewBuilder().WithNamespace(consts.ControllerNamespace)
 	extraControllerArgs := []string{}
-	if testenv.KongEnterpriseEnabled() {
+	if testenv.KongEnterpriseEnabled() || kongVersion.GTE(consts.ForceLicenseVersionCutoff) {
 		licenseJSON, err := kong.GetLicenseJSONFromEnv()
 		if err != nil {
 			return nil, nil, err

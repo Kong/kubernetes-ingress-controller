@@ -36,6 +36,9 @@ type Client struct {
 	lastConfigSHA     []byte
 	// podRef (optional) describes the Pod that the Client communicates with.
 	podRef *k8stypes.NamespacedName
+	// tlsServerName (optional) is the SNI used for TLS verification against the Admin API.
+	// It's retained so the client can be recreated with the same SNI when it turns pending.
+	tlsServerName string
 }
 
 // NewClient creates an Admin API client that is to be used with a regular Admin API exposed by Kong Gateways.
@@ -206,6 +209,18 @@ func (c *Client) PodReference() (k8stypes.NamespacedName, bool) {
 	return k8stypes.NamespacedName{}, false
 }
 
+// AttachTLSServerName allows attaching the SNI used for TLS verification against the Admin API.
+// Should be used in case gateway service discovery is used so the SNI can be preserved when the
+// client is recreated (e.g. after the gateway Pod restarts).
+func (c *Client) AttachTLSServerName(name string) {
+	c.tlsServerName = name
+}
+
+// TLSServerName returns the SNI used for TLS verification against the Admin API, if any.
+func (c *Client) TLSServerName() string {
+	return c.tlsServerName
+}
+
 type ClientFactory struct {
 	logger     logr.Logger
 	workspace  string
@@ -241,5 +256,6 @@ func (cf ClientFactory) CreateAdminAPIClient(ctx context.Context, discoveredAdmi
 	}
 
 	cl.AttachPodReference(discoveredAdminAPI.PodRef)
+	cl.AttachTLSServerName(discoveredAdminAPI.TLSServerName)
 	return cl, nil
 }

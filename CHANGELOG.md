@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.5.9](#359)
  - [3.5.8](#358)
  - [3.5.7](#357)
  - [3.5.6](#356)
@@ -116,9 +117,9 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## [3.5.8]
+## [3.5.9]
 
-> Release date: 2026-06-01
+> Release date: 2026-06-04
 
 ### Fixed
 
@@ -127,6 +128,13 @@ Adding a new version? You'll need three changes:
   which, when gateway service discovery is combined with a mTLS-secured Admin API, caused
   permanent TLS verification failures against the recreated client.
   [#7950](https://github.com/Kong/kubernetes-ingress-controller/pull/7950)
+
+## [3.5.8]
+
+> Release date: 2026-06-01
+
+### Fixed
+
 - Revert plugin config sanitization `--dump-sensitive-config` isn't set.
   Due to plugin configuration being dependent on plugin type controller is not
   able to make an informed decision whether a field is sensitive or not and more
@@ -4278,6 +4286,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.5.9]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.8...v3.5.9
 [3.5.8]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.7...v3.5.8
 [3.5.7]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.6...v3.5.7
 [3.5.6]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.5...v3.5.6

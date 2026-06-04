@@ -131,6 +131,11 @@ Adding a new version? You'll need three changes:
 
 ### Fixed
 
+- Preserve the Admin API client's TLS server name (SNI) when a client turns pending and is
+  recreated (e.g. after a gateway Pod restart). Previously the SNI was dropped on recreation,
+  which, when gateway service discovery is combined with a mTLS-secured Admin API, caused
+  permanent TLS verification failures against the recreated client.
+  [#7950](https://github.com/Kong/kubernetes-ingress-controller/pull/7950)
 - Revert plugin config sanitization `--dump-sensitive-config` isn't set.
   Due to plugin configuration being dependent on plugin type controller is not
   able to make an informed decision whether a field is sensitive or not and more

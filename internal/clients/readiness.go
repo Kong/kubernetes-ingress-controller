@@ -47,6 +47,7 @@ type AlreadyCreatedClient interface {
 	IsReady(context.Context) error
 	PodReference() (k8stypes.NamespacedName, bool)
 	BaseRootURL() string
+	TLSServerName() string
 }
 
 type DefaultReadinessChecker struct {
@@ -178,8 +179,9 @@ func (c DefaultReadinessChecker) checkAlreadyExistingClients(ctx context.Context
 				select {
 				case <-ctx.Done():
 				case pendingChan <- adminapi.DiscoveredAdminAPI{
-					Address: client.BaseRootURL(),
-					PodRef:  podRef,
+					Address:       client.BaseRootURL(),
+					TLSServerName: client.TLSServerName(),
+					PodRef:        podRef,
 				}:
 				}
 			}

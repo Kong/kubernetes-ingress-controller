@@ -37,3 +37,22 @@ func TestClientFactory_CreateAdminAPIClientAttachesPodReference(t *testing.T) {
 		Name:      "name",
 	}, ref)
 }
+
+func TestClientFactory_CreateAdminAPIClientAttachesTLSServerName(t *testing.T) {
+	factory := adminapi.NewClientFactoryForWorkspace(logr.Discard(), "workspace", managercfg.AdminAPIClientConfig{}, "")
+
+	adminAPIHandler := mocks.NewAdminAPIHandler(t)
+	adminAPIServer := httptest.NewServer(adminAPIHandler)
+	t.Cleanup(func() { adminAPIServer.Close() })
+
+	const tlsServerName = "pod.dataplane-admin-kong.default.svc"
+	client, err := factory.CreateAdminAPIClient(t.Context(), adminapi.DiscoveredAdminAPI{
+		Address:       adminAPIServer.URL,
+		TLSServerName: tlsServerName,
+	})
+	require.NoError(t, err)
+	require.NotNil(t, client)
+
+	require.Equal(t, tlsServerName, client.TLSServerName(),
+		"expected TLSServerName to be attached to the client")
+}

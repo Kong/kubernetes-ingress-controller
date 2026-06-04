@@ -57,9 +57,10 @@ func (cf *mockClientFactory) CallsForAddress(address string) int {
 }
 
 type mockAlreadyCreatedClient struct {
-	url     string
-	isReady bool
-	podRef  k8stypes.NamespacedName
+	url           string
+	isReady       bool
+	podRef        k8stypes.NamespacedName
+	tlsServerName string
 }
 
 func (m mockAlreadyCreatedClient) IsReady(context.Context) error {
@@ -75,6 +76,10 @@ func (m mockAlreadyCreatedClient) PodReference() (k8stypes.NamespacedName, bool)
 
 func (m mockAlreadyCreatedClient) BaseRootURL() string {
 	return m.url
+}
+
+func (m mockAlreadyCreatedClient) TLSServerName() string {
+	return m.tlsServerName
 }
 
 func TestDefaultReadinessChecker(t *testing.T) {
@@ -275,4 +280,34 @@ func TestDefaultReadinessChecker(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestDefaultReadinessChecker_PreservesTLSServerName ensures that when an already created client
+// turns pending (e.g. after a gateway Pod restart), the TLSServerName (SNI) is carried over to the
+// resulting DiscoveredAdminAPI so the client can be recreated with a valid SNI for TLS verification.
+func TestDefaultReadinessChecker_PreservesTLSServerName(t *testing.T) {
+	const (
+		testURL           = "http://localhost:8001"
+		testTLSServerName = "pod.dataplane-admin-kong.default.svc"
+	)
+	testPodRef := k8stypes.NamespacedName{Namespace: "default", Name: "mock"}
+
+	factory := newMockClientFactory(t, nil)
+	checker := clients.NewDefaultReadinessChecker(factory, managercfg.DefaultDataPlanesReadinessCheckTimeout, logr.Discard())
+
+	result := checker.CheckReadiness(t.Context(),
+		[]clients.AlreadyCreatedClient{
+			mockAlreadyCreatedClient{
+				podRef:        testPodRef,
+				url:           testURL,
+				isReady:       false, // Turns pending.
+				tlsServerName: testTLSServerName,
+			},
+		},
+		nil,
+	)
+
+	require.Len(t, result.ClientsTurnedPending, 1)
+	require.Equal(t, testTLSServerName, result.ClientsTurnedPending[0].TLSServerName,
+		"TLSServerName must be preserved when a client turns pending")
 }

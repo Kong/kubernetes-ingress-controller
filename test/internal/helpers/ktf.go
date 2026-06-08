@@ -13,7 +13,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
-func getKongVersion() (semver.Version, error) {
+// GetKongImageVersion returns the Kong version to be used for the KTF addon based on environment variables.
+func GetKongImageVersion() (semver.Version, error) {
 	kongVersion, err := semver.Parse(testenv.KongEffectiveVersion())
 	if err == nil {
 		return kongVersion, nil
@@ -33,7 +34,7 @@ func getKongVersion() (semver.Version, error) {
 // GenerateKongBuilder returns a Kong KTF addon builder, a string slice
 // of controller arguments needed to interact with the addon and an error.
 func GenerateKongBuilder(_ context.Context) (*kong.Builder, []string, error) {
-	kongVersion, err := getKongVersion()
+	kongVersion, err := GetKongImageVersion()
 	if err != nil {
 		return nil, nil, fmt.Errorf("could not determine Kong version: %w", err)
 	}

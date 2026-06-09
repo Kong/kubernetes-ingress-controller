@@ -1,6 +1,6 @@
 module github.com/kong/kubernetes-ingress-controller/v3
 
-go 1.25.11
+go 1.25.10
 
 //
 //  Error parsing file: /home/runner/work/kubernetes-ingress-controller/kubernetes-ingress-controller/go.mod.

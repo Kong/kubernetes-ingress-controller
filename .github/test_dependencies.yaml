@@ -12,7 +12,7 @@ e2e:
     - 'v1.29.14'
   gke:
     # renovate: datasource=custom.gke-rapid depName=gke versioning=semver
-    - '1.35.3'
+    - '1.35.5'
 
   # For Istio, we define combinations of Kind and Istio versions that will be
   # used directly in the test matrix `include` section.
@@ -46,17 +46,17 @@ integration:
   # renovate: datasource=docker depName=kong versioning=docker
   kong-oss: '3.9.1'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-  kong-ee: '3.11.0.0'
+  kong-ee: '3.12.0.6'
 
 kongintegration:
   # renovate: datasource=docker depName=kong versioning=docker
   kong-oss: '3.9.1'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-  kong-ee: '3.11.0.0'
+  kong-ee: '3.12.0.6'
 
 envtests:
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-  kong-ee: '3.11.0.0'
+  kong-ee: '3.12.0.6'
   # This is a version of Kong Gateway that does not support sticky sessions,
   # all versions >= 3.11.0 support sticky sessions.
   kong-without-sticky-sessions: '3.9.1'

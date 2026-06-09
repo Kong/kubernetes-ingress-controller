@@ -463,7 +463,7 @@ func compareSplitHTTPRouteMatchesRelativePriority(match1, match2 SplitHTTPRouteM
 // based kong route with assigned priority.
 func kongExpressionRouteFromHTTPRouteMatchWithPriority(
 	httpRouteMatchWithPriority SplitHTTPRouteMatchToKongRoutePriority,
-	supportRedirectPlugin bool,
+	options TranslateHTTPRouteRulesToKongRouteOptions,
 ) (*kongstate.Route, error) {
 	match := httpRouteMatchWithPriority.Match
 	httproute := httpRouteMatchWithPriority.Match.Source
@@ -499,6 +499,7 @@ func kongExpressionRouteFromHTTPRouteMatchWithPriority(
 		Route: kong.Route{
 			Name:         kong.String(routeName),
 			PreserveHost: kong.Bool(true),
+			Protocols:    options.Protocols,
 			// stripPath needs to be disabled by default to be conformant with the Gateway API
 			StripPath: kong.Bool(false),
 			Tags:      tags,
@@ -530,7 +531,7 @@ func kongExpressionRouteFromHTTPRouteMatchWithPriority(
 		}
 		setPluginsOptions := setKongRoutePluginsOptions{
 			expressionsRouterEnabled:  true,
-			redirectKongPluginEnabled: supportRedirectPlugin,
+			redirectKongPluginEnabled: options.SupportRedirectPlugin,
 		}
 		if err := setRoutePlugins(r, rule.Filters, path, tags, setPluginsOptions); err != nil {
 			return nil, err
@@ -565,7 +566,7 @@ func groupHTTPRouteMatchesWithPrioritiesByRule(
 // that are pointing to the same service to list of kongstate route with expressions.
 func translateSplitHTTPRouteMatchesToKongstateRoutesWithExpression(
 	matchesWithPriorities []SplitHTTPRouteMatchToKongRoutePriority,
-	supportRedirectPlugin bool,
+	options TranslateHTTPRouteRulesToKongRouteOptions,
 ) ([]kongstate.Route, error) {
 	routes := make([]kongstate.Route, 0, len(matchesWithPriorities))
 	for _, matchWithPriority := range matchesWithPriorities {
@@ -574,7 +575,7 @@ func translateSplitHTTPRouteMatchesToKongstateRoutesWithExpression(
 		// TODO: update the algorithm to assign priorities to matches to make it possible to consolidate some matches.
 		// For example, we can assign the same priority to multiple matches from the same rule if they tie on the priority from the fixed fields:
 		// https://github.com/Kong/kubernetes-ingress-controller/issues/6807
-		route, err := kongExpressionRouteFromHTTPRouteMatchWithPriority(matchWithPriority, supportRedirectPlugin)
+		route, err := kongExpressionRouteFromHTTPRouteMatchWithPriority(matchWithPriority, options)
 		if err != nil {
 			return []kongstate.Route{}, err
 		}

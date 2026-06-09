@@ -134,15 +134,17 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 		additionalHeaderKey   = "X-Additional-Header"
 		additionalHeaderValue = "additional-header-value"
 	)
-	testAdditionalRoute := func(t *testing.T, proxyURL *url.URL) {
+	testAdditionalRoute := func(t *testing.T, proxyURLHTTPS *url.URL) {
 		t.Helper()
 		t.Log("verifying that routing to additional route works and header added by plugin is returned")
 		helpers.EventuallyGETPath(
 			t,
-			proxyURL,
-			proxyURL.Host,
+			proxyURLHTTPS,
+			proxyURLHTTPS.String(),
 			additionalRoutePath,
-			nil,
+			&helpers.HTTPSOptions{
+				InsecureSkipVerify: true,
+			},
 			http.StatusOK,
 			additionalRouteServiceTarget,
 			nil,
@@ -244,7 +246,7 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 			require.NoError(t, err)
 
 			t.Logf("verifying that routing to %s works and header added by plugin is returned", additionalRoutePath)
-			testAdditionalRoute(t, GetHTTPURLFromCtx(ctx))
+			testAdditionalRoute(t, GetHTTPSURLFromCtx(ctx))
 
 			return ctx
 		}).
@@ -276,7 +278,7 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 			return ctx
 		}).
 		Assess("verify that route with misconfigured plugin operates with previous config", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-			testAdditionalRoute(t, GetHTTPURLFromCtx(ctx))
+			testAdditionalRoute(t, GetHTTPSURLFromCtx(ctx))
 			return ctx
 		}).
 		Assess("modify working route /httproute-testing to /new-route", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
@@ -290,15 +292,16 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 			return ctx
 		}).
 		Assess("verify that all routes are operational", func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-			proxyURL := GetHTTPURLFromCtx(ctx)
-			testAdditionalRoute(t, proxyURL)
+			proxyURLHTTP := GetHTTPURLFromCtx(ctx)
+			proxyURLHTTPS := GetHTTPSURLFromCtx(ctx)
+			testAdditionalRoute(t, proxyURLHTTPS)
 
 			const newRoute = "/new-route"
 			t.Logf("verifying that /httproute-testing is no longer operational")
 			helpers.EventuallyGETPath(
 				t,
-				proxyURL,
-				proxyURL.Host,
+				proxyURLHTTP,
+				proxyURLHTTP.Host,
 				"/httproute-testing",
 				nil,
 				http.StatusNotFound,
@@ -311,10 +314,12 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 			t.Logf("verifying that /new-route is operational and loadbalanced")
 			helpers.EventuallyGETPath(
 				t,
-				proxyURL,
-				proxyURL.Host,
+				proxyURLHTTPS,
+				proxyURLHTTPS.String(),
 				newRoute,
-				nil,
+				&helpers.HTTPSOptions{
+					InsecureSkipVerify: true,
+				},
 				http.StatusOK,
 				"echo-1",
 				nil,
@@ -323,10 +328,12 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 			)
 			helpers.EventuallyGETPath(
 				t,
-				proxyURL,
-				proxyURL.Host,
+				proxyURLHTTPS,
+				proxyURLHTTPS.String(),
 				newRoute,
-				nil,
+				&helpers.HTTPSOptions{
+					InsecureSkipVerify: true,
+				},
 				http.StatusOK,
 				"echo-2",
 				nil,
@@ -345,7 +352,10 @@ func runHTTPRouteExampleTestScenario(manifestToUse string) func(ctx context.Cont
 	return func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 		cleaner := GetFromCtxForT[*clusters.Cleaner](ctx, t)
 		cluster := GetClusterFromCtx(ctx)
-		proxyURL := GetHTTPURLFromCtx(ctx)
+		var (
+			proxyURLHTTP  = GetHTTPURLFromCtx(ctx)
+			proxyURLHTTPS = GetHTTPSURLFromCtx(ctx)
+		)
 
 		t.Logf("applying yaml manifest %s", manifestToUse)
 		manifest, err := os.ReadFile(manifestToUse)
@@ -358,10 +368,12 @@ func runHTTPRouteExampleTestScenario(manifestToUse string) func(ctx context.Cont
 		t.Logf("verifying that the HTTPRoute becomes routable")
 		helpers.EventuallyGETPath(
 			t,
-			proxyURL,
-			proxyURL.Host,
+			proxyURLHTTPS,
+			proxyURLHTTPS.String(),
 			"/httproute-testing",
-			nil,
+			&helpers.HTTPSOptions{
+				InsecureSkipVerify: true,
+			},
 			http.StatusOK,
 			"echo-1",
 			nil,
@@ -372,12 +384,29 @@ func runHTTPRouteExampleTestScenario(manifestToUse string) func(ctx context.Cont
 		t.Logf("verifying that the backendRefs are being loadbalanced")
 		helpers.EventuallyGETPath(
 			t,
-			proxyURL,
-			proxyURL.Host,
+			proxyURLHTTPS,
+			proxyURLHTTPS.String(),
 			"/httproute-testing",
-			nil,
+			&helpers.HTTPSOptions{
+				InsecureSkipVerify: true,
+			},
 			http.StatusOK,
 			"echo-2",
+			nil,
+			consts.IngressWait,
+			consts.WaitTick,
+		)
+
+		t.Logf("verifying that the backendRefs are not reached through HTTP listener")
+		helpers.EventuallyGETPath(
+			t,
+			proxyURLHTTP,
+			proxyURLHTTP.String(),
+			"/httproute-testing",
+			nil,
+			// Status code returned by Kong when HTTPS is required but request is made over HTTP.
+			http.StatusUpgradeRequired,
+			"",
 			nil,
 			consts.IngressWait,
 			consts.WaitTick,

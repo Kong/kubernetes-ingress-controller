@@ -40,8 +40,7 @@ services:
   read_timeout: 60000
   retries: 5
   routes:
-  - expression: (http.path ^= "/") && ((net.protocol == "http") || (net.protocol ==
-      "https"))
+  - expression: http.path ^= "/"
     https_redirect_status_code: 426
     id: 01c21dd4-41c1-57b6-a417-66c80b8ad22b
     name: bar-namespace.ing-with-default-backend

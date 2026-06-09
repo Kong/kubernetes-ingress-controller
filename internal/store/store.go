@@ -255,7 +255,7 @@ func (s Store) ListIngressClassesV1() []*netv1.IngressClass {
 
 // ListIngressClassParametersV1Alpha1 returns the list of IngressClassParameters in the Ingress v1alpha1 store.
 func (s Store) ListIngressClassParametersV1Alpha1() []*configurationv1alpha1.IngressClassParameters {
-	var classParams []*configurationv1alpha1.IngressClassParameters //nolint:prealloc
+	var classParams []*configurationv1alpha1.IngressClassParameters
 	for _, item := range s.stores.IngressClassParametersV1alpha1.List() {
 		classParam, ok := item.(*configurationv1alpha1.IngressClassParameters)
 		if !ok {

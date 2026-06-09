@@ -54,7 +54,6 @@ func StartReconcilers(ctx context.Context, t *testing.T, scheme *runtime.Scheme,
 	// This wait group makes it so that we wait for manager to exit.
 	// This way we get clean test logs not mixing between tests.
 	wg := sync.WaitGroup{}
-	wg.Add(1)
 	wg.Go(func() {
 		assert.NoError(t, mgr.Start(ctx))
 	})

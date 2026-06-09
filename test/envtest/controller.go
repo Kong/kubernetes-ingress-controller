@@ -55,10 +55,9 @@ func StartReconcilers(ctx context.Context, t *testing.T, scheme *runtime.Scheme,
 	// This way we get clean test logs not mixing between tests.
 	wg := sync.WaitGroup{}
 	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	wg.Go(func() {
 		assert.NoError(t, mgr.Start(ctx))
-	}()
+	})
 	t.Cleanup(func() {
 		wg.Wait()
 		DumpLogsIfTestFailed(t, logs)

@@ -30,7 +30,6 @@ linters:
     - nakedret
     - nilerr
     - nolintlint
-    - prealloc
     - predeclared
     - revive
     - unconvert
@@ -216,6 +215,10 @@ linters:
           - revive
         path: \.go
         text: "var-declaration: should drop = 0 from declaration of var .*; it is the zero value"
+      - linters:
+          - revive
+        path: \.go
+        text: "var-naming: avoid package names that conflict with Go standard library package names"
       - linters:
           - gosec
         text: "G115: integer overflow conversion"

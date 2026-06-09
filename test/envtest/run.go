@@ -296,13 +296,10 @@ func RunManager(
 	// This wait group makes it so that we wait for manager to exit.
 	// This way we get clean test logs not mixing between tests.
 	wg := sync.WaitGroup{}
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-
+	wg.Go(func() {
 		mgr := SetupManager(ctx, t, mgrID, envcfg, adminAPIOpts, modifyCfgFns...)
 		require.NoError(t, mgr.Run(ctx))
-	}()
+	})
 	t.Cleanup(func() {
 		wg.Wait()
 		DumpLogsIfTestFailed(t, logs)

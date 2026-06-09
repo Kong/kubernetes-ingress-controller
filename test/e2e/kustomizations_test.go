@@ -3,11 +3,15 @@
 package e2e
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"time"
 
+	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/kubectl"
+	"go.yaml.in/yaml/v3"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/resid"
@@ -177,4 +181,61 @@ func patchLivenessProbes(baseManifestReader io.Reader, deployment k8stypes.Names
 		},
 	}
 	return kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
+}
+
+const kongLicenseEnvPatch = `- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: KONG_LICENSE_DATA
+    valueFrom:
+      secretKeyRef:
+        key: license
+        name: kong-enterprise-license`
+
+func WithLicensePatch() ManifestPatch {
+	return func(r io.Reader) (io.Reader, error) {
+		licenseSecret, err := ktfkong.GetLicenseSecretFromEnv()
+		if err != nil {
+			return nil, err
+		}
+		// GetLicenseSecretFromEnv returns a secret without TypeMeta/namespace; both are
+		// required for it to apply cleanly into the kong namespace via `kubectl apply -f -`.
+		licenseSecret.TypeMeta = metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"}
+		licenseSecret.Namespace = namespace
+
+		// Add the KONG_LICENSE_DATA env var (referencing the secret) to the proxy
+		// container (index 0) of the proxy-kong deployment.
+		kustomization := types.Kustomization{
+			Patches: []types.Patch{
+				{
+					Patch: kongLicenseEnvPatch,
+					Target: &types.Selector{
+						ResId: resid.ResId{
+							Gvk:       resid.Gvk{Group: "apps", Version: "v1", Kind: "Deployment"},
+							Name:      "proxy-kong",
+							Namespace: namespace,
+						},
+					},
+				},
+			},
+		}
+		patched, err := kubectl.GetKustomizedManifest(kustomization, r)
+		if err != nil {
+			return nil, err
+		}
+
+		// Append the license secret as an additional document so it is created
+		// alongside the deployment.
+		secretYAML, err := yaml.Marshal(licenseSecret)
+		if err != nil {
+			return nil, err
+		}
+		var buf bytes.Buffer
+		if _, err := io.Copy(&buf, patched); err != nil {
+			return nil, err
+		}
+		buf.WriteString("\n---\n")
+		buf.Write(secretYAML)
+		return &buf, nil
+	}
 }

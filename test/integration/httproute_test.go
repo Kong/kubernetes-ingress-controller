@@ -630,15 +630,15 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 
 	t.Logf("update hostnames in httproute to wildcard")
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		httpRoute, err = hClient.Get(ctx, httpRoute.Name, metav1.GetOptions{})
+		httpRouteForUpdate, err := hClient.Get(ctx, httpRoute.Name, metav1.GetOptions{})
 		if !assert.NoErrorf(c, err, "failed getting the HTTPRoute %s", httpRoute.Name) {
 			return
 		}
-		httpRoute.Spec.Hostnames = []gatewayapi.Hostname{
+		httpRouteForUpdate.Spec.Hostnames = []gatewayapi.Hostname{
 			gatewayapi.Hostname("*.specific.io"),
 		}
-		httpRoute, err = hClient.Update(ctx, httpRoute, metav1.UpdateOptions{})
-		assert.NoErrorf(c, err, "failed updating the HTTPRoute %s", httpRoute.Name)
+		httpRouteForUpdate, err = hClient.Update(ctx, httpRouteForUpdate, metav1.UpdateOptions{})
+		assert.NoErrorf(c, err, "failed updating the HTTPRoute %s", httpRouteForUpdate.Name)
 	}, test.RequestTimeout, 100*time.Millisecond)
 	t.Logf("test host matched hostname in listeners")
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
@@ -648,13 +648,17 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 	require.Error(t, testGetByHost(t, "another2.specific.io"))
 
 	t.Logf("update hostname in httproute to an unmatched host")
-	httpRoute, err = hClient.Get(ctx, httpRoute.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	httpRoute.Spec.Hostnames = []gatewayapi.Hostname{
-		gatewayapi.Hostname("another.specific.io"),
-	}
-	httpRoute, err = hClient.Update(ctx, httpRoute, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		httpRouteForUpdate, err := hClient.Get(ctx, httpRoute.Name, metav1.GetOptions{})
+		// Fail the whole test if we cannot get the HTTPRoute.
+		require.NoErrorf(t, err, "failed getting the HTTPRoute %s", httpRoute.Name)
+		httpRouteForUpdate.Spec.Hostnames = []gatewayapi.Hostname{
+			gatewayapi.Hostname("another.specific.io"),
+		}
+		httpRouteForUpdate, err = hClient.Update(ctx, httpRouteForUpdate, metav1.UpdateOptions{})
+		assert.NoErrorf(c, err, "failed updating the HTTPRoute %s", httpRouteForUpdate.Name)
+	}, test.RequestTimeout, 100*time.Millisecond)
+
 	t.Logf("status of httproute should contain an 'Accepted' condition with 'False' status")
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		currentHTTPRoute, err := hClient.Get(ctx, httpRoute.Name, metav1.GetOptions{})

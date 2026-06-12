@@ -404,6 +404,8 @@ func (r *KongV1Alpha1KongLicenseReconciler) ensureControllerStatusConditions(
 	reason string, message string,
 ) error {
 	// Get the latest status of target KongLicense.
+	// Deep copy is required here since the license object from cache is shared by multiple goroutines and the status update will modify the license object.
+	license = license.DeepCopy()
 	if err := r.Get(ctx, k8stypes.NamespacedName{Name: license.Name}, license); err != nil {
 		return fmt.Errorf("failed to get latest version of KongLicense %s: %w", license.Name, err)
 	}

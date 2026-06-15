@@ -87,7 +87,7 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 	require.NoError(t, err)
 	if kongImageVersion.GTE(consts.ForceLicenseVersionCutoff) {
 		t.Logf("Kong version %s requires a license, patching the manifest", kongImageVersion)
-		manifestDeploy.Patches = append(manifestDeploy.Patches, WithLicensePatch())
+		manifestDeploy.Patches = append(manifestDeploy.Patches, WithLicensePatch(getProxyDeploymentName(manifestDeploy.Path)))
 	}
 	manifestDeploy.Run(ctx, t, env)
 
@@ -111,7 +111,7 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	require.NoError(t, err)
 	if kongImageVersion.GTE(consts.ForceLicenseVersionCutoff) {
 		t.Logf("Kong version %s requires a license, patching the manifest", kongImageVersion)
-		manifestDeploy.Patches = append(manifestDeploy.Patches, WithLicensePatch())
+		manifestDeploy.Patches = append(manifestDeploy.Patches, WithLicensePatch(getProxyDeploymentName(manifestDeploy.Path)))
 	}
 	deployments := manifestDeploy.Run(ctx, t, env)
 	deployment := deployments.ControllerNN
@@ -287,7 +287,7 @@ func TestDeployAllInOnePostgresGatewayDiscovery(t *testing.T) {
 	require.NoError(t, err)
 	if kongImageVersion.GTE(consts.ForceLicenseVersionCutoff) {
 		t.Logf("Kong version %s requires a license, patching the manifest", kongImageVersion)
-		manifestDeploy.Patches = append(manifestDeploy.Patches, WithLicensePatch())
+		manifestDeploy.Patches = append(manifestDeploy.Patches, WithLicensePatch(getProxyDeploymentName(manifestDeploy.Path)))
 	}
 	deployments := manifestDeploy.Run(ctx, t, env)
 
@@ -311,7 +311,7 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	require.NoError(t, err)
 	if kongImageVersion.GTE(consts.ForceLicenseVersionCutoff) {
 		t.Logf("Kong version %s requires a license, patching the manifest", kongImageVersion)
-		manifestDeploy.Patches = append(manifestDeploy.Patches, WithLicensePatch())
+		manifestDeploy.Patches = append(manifestDeploy.Patches, WithLicensePatch(getProxyDeploymentName(manifestDeploy.Path)))
 	}
 	deployments := manifestDeploy.Run(ctx, t, env)
 

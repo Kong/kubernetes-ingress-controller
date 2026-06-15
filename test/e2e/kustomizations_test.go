@@ -10,11 +10,11 @@ import (
 
 	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/kubectl"
-	"go.yaml.in/yaml/v3"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/resid"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -192,7 +192,13 @@ const kongLicenseEnvPatch = `- op: add
         key: license
         name: kong-enterprise-license`
 
-func WithLicensePatch() ManifestPatch {
+// WithLicensePatch injects the enterprise license from the environment into the deployed
+// manifest. It adds the KONG_LICENSE_DATA env var (referencing the kong-enterprise-license
+// secret) to the proxy container of the given proxy deployment and appends the secret itself.
+// proxyDeploymentName must be the name of the deployment that runs the proxy container, which
+// differs between manifest variants (proxy-kong for multi-pod, ingress-kong for single-pod);
+// use getProxyDeploymentName to derive it from the manifest path.
+func WithLicensePatch(proxyDeploymentName string) ManifestPatch {
 	return func(r io.Reader) (io.Reader, error) {
 		licenseSecret, err := ktfkong.GetLicenseSecretFromEnv()
 		if err != nil {
@@ -204,7 +210,7 @@ func WithLicensePatch() ManifestPatch {
 		licenseSecret.Namespace = namespace
 
 		// Add the KONG_LICENSE_DATA env var (referencing the secret) to the proxy
-		// container (index 0) of the proxy-kong deployment.
+		// container (index 0) of the proxy deployment.
 		kustomization := types.Kustomization{
 			Patches: []types.Patch{
 				{
@@ -212,7 +218,7 @@ func WithLicensePatch() ManifestPatch {
 					Target: &types.Selector{
 						ResId: resid.ResId{
 							Gvk:       resid.Gvk{Group: "apps", Version: "v1", Kind: "Deployment"},
-							Name:      "proxy-kong",
+							Name:      proxyDeploymentName,
 							Namespace: namespace,
 						},
 					},

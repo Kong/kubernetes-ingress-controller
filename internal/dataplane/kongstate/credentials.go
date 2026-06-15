@@ -1,6 +1,7 @@
 package kongstate
 
 import (
+	"crypto/sha256"
 	"fmt"
 
 	"github.com/kong/go-kong/kong"
@@ -18,6 +19,15 @@ var redactedString = kong.String("{vault://redacted-value}")
 // collisions.
 func randRedactedString(uuidGenerator util.UUIDGenerator) *string {
 	s := fmt.Sprintf("{vault://%s}", uuidGenerator.NewString())
+	return &s
+}
+
+// deterministicRedactedString returns a stable vault-URI redaction derived from seed.
+// It produces the same output for the same seed (no churn on unchanged credentials) while
+// remaining distinct for different seeds. The real secret value is not recoverable from the output.
+func deterministicRedactedString(seed string) *string {
+	sum := sha256.Sum256([]byte(seed))
+	s := fmt.Sprintf("{vault://%x}", sum[:16])
 	return &s
 }
 
@@ -161,13 +171,23 @@ func NewMTLSAuth(config any) (*MTLSAuth, error) {
 }
 
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
+// The Key field is replaced with a deterministic vault-URI derived from the real key so that
+// repeated syncs without a key change produce the same redacted value (preventing spurious
+// delete+create churn in go-database-reconciler). When the real key is unavailable the
+// redaction falls back to a random vault-URI.
 func (c *KeyAuth) SanitizedCopy(uuidGenerator util.UUIDGenerator) *KeyAuth {
+	var redactedKey *string
+	if c.Key != nil {
+		redactedKey = deterministicRedactedString(*c.Key)
+	} else {
+		redactedKey = randRedactedString(uuidGenerator)
+	}
 	return &KeyAuth{
 		KeyAuth: kong.KeyAuth{
 			// Consumer field omitted
 			CreatedAt: c.CreatedAt,
 			ID:        c.ID,
-			Key:       randRedactedString(uuidGenerator),
+			Key:       redactedKey,
 			Tags:      c.Tags,
 		},
 	}

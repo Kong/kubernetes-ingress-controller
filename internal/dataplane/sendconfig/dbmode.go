@@ -337,22 +337,22 @@ type credential interface {
 
 // credentialOps holds type-specific operations for one credential collection, used by refillCredTypeIDs.
 type credentialOps[T credential] struct {
-	kind        string
-	getCurrents func() ([]*T, error)
-	getTargets  func() ([]*T, error)
-	consumerID  func(*T) string
-	id          func(*T) *string
-	tags        func(*T) []*string
-	setID       func(*T, *string)
-	delete      func(string) error
-	add         func(T) error
+	kind            string
+	getCurrentItems func() ([]*T, error)
+	getTargetItems  func() ([]*T, error)
+	consumerID      func(*T) string
+	id              func(*T) *string
+	tags            func(*T) []*string
+	setID           func(*T, *string)
+	delete          func(string) error
+	add             func(T) error
 }
 
 // refillCredTypeIDs is the shared implementation for all per-type refill functions.
 // It builds an index of current-state IDs keyed by credentialMatchKey(consumerID, tags) and
 // copies each matching ID into the target state (delete old entry + re-add with existing ID).
 func refillCredTypeIDs[T credential](ops credentialOps[T], logger logr.Logger) error {
-	current, err := ops.getCurrents()
+	current, err := ops.getCurrentItems()
 	if err != nil {
 		return fmt.Errorf("failed getting current %s: %w", ops.kind, err)
 	}
@@ -367,7 +367,7 @@ func refillCredTypeIDs[T credential](ops credentialOps[T], logger logr.Logger) e
 		currentIndex[k] = id
 	}
 
-	targets, err := ops.getTargets()
+	targets, err := ops.getTargetItems()
 	if err != nil {
 		return fmt.Errorf("failed getting target %s: %w", ops.kind, err)
 	}
@@ -397,9 +397,9 @@ func refillCredTypeIDs[T credential](ops credentialOps[T], logger logr.Logger) e
 
 func refillKeyAuthIDs(currentState *state.KongState, targetState *state.KongState, logger logr.Logger) error {
 	return refillCredTypeIDs(credentialOps[state.KeyAuth]{
-		kind:        "key-auth",
-		getCurrents: currentState.KeyAuths.GetAll,
-		getTargets:  targetState.KeyAuths.GetAll,
+		kind:            "key-auth",
+		getCurrentItems: currentState.KeyAuths.GetAll,
+		getTargetItems:  targetState.KeyAuths.GetAll,
 		consumerID: func(ka *state.KeyAuth) string {
 			if ka.Consumer != nil && ka.Consumer.ID != nil {
 				return *ka.Consumer.ID
@@ -416,9 +416,9 @@ func refillKeyAuthIDs(currentState *state.KongState, targetState *state.KongStat
 
 func refillBasicAuthIDs(currentState *state.KongState, targetState *state.KongState, logger logr.Logger) error {
 	return refillCredTypeIDs(credentialOps[state.BasicAuth]{
-		kind:        "basic-auth",
-		getCurrents: currentState.BasicAuths.GetAll,
-		getTargets:  targetState.BasicAuths.GetAll,
+		kind:            "basic-auth",
+		getCurrentItems: currentState.BasicAuths.GetAll,
+		getTargetItems:  targetState.BasicAuths.GetAll,
 		consumerID: func(ba *state.BasicAuth) string {
 			if ba.Consumer != nil && ba.Consumer.ID != nil {
 				return *ba.Consumer.ID
@@ -435,9 +435,9 @@ func refillBasicAuthIDs(currentState *state.KongState, targetState *state.KongSt
 
 func refillHMACAuthIDs(currentState *state.KongState, targetState *state.KongState, logger logr.Logger) error {
 	return refillCredTypeIDs(credentialOps[state.HMACAuth]{
-		kind:        "hmac-auth",
-		getCurrents: currentState.HMACAuths.GetAll,
-		getTargets:  targetState.HMACAuths.GetAll,
+		kind:            "hmac-auth",
+		getCurrentItems: currentState.HMACAuths.GetAll,
+		getTargetItems:  targetState.HMACAuths.GetAll,
 		consumerID: func(ha *state.HMACAuth) string {
 			if ha.Consumer != nil && ha.Consumer.ID != nil {
 				return *ha.Consumer.ID
@@ -454,9 +454,9 @@ func refillHMACAuthIDs(currentState *state.KongState, targetState *state.KongSta
 
 func refillJWTAuthIDs(currentState *state.KongState, targetState *state.KongState, logger logr.Logger) error {
 	return refillCredTypeIDs(credentialOps[state.JWTAuth]{
-		kind:        "jwt-auth",
-		getCurrents: currentState.JWTAuths.GetAll,
-		getTargets:  targetState.JWTAuths.GetAll,
+		kind:            "jwt-auth",
+		getCurrentItems: currentState.JWTAuths.GetAll,
+		getTargetItems:  targetState.JWTAuths.GetAll,
 		consumerID: func(ja *state.JWTAuth) string {
 			if ja.Consumer != nil && ja.Consumer.ID != nil {
 				return *ja.Consumer.ID
@@ -473,9 +473,9 @@ func refillJWTAuthIDs(currentState *state.KongState, targetState *state.KongStat
 
 func refillACLGroupIDs(currentState *state.KongState, targetState *state.KongState, logger logr.Logger) error {
 	return refillCredTypeIDs(credentialOps[state.ACLGroup]{
-		kind:        "acl-group",
-		getCurrents: currentState.ACLGroups.GetAll,
-		getTargets:  targetState.ACLGroups.GetAll,
+		kind:            "acl-group",
+		getCurrentItems: currentState.ACLGroups.GetAll,
+		getTargetItems:  targetState.ACLGroups.GetAll,
 		consumerID: func(ag *state.ACLGroup) string {
 			if ag.Consumer != nil && ag.Consumer.ID != nil {
 				return *ag.Consumer.ID
@@ -492,9 +492,9 @@ func refillACLGroupIDs(currentState *state.KongState, targetState *state.KongSta
 
 func refillOauth2CredIDs(currentState *state.KongState, targetState *state.KongState, logger logr.Logger) error {
 	return refillCredTypeIDs(credentialOps[state.Oauth2Credential]{
-		kind:        "oauth2-cred",
-		getCurrents: currentState.Oauth2Creds.GetAll,
-		getTargets:  targetState.Oauth2Creds.GetAll,
+		kind:            "oauth2-cred",
+		getCurrentItems: currentState.Oauth2Creds.GetAll,
+		getTargetItems:  targetState.Oauth2Creds.GetAll,
 		consumerID: func(oc *state.Oauth2Credential) string {
 			if oc.Consumer != nil && oc.Consumer.ID != nil {
 				return *oc.Consumer.ID
@@ -511,9 +511,9 @@ func refillOauth2CredIDs(currentState *state.KongState, targetState *state.KongS
 
 func refillMTLSAuthIDs(currentState *state.KongState, targetState *state.KongState, logger logr.Logger) error {
 	return refillCredTypeIDs(credentialOps[state.MTLSAuth]{
-		kind:        "mtls-auth",
-		getCurrents: currentState.MTLSAuths.GetAll,
-		getTargets:  targetState.MTLSAuths.GetAll,
+		kind:            "mtls-auth",
+		getCurrentItems: currentState.MTLSAuths.GetAll,
+		getTargetItems:  targetState.MTLSAuths.GetAll,
 		consumerID: func(ma *state.MTLSAuth) string {
 			if ma.Consumer != nil && ma.Consumer.ID != nil {
 				return *ma.Consumer.ID

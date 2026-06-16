@@ -125,9 +125,19 @@ Adding a new version? You'll need three changes:
 - [0.0.5](#005)
 - [0.0.4 and prior](#004-and-prior)
 
-## [3.5]
+## [3.5.10]
 
 > Release date: TBD
+
+### Fixed
+
+- Prevent recreating consumer credentials on every Konnect sync when running in
+  KIC in Konnect mode.
+  [#7978](https://github.com/Kong/kubernetes-ingress-controller/pull/7978)
+
+## [3.5.9]
+
+> Release date: 2026-06-04
 
 ### Fixed
 
@@ -136,6 +146,13 @@ Adding a new version? You'll need three changes:
   which, when gateway service discovery is combined with a mTLS-secured Admin API, caused
   permanent TLS verification failures against the recreated client.
   [#7950](https://github.com/Kong/kubernetes-ingress-controller/pull/7950)
+
+## [3.5.8]
+
+> Release date: 2026-06-01
+
+### Fixed
+
 - Revert plugin config sanitization `--dump-sensitive-config` isn't set.
   Due to plugin configuration being dependent on plugin type controller is not
   able to make an informed decision whether a field is sensitive or not and more
@@ -143,6 +160,7 @@ Adding a new version? You'll need three changes:
   Users are suggested to block network access to debug endpoints (which are disabled
   by default) if plugin configuration can contain sensitive information.
   [#7937](https://github.com/Kong/kubernetes-ingress-controller/pull/7937)
+  [#7939](https://github.com/Kong/kubernetes-ingress-controller/pull/7939)
 
 ## [3.5.7]
 

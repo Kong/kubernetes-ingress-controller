@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"reflect"
+	"sort"
+	"strings"
 	"sync"
 	"time"
 
@@ -94,6 +96,12 @@ func (s *UpdateStrategyDBMode) Update(ctx context.Context, targetContent Content
 
 	if err := s.refillPluginIDs(cs, ts); err != nil {
 		return mo.None[int](), err
+	}
+
+	if s.isKonnect {
+		if err := refillCredentialIDs(cs, ts, s.logger); err != nil {
+			return mo.None[int](), err
+		}
 	}
 
 	syncer, err := diff.NewSyncer(diff.SyncerOpts{
@@ -270,6 +278,256 @@ func (s *UpdateStrategyDBMode) targetState(
 	}
 
 	return state.Get(rawState)
+}
+
+// credentialMatchKey returns a string that uniquely identifies a credential within the KongState
+// across syncs. It combines the consumer's ID and a sorted, canonical form of the credential's tags.
+// KIC always tags credentials with GenerateTagsForObject(secret), which encodes the k8s Secret's
+// namespace/name/uid — this is deterministic and survives SanitizedCopy. The consumer ID is stable
+// because FillIDs covers consumers. Using these two fields (rather than the credential value such as
+// Key or Username) avoids the sanitization-induced churn where SanitizedCopy randomizes key-auth Key.
+func credentialMatchKey(consumerID string, tags []*string) string {
+	tagStrs := make([]string, 0, len(tags))
+	for _, t := range tags {
+		if t != nil {
+			tagStrs = append(tagStrs, *t)
+		}
+	}
+	sort.Strings(tagStrs)
+	return consumerID + "|" + strings.Join(tagStrs, ",")
+}
+
+// refillCredentialIDs reconciles credential IDs from the current state into the target state.
+// When KIC builds target content, credentials carry no IDs (go-kong has no FillID for credential
+// types). On the Konnect sync path, SanitizedCopy further randomizes key-auth Key values, so
+// go-database-reconciler's value-based ID recovery always misses, causing delete+create churn.
+// This function matches current-state credentials to target-state credentials by consumer ID + tags
+// and copies the existing ID, turning churn into a stable in-place update (or no event with Fix A).
+func refillCredentialIDs(currentState *state.KongState, targetState *state.KongState, logger logr.Logger) error {
+	if err := refillKeyAuthIDs(currentState, targetState, logger); err != nil {
+		return err
+	}
+	if err := refillBasicAuthIDs(currentState, targetState, logger); err != nil {
+		return err
+	}
+	if err := refillHMACAuthIDs(currentState, targetState, logger); err != nil {
+		return err
+	}
+	if err := refillJWTAuthIDs(currentState, targetState, logger); err != nil {
+		return err
+	}
+	if err := refillACLGroupIDs(currentState, targetState, logger); err != nil {
+		return err
+	}
+	if err := refillOauth2CredIDs(currentState, targetState, logger); err != nil {
+		return err
+	}
+	return refillMTLSAuthIDs(currentState, targetState, logger)
+}
+
+// credential is a union of all credential types.
+// This is primarily used as a type constraint for credentialOps and refillCredTypeIDs.
+type credential interface {
+	state.KeyAuth |
+		state.BasicAuth |
+		state.HMACAuth |
+		state.JWTAuth |
+		state.ACLGroup |
+		state.Oauth2Credential |
+		state.MTLSAuth
+}
+
+// credentialOps holds type-specific operations for one credential collection, used by refillCredTypeIDs.
+type credentialOps[T credential] struct {
+	kind            string
+	getCurrentItems func() ([]*T, error)
+	getTargetItems  func() ([]*T, error)
+	consumerID      func(*T) string
+	id              func(*T) *string
+	tags            func(*T) []*string
+	setID           func(*T, *string)
+	delete          func(string) error
+	add             func(T) error
+}
+
+// refillCredTypeIDs is the shared implementation for all per-type refill functions.
+// It builds an index of current-state IDs keyed by credentialMatchKey(consumerID, tags) and
+// copies each matching ID into the target state (delete old entry + re-add with existing ID).
+func refillCredTypeIDs[T credential](ops credentialOps[T], logger logr.Logger) error {
+	current, err := ops.getCurrentItems()
+	if err != nil {
+		return fmt.Errorf("failed getting current %s: %w", ops.kind, err)
+	}
+
+	currentIndex := make(map[string]*string, len(current))
+	for _, c := range current {
+		id := ops.id(c)
+		if id == nil {
+			continue
+		}
+		k := credentialMatchKey(ops.consumerID(c), ops.tags(c))
+		currentIndex[k] = id
+	}
+
+	targets, err := ops.getTargetItems()
+	if err != nil {
+		return fmt.Errorf("failed getting target %s: %w", ops.kind, err)
+	}
+	for _, t := range targets {
+		k := credentialMatchKey(ops.consumerID(t), ops.tags(t))
+		existingID, ok := currentIndex[k]
+		if !ok || existingID == nil {
+			continue
+		}
+		currentID := ops.id(t)
+		if currentID != nil && *currentID == *existingID {
+			continue
+		}
+		logger.V(logging.DebugLevel).Info("keeping ID of existing "+ops.kind, "new_id", currentID, "old_id", existingID)
+		if currentID != nil {
+			if err := ops.delete(*currentID); err != nil && !errors.Is(err, state.ErrNotFound) {
+				return fmt.Errorf("failed deleting target %s: %w", ops.kind, err)
+			}
+		}
+		ops.setID(t, existingID)
+		if err := ops.add(*t); err != nil {
+			return fmt.Errorf("failed adding target %s with refilled ID: %w", ops.kind, err)
+		}
+	}
+	return nil
+}
+
+func refillKeyAuthIDs(currentState *state.KongState, targetState *state.KongState, logger logr.Logger) error {
+	return refillCredTypeIDs(credentialOps[state.KeyAuth]{
+		kind:            "key-auth",
+		getCurrentItems: currentState.KeyAuths.GetAll,
+		getTargetItems:  targetState.KeyAuths.GetAll,
+		consumerID: func(ka *state.KeyAuth) string {
+			if ka.Consumer != nil && ka.Consumer.ID != nil {
+				return *ka.Consumer.ID
+			}
+			return ""
+		},
+		id:     func(ka *state.KeyAuth) *string { return ka.ID },
+		tags:   func(ka *state.KeyAuth) []*string { return ka.Tags },
+		setID:  func(ka *state.KeyAuth, id *string) { ka.ID = id },
+		delete: targetState.KeyAuths.Delete,
+		add:    targetState.KeyAuths.Add,
+	}, logger)
+}
+
+func refillBasicAuthIDs(currentState *state.KongState, targetState *state.KongState, logger logr.Logger) error {
+	return refillCredTypeIDs(credentialOps[state.BasicAuth]{
+		kind:            "basic-auth",
+		getCurrentItems: currentState.BasicAuths.GetAll,
+		getTargetItems:  targetState.BasicAuths.GetAll,
+		consumerID: func(ba *state.BasicAuth) string {
+			if ba.Consumer != nil && ba.Consumer.ID != nil {
+				return *ba.Consumer.ID
+			}
+			return ""
+		},
+		id:     func(ba *state.BasicAuth) *string { return ba.ID },
+		tags:   func(ba *state.BasicAuth) []*string { return ba.Tags },
+		setID:  func(ba *state.BasicAuth, id *string) { ba.ID = id },
+		delete: targetState.BasicAuths.Delete,
+		add:    targetState.BasicAuths.Add,
+	}, logger)
+}
+
+func refillHMACAuthIDs(currentState *state.KongState, targetState *state.KongState, logger logr.Logger) error {
+	return refillCredTypeIDs(credentialOps[state.HMACAuth]{
+		kind:            "hmac-auth",
+		getCurrentItems: currentState.HMACAuths.GetAll,
+		getTargetItems:  targetState.HMACAuths.GetAll,
+		consumerID: func(ha *state.HMACAuth) string {
+			if ha.Consumer != nil && ha.Consumer.ID != nil {
+				return *ha.Consumer.ID
+			}
+			return ""
+		},
+		id:     func(ha *state.HMACAuth) *string { return ha.ID },
+		tags:   func(ha *state.HMACAuth) []*string { return ha.Tags },
+		setID:  func(ha *state.HMACAuth, id *string) { ha.ID = id },
+		delete: targetState.HMACAuths.Delete,
+		add:    targetState.HMACAuths.Add,
+	}, logger)
+}
+
+func refillJWTAuthIDs(currentState *state.KongState, targetState *state.KongState, logger logr.Logger) error {
+	return refillCredTypeIDs(credentialOps[state.JWTAuth]{
+		kind:            "jwt-auth",
+		getCurrentItems: currentState.JWTAuths.GetAll,
+		getTargetItems:  targetState.JWTAuths.GetAll,
+		consumerID: func(ja *state.JWTAuth) string {
+			if ja.Consumer != nil && ja.Consumer.ID != nil {
+				return *ja.Consumer.ID
+			}
+			return ""
+		},
+		id:     func(ja *state.JWTAuth) *string { return ja.ID },
+		tags:   func(ja *state.JWTAuth) []*string { return ja.Tags },
+		setID:  func(ja *state.JWTAuth, id *string) { ja.ID = id },
+		delete: targetState.JWTAuths.Delete,
+		add:    targetState.JWTAuths.Add,
+	}, logger)
+}
+
+func refillACLGroupIDs(currentState *state.KongState, targetState *state.KongState, logger logr.Logger) error {
+	return refillCredTypeIDs(credentialOps[state.ACLGroup]{
+		kind:            "acl-group",
+		getCurrentItems: currentState.ACLGroups.GetAll,
+		getTargetItems:  targetState.ACLGroups.GetAll,
+		consumerID: func(ag *state.ACLGroup) string {
+			if ag.Consumer != nil && ag.Consumer.ID != nil {
+				return *ag.Consumer.ID
+			}
+			return ""
+		},
+		id:     func(ag *state.ACLGroup) *string { return ag.ID },
+		tags:   func(ag *state.ACLGroup) []*string { return ag.Tags },
+		setID:  func(ag *state.ACLGroup, id *string) { ag.ID = id },
+		delete: targetState.ACLGroups.Delete,
+		add:    targetState.ACLGroups.Add,
+	}, logger)
+}
+
+func refillOauth2CredIDs(currentState *state.KongState, targetState *state.KongState, logger logr.Logger) error {
+	return refillCredTypeIDs(credentialOps[state.Oauth2Credential]{
+		kind:            "oauth2-cred",
+		getCurrentItems: currentState.Oauth2Creds.GetAll,
+		getTargetItems:  targetState.Oauth2Creds.GetAll,
+		consumerID: func(oc *state.Oauth2Credential) string {
+			if oc.Consumer != nil && oc.Consumer.ID != nil {
+				return *oc.Consumer.ID
+			}
+			return ""
+		},
+		id:     func(oc *state.Oauth2Credential) *string { return oc.ID },
+		tags:   func(oc *state.Oauth2Credential) []*string { return oc.Tags },
+		setID:  func(oc *state.Oauth2Credential, id *string) { oc.ID = id },
+		delete: targetState.Oauth2Creds.Delete,
+		add:    targetState.Oauth2Creds.Add,
+	}, logger)
+}
+
+func refillMTLSAuthIDs(currentState *state.KongState, targetState *state.KongState, logger logr.Logger) error {
+	return refillCredTypeIDs(credentialOps[state.MTLSAuth]{
+		kind:            "mtls-auth",
+		getCurrentItems: currentState.MTLSAuths.GetAll,
+		getTargetItems:  targetState.MTLSAuths.GetAll,
+		consumerID: func(ma *state.MTLSAuth) string {
+			if ma.Consumer != nil && ma.Consumer.ID != nil {
+				return *ma.Consumer.ID
+			}
+			return ""
+		},
+		id:     func(ma *state.MTLSAuth) *string { return ma.ID },
+		tags:   func(ma *state.MTLSAuth) []*string { return ma.Tags },
+		setID:  func(ma *state.MTLSAuth, id *string) { ma.ID = id },
+		delete: targetState.MTLSAuths.Delete,
+		add:    targetState.MTLSAuths.Add,
+	}, logger)
 }
 
 // refillPluginIDs keeps the plugin ID in the target state if there are already the same plugin

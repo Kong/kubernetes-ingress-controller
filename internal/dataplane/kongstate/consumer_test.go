@@ -86,7 +86,7 @@ func TestConsumer_SanitizedCopy(t *testing.T) {
 				Plugins: []kong.Plugin{{ID: kong.String("1")}},
 				KeyAuths: []*KeyAuth{
 					{
-						KeyAuth: kong.KeyAuth{ID: kong.String("1"), Key: kong.String("{vault://52fdfc07-2182-454f-963f-5f0f9a621d72}")},
+						KeyAuth: kong.KeyAuth{ID: kong.String("1"), Key: deterministicRedactedString("secret")},
 					},
 				},
 				HMACAuths: []*HMACAuth{

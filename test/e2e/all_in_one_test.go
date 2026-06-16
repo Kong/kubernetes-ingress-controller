@@ -106,7 +106,6 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 
 	t.Log("deploying kong components")
 	manifestDeploy := ManifestDeploy{Path: postgresPath}
-	t.Log("deploying kong components")
 	kongImageVersion, err := helpers.GetKongImageVersion()
 	require.NoError(t, err)
 	if kongImageVersion.GTE(consts.ForceLicenseVersionCutoff) {

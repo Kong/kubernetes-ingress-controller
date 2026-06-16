@@ -18,6 +18,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/istio"
 	kongaddon "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
+	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -77,6 +78,14 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 		WithControllerDisabled().
 		WithProxyAdminServiceTypeLoadBalancer().
 		WithNamespace(consts.ControllerNamespace)
+	kongImageVersion, err := helpers.GetKongImageVersion()
+	require.NoError(t, err)
+	if kongImageVersion.GTE(consts.ForceLicenseVersionCutoff) {
+		t.Logf("Kong version %s requires a license, patching the manifest", kongImageVersion)
+		licenseJSON, err := ktfkong.GetLicenseJSONFromEnv()
+		require.NoError(t, err, "failed to get Kong license from environment variable")
+		kongBuilder = kongBuilder.WithProxyEnterpriseEnabled(licenseJSON)
+	}
 	kongAddon := kongBuilder.Build()
 
 	t.Log("configuring istio cluster addon for the testing environment")

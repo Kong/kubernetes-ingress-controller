@@ -325,6 +325,8 @@ func refillCredentialIDs(currentState *state.KongState, targetState *state.KongS
 	return refillMTLSAuthIDs(currentState, targetState, logger)
 }
 
+// credential is a union of all credential types.
+// This is primarily used as a type constraint for credentialOps and refillCredTypeIDs.
 type credential interface {
 	state.KeyAuth |
 		state.BasicAuth |

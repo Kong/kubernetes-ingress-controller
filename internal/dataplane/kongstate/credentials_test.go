@@ -14,7 +14,7 @@ func TestKeyAuth_SanitizedCopy(t *testing.T) {
 		want KeyAuth
 	}{
 		{
-			name: "fills all fields but Consumer and sanitizes key",
+			name: "fills all fields but Consumer and sanitizes key deterministically",
 			in: KeyAuth{
 				KeyAuth: kong.KeyAuth{
 					Consumer:  &kong.Consumer{Username: kong.String("foo")},
@@ -28,8 +28,23 @@ func TestKeyAuth_SanitizedCopy(t *testing.T) {
 				KeyAuth: kong.KeyAuth{
 					CreatedAt: kong.Int(1),
 					ID:        kong.String("2"),
-					Key:       kong.String("{vault://52fdfc07-2182-454f-963f-5f0f9a621d72}"),
+					Key:       deterministicRedactedString("3"),
 					Tags:      []*string{kong.String("4.1"), kong.String("4.2")},
+				},
+			},
+		},
+		{
+			name: "sanitizes key to random vault-URI when key is nil",
+			in: KeyAuth{
+				KeyAuth: kong.KeyAuth{
+					ID:  kong.String("2"),
+					Key: nil,
+				},
+			},
+			want: KeyAuth{
+				KeyAuth: kong.KeyAuth{
+					ID:  kong.String("2"),
+					Key: kong.String("{vault://52fdfc07-2182-454f-963f-5f0f9a621d72}"),
 				},
 			},
 		},
@@ -39,6 +54,21 @@ func TestKeyAuth_SanitizedCopy(t *testing.T) {
 			assert.Equal(t, tt.want, got)
 		})
 	}
+
+	t.Run("deterministic: same key produces same redacted value across calls", func(t *testing.T) {
+		ka := KeyAuth{KeyAuth: kong.KeyAuth{Key: kong.String("mykey")}}
+		got1 := ka.SanitizedCopy(StaticUUIDGenerator{UUID: "x"})
+		got2 := ka.SanitizedCopy(StaticUUIDGenerator{UUID: "y"})
+		assert.Equal(t, got1.Key, got2.Key, "same real key must produce same redacted key regardless of uuidGenerator")
+	})
+
+	t.Run("different keys produce different redacted values", func(t *testing.T) {
+		ka1 := KeyAuth{KeyAuth: kong.KeyAuth{Key: kong.String("keyA")}}
+		ka2 := KeyAuth{KeyAuth: kong.KeyAuth{Key: kong.String("keyB")}}
+		got1 := ka1.SanitizedCopy(StaticUUIDGenerator{UUID: "x"})
+		got2 := ka2.SanitizedCopy(StaticUUIDGenerator{UUID: "x"})
+		assert.NotEqual(t, got1.Key, got2.Key, "different real keys must produce different redacted keys")
+	})
 }
 
 func TestHMACAuth_SanitizedCopy(t *testing.T) {

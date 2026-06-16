@@ -127,7 +127,7 @@ Adding a new version? You'll need three changes:
 
 ## [3.5.10]
 
-> Release ate: TBD
+> Release date: TBD
 
 ### Fixed
 

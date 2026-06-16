@@ -519,11 +519,13 @@ func TestAdminAPIClientsManager_PeriodicReadinessReconciliation(t *testing.T) {
 	// Trigger a next readiness check which will make testURL2 ready.
 	readinessChecker.LetChecksReturn(clients.ReadinessCheckResult{ClientsTurnedReady: intoTurnedReady(testURL2)})
 	readinessTicker.Add(managercfg.DefaultDataPlanesReadinessReconciliationInterval)
-	readinessCheckCallEventuallyMatches(readinessCheckCall{
-		AlreadyCreatedURLs: []string{testURL1},
-		PendingURLs:        []string{testURL2},
-	})
-	require.Equal(t, 3, readinessChecker.CallsCount())
+	// Wait for CallsCount to reach 3 instead of relying on readinessCheckCallEventuallyMatches:
+	// the readiness check arguments here are identical to the previous step's (CheckReadiness is
+	// called with the pre-transition lists, so testURL2 is still pending), so LastCall already
+	// matches and would not synchronize with the tick-triggered check made by the manager goroutine.
+	require.Eventually(t, func() bool {
+		return readinessChecker.CallsCount() == 3
+	}, time.Second, time.Millisecond, "expected a third readiness check after the periodic tick")
 	require.True(t, lo.ContainsBy(m.GatewayClients(), func(c *adminapi.Client) bool {
 		return c.BaseRootURL() == testURL2
 	}), "expected to find the new client in the manager's clients list after it became ready")

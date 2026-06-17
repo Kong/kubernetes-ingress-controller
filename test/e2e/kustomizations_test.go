@@ -245,3 +245,44 @@ func WithLicensePatch(proxyDeploymentName string) ManifestPatch {
 		return &buf, nil
 	}
 }
+
+// konnectLicensingEnvPatch is the patch to add the CONTROLLER_KONNECT_LICENSING_ENABLED env var to the controller container to enable Konnect licensing behavior.
+const konnectLicensingEnvPatch = `- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: CONTROLLER_KONNECT_LICENSING_ENABLED
+	value: "true"`
+
+// WithKonnectLicensingPatch adds the CONTROLLER_KONNECT_LICENSING_ENABLED env var to the controller container to enable Konnect licensing behavior.
+// This is required for tests that involve Konnect licensing with Kong versions that require a license at startup,
+// since the presence of this env var changes the licensing activation flow to be compatible with such versions.
+func WithKonnectLicensingPatch() ManifestPatch {
+	return func(r io.Reader) (io.Reader, error) {
+		ingressDeploymentName := "ingress-kong"
+		// Add the CONTROLLER_KONNECT_LICENSING_ENABLED env var to the controller container to enable Konnect licensing behavior.
+		kustomization := types.Kustomization{
+			Patches: []types.Patch{
+				{
+					Patch: konnectLicensingEnvPatch,
+					Target: &types.Selector{
+						ResId: resid.ResId{
+							Gvk:       resid.Gvk{Group: "apps", Version: "v1", Kind: "Deployment"},
+							Name:      ingressDeploymentName,
+							Namespace: namespace,
+						},
+					},
+				},
+			},
+		}
+		patched, err := kubectl.GetKustomizedManifest(kustomization, r)
+		if err != nil {
+			return nil, err
+		}
+
+		var buf bytes.Buffer
+		if _, err := io.Copy(&buf, patched); err != nil {
+			return nil, err
+		}
+		return &buf, nil
+	}
+}

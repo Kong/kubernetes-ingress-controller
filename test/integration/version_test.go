@@ -123,3 +123,10 @@ func eventuallyGetKongRouterFlavor(ctx context.Context, t *testing.T, adminURL *
 	}, time.Minute, time.Second)
 	return routerFlavor
 }
+
+// kongGatewayVersionRequiresLicense returns true if the Kong Gateway version requires a license to run.
+func kongGatewayVersionRequiresLicense() bool {
+	return kongGatewayVersion.IsKongGatewayEnterprise() &&
+		kongGatewayVersion.Major() >= consts.ForceLicenseVersionCutoff.Major &&
+		kongGatewayVersion.Minor() >= consts.ForceLicenseVersionCutoff.Minor
+}

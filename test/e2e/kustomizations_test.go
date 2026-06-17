@@ -251,7 +251,7 @@ const konnectLicensingEnvPatch = `- op: add
   path: /spec/template/spec/containers/0/env/-
   value:
     name: CONTROLLER_KONNECT_LICENSING_ENABLED
-	value: "true"`
+    value: "true"`
 
 // WithKonnectLicensingPatch adds the CONTROLLER_KONNECT_LICENSING_ENABLED env var to the controller container to enable Konnect licensing behavior.
 // This is required for tests that involve Konnect licensing with Kong versions that require a license at startup,

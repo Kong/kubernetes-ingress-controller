@@ -37,6 +37,12 @@ certificates:
   - certificate:
       id: 8aade13c-1470-46bd-9849-9a74e349214f
     name: 4.example.com
+  tags:
+  - k8s-name:sooper-secret2
+  - k8s-namespace:bar-namespace
+  - k8s-kind:Secret
+  - k8s-uid:8aade13c-1470-46bd-9849-9a74e349214f
+  - k8s-version:v1
 - cert: |-
     -----BEGIN CERTIFICATE-----
     MIIBoTCCAQoCCQC/V5OfTXu7xDANBgkqhkiG9w0BAQsFADAVMRMwEQYDVQQDDApr
@@ -74,6 +80,12 @@ certificates:
   - certificate:
       id: c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
     name: 2.example.com
+  tags:
+  - k8s-name:sooper-secret
+  - k8s-namespace:bar-namespace
+  - k8s-kind:Secret
+  - k8s-uid:c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
+  - k8s-version:v1
 services:
 - connect_timeout: 60000
   host: foo-svc.bar-namespace.80.svc

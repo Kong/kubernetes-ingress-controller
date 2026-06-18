@@ -127,6 +127,8 @@ Adding a new version? You'll need three changes:
 - Prevent recreating consumer credentials on every Konnect sync when running in
   KIC in Konnect mode.
   [#7981](https://github.com/Kong/kubernetes-ingress-controller/pull/7981)
+- Fix missing certificate tags in generated config.
+  [#7991](https://github.com/Kong/kubernetes-ingress-controller/pull/7991)
 
 ## [3.5.9]
 

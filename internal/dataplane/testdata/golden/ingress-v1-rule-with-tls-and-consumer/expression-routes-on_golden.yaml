@@ -37,6 +37,12 @@ certificates:
   - certificate:
       id: c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
     name: 2.example.com
+  tags:
+  - k8s-name:sooper-secret
+  - k8s-namespace:bar-namespace
+  - k8s-kind:Secret
+  - k8s-uid:c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af
+  - k8s-version:v1
 consumers:
 - basicauth_credentials:
   - password: consumer-1-password

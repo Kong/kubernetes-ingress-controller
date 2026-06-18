@@ -11,14 +11,14 @@ import (
 )
 
 func TestGetFCertificateFromKongCert(t *testing.T) {
-const (
-	certID = "c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af"
-	certPEM = "-----BEGIN CERTIFICATE-----\nfake\n-----END CERTIFICATE-----"
-	keyPEM = "-----BEGIN PRIVATE KEY-----\nfake\n-----END PRIVATE KEY-----"
-	sniName = "example.com"
-	tag1 = "k8s-name:sooper-secret"
-	tag2 = "k8s-namespace:bar-namespace"
-)
+	const (
+		certID  = "c6ac927c-4f5a-4e88-8b5d-c7b01d0f43af"
+		certPEM = "-----BEGIN CERTIFICATE-----\nfake\n-----END CERTIFICATE-----"
+		keyPEM  = "-----BEGIN PRIVATE KEY-----\nfake\n-----END PRIVATE KEY-----"
+		sniName = "example.com"
+		tag1    = "k8s-name:sooper-secret"
+		tag2    = "k8s-namespace:bar-namespace"
+	)
 
 	testCases := []struct {
 		name     string

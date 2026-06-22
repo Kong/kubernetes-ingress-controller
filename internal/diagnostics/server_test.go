@@ -93,8 +93,24 @@ func TestDiagnosticsServer_Diffs(t *testing.T) {
 		last = diff.Hash
 	}
 
-	// request the diff report
+	// Wait for all diffs to be processed by the collector before making HTTP requests.
+	// This prevents race conditions where the HTTP handler might return data before all
+	// diffs have been stored in the collector's diff map.
 	httpClient := &http.Client{}
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		resp, err := httpClient.Get(fmt.Sprintf("http://localhost:%d/debug/config/diff-report", port))
+		require.NoError(t, err)
+		defer resp.Body.Close()
+
+		got := DiffResponse{}
+		require.NoError(t, json.NewDecoder(resp.Body).Decode(&got))
+
+		// Check that all sent diffs have been processed.
+		require.Len(t, got.Available, configDumpsToWrite, "expected all %d diffs to be available", configDumpsToWrite)
+	}, time.Second*5, time.Millisecond*10, "all diffs should be processed")
+
+	// Request the diff report.
+
 	resp, err := httpClient.Get(fmt.Sprintf("http://localhost:%d/debug/config/diff-report", port))
 	require.NoError(t, err)
 	defer resp.Body.Close()
@@ -124,6 +140,14 @@ func TestDiagnosticsServer_Diffs(t *testing.T) {
 	extra := testConfigDiff()
 	configDiffs[extra.Hash] = extra
 	diffCh <- extra
+
+	// Wait for the extra diff to be processed before checking the results.
+	require.EventuallyWithT(t, func(t *assert.CollectT) {
+		resp, err := httpClient.Get(fmt.Sprintf("http://localhost:%d/debug/config/diff-report?hash=%s", port, extra.Hash))
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		require.Equal(t, http.StatusOK, resp.StatusCode, "extra diff should be available")
+	}, time.Second*5, time.Millisecond*10, "extra diff should be processed")
 
 	second, err := httpClient.Get(fmt.Sprintf("http://localhost:%d/debug/config/diff-report", port))
 	require.NoError(t, err)
@@ -193,13 +217,12 @@ func setupTestServer(ctx context.Context, t *testing.T) (Client, int) {
 	t.Log("Started diagnostics collector")
 
 	// Wait for the server to be ready
-	require.Eventually(t, func() bool {
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		conn, err := net.Dial("tcp", fmt.Sprintf("localhost:%d", port))
-		if err != nil {
-			return false
+		if !assert.NoError(c, err) {
+			return
 		}
 		conn.Close()
-		return true
 	}, 5*time.Second, 100*time.Millisecond, "Server should be ready")
 
 	return client, port

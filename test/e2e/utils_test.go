@@ -152,6 +152,17 @@ func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool
 			return manifestsReader
 		}
 
+		// Distroless images have no bash or rm; lifecycle hooks (postStart/preStop) that use
+		// those tools must be removed. Gated on KongClearStalePIDs being disabled — the same
+		// condition indicates a distroless image is in use (stale PID clearing also needs rm).
+		if testenv.KongClearStalePIDs() != "true" {
+			manifestsReader, err = patchRemoveLifecycleHooks(manifestsReader, deployments.ProxyNN)
+			if err != nil {
+				t.Logf("failed patching lifecycle hooks (%v), using default manifest %v", err, baseManifestPath)
+				return manifestsReader
+			}
+		}
+
 	}
 
 	for _, patch := range testPatches {

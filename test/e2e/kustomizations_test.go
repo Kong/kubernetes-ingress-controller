@@ -192,6 +192,34 @@ const kongLicenseEnvPatch = `- op: add
         key: license
         name: kong-enterprise-license`
 
+const lifecycleHooksPatch = `- op: remove
+  path: /spec/template/spec/containers/0/lifecycle`
+
+// patchRemoveLifecycleHooks removes the lifecycle hooks (postStart/preStop) from the
+// proxy container of the given deployment. Required for distroless images that have no
+// bash or rm available.
+func patchRemoveLifecycleHooks(baseManifestReader io.Reader, deployment k8stypes.NamespacedName) (io.Reader, error) {
+	kustomization := types.Kustomization{
+		Patches: []types.Patch{
+			{
+				Patch: lifecycleHooksPatch,
+				Target: &types.Selector{
+					ResId: resid.ResId{
+						Gvk: resid.Gvk{
+							Group:   "apps",
+							Version: "v1",
+							Kind:    "Deployment",
+						},
+						Name:      deployment.Name,
+						Namespace: deployment.Namespace,
+					},
+				},
+			},
+		},
+	}
+	return kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
+}
+
 // WithLicensePatch injects the enterprise license from the environment into the deployed
 // manifest. It adds the KONG_LICENSE_DATA env var (referencing the kong-enterprise-license
 // secret) to the proxy container of the given proxy deployment and appends the secret itself.

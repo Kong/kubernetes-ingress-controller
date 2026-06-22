@@ -69,7 +69,7 @@ func TestMain(m *testing.M) {
 	kongbuilder.WithProxyEnvVar("vault_test_add_header_1", "h1:v1")
 	// set clear stale PIDs through Kong sidecar container option if the env is set.
 	if v := testenv.KongClearStalePIDs(); v != "" {
-		kongbuilder.WithAdditionalValue("deployment.initContainers.clearStalePid.enabled", v)
+		kongbuilder.WithAdditionalValue("deployment.kong.initContainers.clearStalePid.enabled", v)
 	}
 	// NOTE: specify postgres image for postgres tests as Kong chart 3.0 removed defaults.
 	kongbuilder.WithAdditionalValue("postgresql.image.tag", "13.11.0-debian-11-r20")

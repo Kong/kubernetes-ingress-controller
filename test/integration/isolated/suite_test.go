@@ -297,6 +297,14 @@ func deployKongAddon(
 	for name, value := range kongAddonCfg.kongProxyEnvVars {
 		kongBuilder.WithProxyEnvVar(name, value)
 	}
+	// set clear stale PIDs through Kong sidecar container option if the env is set.
+	if v := testenv.KongClearStalePIDs(); v != "" {
+		kongBuilder.WithAdditionalValue("deployment.kong.initContainers.clearStalePid.enabled", v)
+	}
+	// NOTE: specify postgres image for postgres tests as Kong chart 3.0 removed defaults.
+	kongBuilder.WithAdditionalValue("postgresql.image.tag", "13.11.0-debian-11-r20")
+	kongBuilder.WithAdditionalValue("postgresql.image.registry", "docker.io")
+	kongBuilder.WithAdditionalValue("postgresql.image.repository", "bitnamilegacy/postgresql")
 
 	kongAddon := kongBuilder.Build()
 	t.Logf("deploying kong addon to cluster %s in namespace %s", cluster.Name(), namespace)

@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/blang/semver/v4"
 	"github.com/go-logr/logr"
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-database-reconciler/pkg/file"
@@ -220,14 +219,10 @@ func buildContentFromFixture(
 	cacheStores, err := store.NewCacheStoresFromObjYAML(objects...)
 	require.NoError(t, err)
 
-	v, err := kong.ParseSemanticVersion(testenv.KongTag())
-	require.NoError(t, err)
-
 	translatorInstance, err := translator.NewTranslator(
 		logger,
 		store.New(cacheStores, "kong", logger),
 		"",
-		semver.MustParse(fmt.Sprintf("%d.%d.%d", v.Major(), v.Minor(), v.Patch())),
 		translator.FeatureFlags{},
 		unavailableSchemaServiceProvider{},
 		translator.Config{},

@@ -116,15 +116,23 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 		if !assert.NotEmpty(t, updateError.RawResponseBody()) {
 			return
 		}
-		resourceErr, found := lo.Find(updateError.ResourceFailures(), func(r failures.ResourceFailure) bool {
-			return lo.ContainsBy(r.CausingObjects(), func(obj client.Object) bool {
-				return obj.GetName() == "test-service"
-			})
-		})
-		if !assert.Truef(t, found, "expected resource error for test-service, got: %+v", updateError.ResourceFailures()) {
+		resourceErrs := lo.Filter(updateError.ResourceFailures(),
+			func(r failures.ResourceFailure, _ int) bool {
+				return lo.ContainsBy(r.CausingObjects(), func(obj client.Object) bool {
+					return obj.GetName() == "test-service"
+				})
+			},
+		)
+		if !assert.Truef(t, len(resourceErrs) > 0, "expected resource error for test-service, got: %+v", updateError.ResourceFailures()) {
 			return
 		}
-		if !assert.Equal(t, resourceErr.Message(), expectedMessage) {
+		resourceErr, ok := lo.Find(resourceErrs, func(resourceErr failures.ResourceFailure) bool {
+			return resourceErr.Message() == expectedMessage
+		})
+		if !ok {
+			assert.Failf(t, "expected resource error message not found", "expected: %s, got: %+v",
+				expectedMessage, resourceErrs,
+			)
 			return
 		}
 		if diff := cmp.Diff(expectedCausingObjects, resourceErr.CausingObjects()); !assert.Empty(t, diff) {

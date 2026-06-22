@@ -251,7 +251,14 @@ func fillPlugin(ctx context.Context, plugin *file.FPlugin, schemas PluginSchemaS
 	if plugin.Config == nil {
 		plugin.Config = make(kong.Configuration)
 	}
-	err = kong.FillPluginsDefaults(&plugin.Plugin, schema)
+	err = kong.FillPluginsDefaultsWithOpts(&plugin.Plugin, schema, kong.FillRecordOptions{
+		FillDefaults: true,
+		// Do not fill auto fields as they are meant to be set by Kong.
+		// Filling them might cause issues, for example: filling in the namespace field
+		// in rate-limiting-advanced plugin (setting it it to nil) will cause the config
+		// to be rejected by Kong as the namespace field is required to be set to a non-nil value.
+		FillAuto: false,
+	})
 	if err != nil {
 		return fmt.Errorf("error filling in default for plugin %s: %w", *plugin.Name, err)
 	}

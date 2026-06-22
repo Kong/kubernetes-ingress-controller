@@ -31,6 +31,11 @@ on:
         description: Run Istio E2E tests.
         type: boolean
         default: false
+      clear-stale-pids:
+        description: Whether to clear stale PIDs through Kong sidecar container.
+        type: boolean
+        required: false
+        default: true
 
 permissions:
   contents: read
@@ -294,6 +299,7 @@ jobs:
         env:
           MISE_VERBOSE: 1
           MISE_DEBUG: 1
+          TEST_KONG_CLEAR_STALE_PIDS: ${{ inputs.clear-stale-pids }}
           # NOTE: The limitation of the GKE setup is that we cannot run tests against a local image,
           # therefore we need to use the nightly one.
           # TODO: Once we have a way to load images into GKE, we can use the local image.

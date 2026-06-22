@@ -67,6 +67,10 @@ func TestMain(m *testing.M) {
 	}
 	// add env for vaults.
 	kongbuilder.WithProxyEnvVar("vault_test_add_header_1", "h1:v1")
+	// set clear stale PIDs through Kong sidecar container option if the env is set.
+	if v := testenv.KongClearStalePIDs(); v != "" {
+		kongbuilder.WithAdditionalValue("deployment.initContainers.clearStalePid.enabled", v)
+	}
 
 	// Pin the Helm chart version.
 	kongbuilder.WithHelmChartVersion(testenv.KongHelmChartVersion())

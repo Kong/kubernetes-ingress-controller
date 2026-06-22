@@ -71,6 +71,10 @@ func TestMain(m *testing.M) {
 	if v := testenv.KongClearStalePIDs(); v != "" {
 		kongbuilder.WithAdditionalValue("deployment.initContainers.clearStalePid.enabled", v)
 	}
+	// NOTE: specify postgres image for postgres tests as Kong chart 3.0 removed defaults.
+	kongbuilder.WithAdditionalValue("postgresql.image.tag", "13.11.0-debian-11-r20")
+	kongbuilder.WithAdditionalValue("postgresql.image.registry", "docker.io")
+	kongbuilder.WithAdditionalValue("postgresql.image.repository", "bitnamilegacy/postgresql")
 
 	// Pin the Helm chart version.
 	kongbuilder.WithHelmChartVersion(testenv.KongHelmChartVersion())

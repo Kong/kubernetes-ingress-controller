@@ -51,6 +51,10 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	if testenv.IsKongGatewayVersionEnterpriseOnly() && !testenv.KongEnterpriseEnabled() {
+		fmt.Println("INFO: skipping suite, because Kong Gateway >= 3.15 is enterprise only")
+		os.Exit(0)
+	}
 	var code int
 	defer func() {
 		os.Exit(code)

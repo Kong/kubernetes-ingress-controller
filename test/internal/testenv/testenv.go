@@ -5,10 +5,14 @@ import (
 	"os"
 	"time"
 
+	"github.com/blang/semver/v4"
+	kongsemver "github.com/kong/semver/v4"
+	"github.com/samber/lo"
 	"github.com/tidwall/gjson"
 	"sigs.k8s.io/yaml"
 
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 )
 
 // -----------------------------------------------------------------------------
@@ -78,6 +82,15 @@ func KongImage() string {
 // KongTag is the Kong image tag to use in tests.
 func KongTag() string {
 	return os.Getenv("TEST_KONG_TAG")
+}
+
+// IsKongGatewayVersionEnterpriseOnly indicates if the Kong Gateway
+// version is enterprise only (basically unusable without license).
+func IsKongGatewayVersionEnterpriseOnly() bool {
+	parsed := lo.Must(kongsemver.Parse(KongTag()))
+	v := semver.Version{Major: parsed.Major, Minor: parsed.Minor, Patch: parsed.Patch}
+
+	return v.GTE(versions.KongEnterpriseCutoff)
 }
 
 // KongImageTag is the combined Kong image and tag if both are set, or empty string if not.

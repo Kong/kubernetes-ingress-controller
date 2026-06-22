@@ -3,6 +3,32 @@ name: conformance tests
 on:
   workflow_call:
     inputs:
+      kong-container-repo:
+        type: string
+        default: "kong/kong"
+        required: false
+      kong-container-tag:
+        type: string
+        default: "<from_test_dependencies.yaml>"
+        required: false
+      kong-oss-effective-version:
+        # specifies effective semver of Kong gateway OSS when tag is not a valid semver (like 'nightly').
+        type: string
+        default: ""
+        required: false
+      kong-enterprise-container-repo:
+        type: string
+        default: "kong/kong-gateway"
+        required: false
+      kong-enterprise-container-tag:
+        type: string
+        default: "<from_test_dependencies.yaml>"
+        required: false
+      kong-enterprise-effective-version:
+        # specifies effective semver of Kong gateway enterprise when tag is not a valid semver (like 'nightly').
+        type: string
+        default: ""
+        required: false
       log-output-file:
         # specifies the file for KIC manager's logs to output to.
         type: string
@@ -17,6 +43,9 @@ jobs:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
     runs-on: ubuntu-latest
     outputs:
+      kind: ${{ steps.set-versions.outputs.kind }}
+      kong-ee: ${{ steps.set-versions.outputs.kong-ee }}
+      kong-oss: ${{ steps.set-versions.outputs.kong-oss }}
       helm-kong: ${{ steps.set-versions.outputs.helm-kong }}
     steps:
       - name: Harden Runner
@@ -29,28 +58,72 @@ jobs:
       - id: set-versions
         name: Set versions
         run: |
-          echo "helm-kong=$(yq -ojson -r '.integration.helm.kong' < .github/test_dependencies.yaml )" >> $GITHUB_OUTPUT
+          (
+            echo "kind=$(yq -ojson -r '.integration.kind' < .github/test_dependencies.yaml )"
+            echo "kong-ee=$(yq -ojson -r '.integration.kong-ee' < .github/test_dependencies.yaml )"
+            echo "kong-oss=$(yq -ojson -r '.integration.kong-oss' < .github/test_dependencies.yaml )"
+            echo "helm-kong=$(yq -ojson -r '.integration.helm.kong' < .github/test_dependencies.yaml )"
+          ) >> $GITHUB_OUTPUT
 
   conformance-tests:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
     name: ${{ matrix.name }}
     runs-on: ubuntu-latest
     needs: dependencies-versions
     env:
+      KONG_CLUSTER_VERSION: ${{ needs.dependencies-versions.outputs.kind }}
       TEST_KONG_HELM_CHART_VERSION: ${{ needs.dependencies-versions.outputs.helm-kong }}
     strategy:
       fail-fast: false
       matrix:
         include:
-        - name: traditional-compatible-router
-          router-flavor: traditional_compatible
-        - name: expressions-router
-          router-flavor: expressions
+          - name: traditional-compatible-router
+            router-flavor: traditional_compatible
+          - name: expressions-router
+            router-flavor: expressions
+          - name: enterprise-traditional-compatible-router
+            router-flavor: traditional_compatible
+            enterprise: true
+          - name: enterprise-expressions-router
+            router-flavor: expressions
+            enterprise: true
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
         with:
           egress-policy: audit
+      - uses: Kong/kong-license@c4decf08584f84ff8fe8e7cd3c463e0192f6111b # master @ 20250107
+        id: license
+        with:
+          op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+
+      - name: Set image of Kong
+        id: set_kong_image
+        run: |
+          kong_ee_tag="${{ inputs.kong-enterprise-container-tag }}"
+          if [ "${{ inputs.kong-enterprise-container-tag }}" == "<from_test_dependencies.yaml>" ]; then
+            kong_ee_tag=${{ needs.dependencies-versions.outputs.kong-ee }}
+          fi
+          kong_oss_tag="${{ inputs.kong-container-tag }}"
+          if [ "${{ inputs.kong-container-tag }}" == "<from_test_dependencies.yaml>" ]; then
+            kong_oss_tag=${{ needs.dependencies-versions.outputs.kong-oss }}
+          fi
+
+          if [ "${{ matrix.enterprise }}" == "true" ]; then
+            (
+              echo "TEST_KONG_IMAGE=${{ inputs.kong-enterprise-container-repo }}"
+              echo "TEST_KONG_TAG=${kong_ee_tag}"
+              echo "TEST_KONG_EFFECTIVE_VERSION=${{ inputs.kong-enterprise-effective-version }}"
+              echo "TEST_KONG_ENTERPRISE=true"
+            ) >> $GITHUB_ENV
+          else
+            (
+              echo "TEST_KONG_IMAGE=${{ inputs.kong-container-repo }}"
+              echo "TEST_KONG_TAG=${kong_oss_tag}"
+              echo "TEST_KONG_EFFECTIVE_VERSION=${{ inputs.kong-oss-effective-version }}"
+            ) >> $GITHUB_ENV
+          fi
+
       - name: checkout repository
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
@@ -70,6 +143,7 @@ jobs:
         env:
           MISE_VERBOSE: 1
           MISE_DEBUG: 1
+          KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           JUNIT_REPORT: ${{ env.JUNIT_REPORT }}
           TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor }}
           TEST_KONG_KIC_MANAGER_LOG_OUTPUT: ${{ inputs.log-output-file }}
@@ -78,7 +152,7 @@ jobs:
       - name: upload KIC logs
         if: ${{ failure() && inputs.log-output-file != '' }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with: 
+        with:
           name: ${{ matrix.name }}-kic-logs
           path: ${{ inputs.log-output-file }}
           if-no-files-found: ignore
@@ -93,7 +167,7 @@ jobs:
   merge-junit-test-reports:
     runs-on: ubuntu-latest
     needs:
-    - conformance-tests
+      - conformance-tests
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1

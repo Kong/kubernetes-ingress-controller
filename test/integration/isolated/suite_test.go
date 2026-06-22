@@ -44,6 +44,10 @@ var tenv env.Environment
 // -----------------------------------------------------------------------------
 
 func TestMain(m *testing.M) {
+	if testenv.IsKongGatewayVersionEnterpriseOnly() && !testenv.KongEnterpriseEnabled() {
+		fmt.Println("INFO: skipping suite, because Kong Gateway >= 3.15 is enterprise only")
+		os.Exit(0)
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

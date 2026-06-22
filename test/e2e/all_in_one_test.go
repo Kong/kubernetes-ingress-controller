@@ -23,6 +23,7 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/metrics"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
@@ -80,8 +81,15 @@ func TestDeployAllInOnePostgres(t *testing.T) {
 	t.Parallel()
 	ctx, env := setupE2ETest(t)
 
+	manifestDeploy := ManifestDeploy{Path: postgresPath}
 	t.Log("deploying kong components")
-	ManifestDeploy{Path: postgresPath}.Run(ctx, t, env)
+	kongImageVersion, err := helpers.GetKongImageVersion()
+	require.NoError(t, err)
+	if kongImageVersion.GTE(consts.ForceLicenseVersionCutoff) {
+		t.Logf("Kong version %s requires a license, patching the manifest", kongImageVersion)
+		manifestDeploy.Patches = append(manifestDeploy.Patches, WithLicensePatch(getProxyDeploymentName(manifestDeploy.Path)))
+	}
+	manifestDeploy.Run(ctx, t, env)
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
 	verifyPostgres(ctx, t, env)
@@ -97,7 +105,14 @@ func TestDeployAllInOnePostgresWithMultipleReplicas(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	deployments := ManifestDeploy{Path: postgresPath}.Run(ctx, t, env)
+	manifestDeploy := ManifestDeploy{Path: postgresPath}
+	kongImageVersion, err := helpers.GetKongImageVersion()
+	require.NoError(t, err)
+	if kongImageVersion.GTE(consts.ForceLicenseVersionCutoff) {
+		t.Logf("Kong version %s requires a license, patching the manifest", kongImageVersion)
+		manifestDeploy.Patches = append(manifestDeploy.Patches, WithLicensePatch(getProxyDeploymentName(manifestDeploy.Path)))
+	}
+	deployments := manifestDeploy.Run(ctx, t, env)
 	deployment := deployments.ControllerNN
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
@@ -265,7 +280,15 @@ func TestDeployAllInOnePostgresGatewayDiscovery(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	deployments := ManifestDeploy{Path: manifestFilePath}.Run(ctx, t, env)
+	manifestDeploy := ManifestDeploy{Path: manifestFilePath}
+	t.Log("deploying kong components")
+	kongImageVersion, err := helpers.GetKongImageVersion()
+	require.NoError(t, err)
+	if kongImageVersion.GTE(consts.ForceLicenseVersionCutoff) {
+		t.Logf("Kong version %s requires a license, patching the manifest", kongImageVersion)
+		manifestDeploy.Patches = append(manifestDeploy.Patches, WithLicensePatch(getProxyDeploymentName(manifestDeploy.Path)))
+	}
+	deployments := manifestDeploy.Run(ctx, t, env)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
@@ -282,7 +305,14 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	deployments := ManifestDeploy{Path: manifestFilePath}.Run(ctx, t, env)
+	manifestDeploy := ManifestDeploy{Path: manifestFilePath}
+	kongImageVersion, err := helpers.GetKongImageVersion()
+	require.NoError(t, err)
+	if kongImageVersion.GTE(consts.ForceLicenseVersionCutoff) {
+		t.Logf("Kong version %s requires a license, patching the manifest", kongImageVersion)
+		manifestDeploy.Patches = append(manifestDeploy.Patches, WithLicensePatch(getProxyDeploymentName(manifestDeploy.Path)))
+	}
+	deployments := manifestDeploy.Run(ctx, t, env)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	ingress := deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)

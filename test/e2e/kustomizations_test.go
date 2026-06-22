@@ -3,14 +3,18 @@
 package e2e
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"time"
 
+	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/kubectl"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/resid"
+	"sigs.k8s.io/yaml"
 )
 
 const (
@@ -177,4 +181,108 @@ func patchLivenessProbes(baseManifestReader io.Reader, deployment k8stypes.Names
 		},
 	}
 	return kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
+}
+
+const kongLicenseEnvPatch = `- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: KONG_LICENSE_DATA
+    valueFrom:
+      secretKeyRef:
+        key: license
+        name: kong-enterprise-license`
+
+// WithLicensePatch injects the enterprise license from the environment into the deployed
+// manifest. It adds the KONG_LICENSE_DATA env var (referencing the kong-enterprise-license
+// secret) to the proxy container of the given proxy deployment and appends the secret itself.
+// proxyDeploymentName must be the name of the deployment that runs the proxy container, which
+// differs between manifest variants (proxy-kong for multi-pod, ingress-kong for single-pod);
+// use getProxyDeploymentName to derive it from the manifest path.
+func WithLicensePatch(proxyDeploymentName string) ManifestPatch {
+	return func(r io.Reader) (io.Reader, error) {
+		licenseSecret, err := ktfkong.GetLicenseSecretFromEnv()
+		if err != nil {
+			return nil, err
+		}
+		// GetLicenseSecretFromEnv returns a secret without TypeMeta/namespace; both are
+		// required for it to apply cleanly into the kong namespace via `kubectl apply -f -`.
+		licenseSecret.TypeMeta = metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"}
+		licenseSecret.Namespace = namespace
+
+		// Add the KONG_LICENSE_DATA env var (referencing the secret) to the proxy
+		// container (index 0) of the proxy deployment.
+		kustomization := types.Kustomization{
+			Patches: []types.Patch{
+				{
+					Patch: kongLicenseEnvPatch,
+					Target: &types.Selector{
+						ResId: resid.ResId{
+							Gvk:       resid.Gvk{Group: "apps", Version: "v1", Kind: "Deployment"},
+							Name:      proxyDeploymentName,
+							Namespace: namespace,
+						},
+					},
+				},
+			},
+		}
+		patched, err := kubectl.GetKustomizedManifest(kustomization, r)
+		if err != nil {
+			return nil, err
+		}
+
+		// Append the license secret as an additional document so it is created
+		// alongside the deployment.
+		secretYAML, err := yaml.Marshal(licenseSecret)
+		if err != nil {
+			return nil, err
+		}
+		var buf bytes.Buffer
+		if _, err := io.Copy(&buf, patched); err != nil {
+			return nil, err
+		}
+		buf.WriteString("\n---\n")
+		buf.Write(secretYAML)
+		return &buf, nil
+	}
+}
+
+// konnectLicensingEnvPatch is the patch to add the CONTROLLER_KONNECT_LICENSING_ENABLED env var to the controller container to enable Konnect licensing behavior.
+const konnectLicensingEnvPatch = `- op: add
+  path: /spec/template/spec/containers/0/env/-
+  value:
+    name: CONTROLLER_KONNECT_LICENSING_ENABLED
+    value: "true"`
+
+// WithKonnectLicensingPatch adds the CONTROLLER_KONNECT_LICENSING_ENABLED env var to the controller container to enable Konnect licensing behavior.
+// This is required for tests that involve Konnect licensing with Kong versions that require a license at startup,
+// since the presence of this env var changes the licensing activation flow to be compatible with such versions.
+func WithKonnectLicensingPatch() ManifestPatch {
+	return func(r io.Reader) (io.Reader, error) {
+		ingressDeploymentName := "ingress-kong"
+		// Add the CONTROLLER_KONNECT_LICENSING_ENABLED env var to the controller container to enable Konnect licensing behavior.
+		kustomization := types.Kustomization{
+			Patches: []types.Patch{
+				{
+					Patch: konnectLicensingEnvPatch,
+					Target: &types.Selector{
+						ResId: resid.ResId{
+							Gvk:       resid.Gvk{Group: "apps", Version: "v1", Kind: "Deployment"},
+							Name:      ingressDeploymentName,
+							Namespace: namespace,
+						},
+					},
+				},
+			},
+		}
+		patched, err := kubectl.GetKustomizedManifest(kustomization, r)
+		if err != nil {
+			return nil, err
+		}
+
+		var buf bytes.Buffer
+		if _, err := io.Copy(&buf, patched); err != nil {
+			return nil, err
+		}
+		return &buf, nil
+	}
 }

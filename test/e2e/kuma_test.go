@@ -15,6 +15,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/util/retry"
 
+	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
@@ -24,7 +26,15 @@ func TestDeployAllInOneDBLESSKuma(t *testing.T) {
 	ctx, env := setupE2ETest(t, buildKumaAddon(t))
 
 	t.Log("deploying kong components")
-	deployments := ManifestDeploy{Path: dblessPath}.Run(ctx, t, env)
+
+	manifestDeploy := ManifestDeploy{Path: dblessPath}
+	kongImageVersion, err := helpers.GetKongImageVersion()
+	require.NoError(t, err)
+	if kongImageVersion.GTE(consts.ForceLicenseVersionCutoff) {
+		t.Logf("Kong version %s requires a license, patching the manifest", kongImageVersion)
+		manifestDeploy.Patches = append(manifestDeploy.Patches, WithLicensePatch(getProxyDeploymentName(manifestDeploy.Path)))
+	}
+	deployments := manifestDeploy.Run(ctx, t, env)
 
 	t.Log("adding Kuma mesh")
 	require.NoError(t, kuma.EnableMeshForNamespace(ctx, env.Cluster(), "kong"))
@@ -46,7 +56,14 @@ func TestDeployAllInOnePostgresKuma(t *testing.T) {
 	ctx, env := setupE2ETest(t, buildKumaAddon(t))
 
 	t.Log("deploying kong components")
-	deployments := ManifestDeploy{Path: postgresPath}.Run(ctx, t, env)
+	manifestDeploy := ManifestDeploy{Path: postgresPath}
+	kongImageVersion, err := helpers.GetKongImageVersion()
+	require.NoError(t, err)
+	if kongImageVersion.GTE(consts.ForceLicenseVersionCutoff) {
+		t.Logf("Kong version %s requires a license, patching the manifest", kongImageVersion)
+		manifestDeploy.Patches = append(manifestDeploy.Patches, WithLicensePatch(getProxyDeploymentName(manifestDeploy.Path)))
+	}
+	deployments := manifestDeploy.Run(ctx, t, env)
 
 	t.Log("this deployment used a postgres backend, verifying that postgres migrations ran properly")
 	verifyPostgres(ctx, t, env)

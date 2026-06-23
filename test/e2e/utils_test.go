@@ -101,7 +101,7 @@ func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environm
 		service, err = env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, service.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		return len(service.Status.LoadBalancer.Ingress) == 1
-	}, time.Minute, time.Second)
+	}, ingressWait, time.Second)
 }
 
 // getTestManifest gets a manifest io.Reader, applying optional patches to the base manifest provided.

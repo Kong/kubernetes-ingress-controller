@@ -301,10 +301,14 @@ func deployKongAddon(
 	for name, value := range kongAddonCfg.kongProxyEnvVars {
 		kongBuilder.WithProxyEnvVar(name, value)
 	}
-	// When running with distroless images, we need to disable clearing stale PIDs
-	// because distroless images do not provide command line utilities like rm.
+	// When running with distroless images, we need to:
+	// - disable clearing stale PIDs because distroless images do not provide command line utilities like rm.
+	// - disable the wait image because distroless images do not provide command line utilities like curl.
+	//   (we could use a specific wait image, but "wait-for-db" template in chart
+	//    doesn't support it, only init container in migrations does)
 	if v := testenv.KongDistrolessImage(); v != "" {
 		kongBuilder.WithAdditionalValue("deployment.kong.initContainers.clearStalePid.enabled", "false")
+		kongBuilder.WithAdditionalValue("waitImage.enabled", "false")
 	}
 	// NOTE: specify postgres image for postgres tests as Kong chart 3.0 removed defaults.
 	kongBuilder.WithAdditionalValue("postgresql.image.tag", "13.11.0-debian-11-r20")

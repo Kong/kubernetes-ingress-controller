@@ -152,12 +152,24 @@ func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool
 			return manifestsReader
 		}
 
-		// Distroless images have no bash or rm; lifecycle hooks (postStart/preStop) that use
-		// those tools must be removed.
+		// Distroless images have no bash or rm; lifecycle hooks (postStart/preStop) and the
+		// wait-for-postgres init container that use those tools must be removed.
 		if testenv.KongDistrolessImage() != "" {
 			manifestsReader, err = patchRemoveLifecycleHooks(manifestsReader, deployments.ProxyNN)
 			if err != nil {
 				t.Logf("failed patching lifecycle hooks (%v), using default manifest %v", err, baseManifestPath)
+				return manifestsReader
+			}
+
+			manifestsReader, err = patchRemoveWaitForPostgres(manifestsReader)
+			if err != nil {
+				t.Logf("failed patching wait-for-postgres init container (%v), using default manifest %v", err, baseManifestPath)
+				return manifestsReader
+			}
+
+			manifestsReader, err = patchMigrationsCommandForDistroless(manifestsReader)
+			if err != nil {
+				t.Logf("failed patching migrations command (%v), using default manifest %v", err, baseManifestPath)
 				return manifestsReader
 			}
 		}

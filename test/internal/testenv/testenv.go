@@ -280,7 +280,7 @@ func KongLicenseData() string {
 	return os.Getenv("KONG_LICENSE_DATA")
 }
 
-// KongClearStalePIDs is the flag to indicate whether to clear stale PIDs through Kong sidecar container.
-func KongClearStalePIDs() string {
-	return os.Getenv("TEST_KONG_CLEAR_STALE_PIDS")
+// KongDistrolessImage is the flag to indicate whether the image is a distroless image.
+func KongDistrolessImage() string {
+	return os.Getenv("TEST_KONG_DISTROLESS_IMAGE")
 }

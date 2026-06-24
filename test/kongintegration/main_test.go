@@ -9,9 +9,10 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	if testenv.IsKongGatewayVersionEnterpriseOnly() && !testenv.KongEnterpriseEnabled() {
-		fmt.Println("INFO: skipping suite, because Kong Gateway >= 3.15 is enterprise only")
-		os.Exit(0)
+	if testenv.IsKongGatewayVersionEnterpriseOnly() && testenv.KongLicenseData() == "" {
+		fmt.Println("ERROR: Kong 3.15+ used and no license provided")
+		os.Exit(1)
 	}
+
 	os.Exit(m.Run())
 }

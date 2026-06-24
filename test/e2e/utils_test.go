@@ -173,10 +173,12 @@ func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool
 				return manifestsReader
 			}
 
-			manifestsReader, err = patchWaitForMigrationsCommandForDistroless(manifestsReader)
-			if err != nil {
-				t.Logf("failed patching wait-for-migrations command (%v), using default manifest %v", err, baseManifestPath)
-				return manifestsReader
+			if strings.Contains(baseManifestPath, "postgres") {
+				manifestsReader, err = patchWaitForMigrationsCommandForDistroless(manifestsReader)
+				if err != nil {
+					t.Logf("failed patching wait-for-migrations command (%v), using default manifest %v", err, baseManifestPath)
+					return manifestsReader
+				}
 			}
 		}
 

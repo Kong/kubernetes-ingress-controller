@@ -8,7 +8,9 @@ Adding a new version? You'll need three changes:
   This is all the way at the bottom. It's the thing we always forget.
 --->
 
-- [3.5.7](#357)
+- [3.5.9](#359)
+- [3.5.8](#358)
+- [3.5.8](#358)
 - [3.5.7](#357)
 - [3.5.6](#356)
 - [3.5.5](#355)
@@ -17,6 +19,9 @@ Adding a new version? You'll need three changes:
 - [3.5.2](#352)
 - [3.5.1](#351)
 - [3.5.0](#350)
+- [3.4.17](#3417)
+- [3.4.16](#3416)
+- [3.4.15](#3415)
 - [3.4.14](#3414)
 - [3.4.13](#3413)
 - [3.4.12](#3412)
@@ -4488,6 +4493,8 @@ Please read the changelog and test in your environment.
 - The initial versions were rapildy iterated to deliver
   a working ingress controller.
 
+[3.5.10]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.9...v3.5.10
+[3.5.9]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.8...v3.5.9
 [3.5.8]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.7...v3.5.8
 [3.5.7]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.6...v3.5.7
 [3.5.6]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.5...v3.5.6
@@ -4497,6 +4504,9 @@ Please read the changelog and test in your environment.
 [3.5.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.1...v3.5.2
 [3.5.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.0...v3.5.1
 [3.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.7...v3.5.0
+[3.4.17]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.16...v3.4.17
+[3.4.16]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.15...v3.4.16
+[3.4.15]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.14...v3.4.15
 [3.4.14]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.13...v3.4.14
 [3.4.13]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.12...v3.4.13
 [3.4.12]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.11...v3.4.12

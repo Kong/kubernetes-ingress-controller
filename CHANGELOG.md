@@ -8,8 +8,8 @@ Adding a new version? You'll need three changes:
   This is all the way at the bottom. It's the thing we always forget.
 --->
 
+- [3.5.10](#3510)
 - [3.5.9](#359)
-- [3.5.8](#358)
 - [3.5.8](#358)
 - [3.5.7](#357)
 - [3.5.6](#356)

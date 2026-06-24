@@ -4120,9 +4120,10 @@ spec:
       - name: kong-enterprise-edition-docker
       initContainers:
       - command:
-        - kong
-        - migrations
-        - list
+        - /bin/bash
+        - -c
+        - while true; do kong migrations list; if [[ 0 -eq $? ]]; then exit 0; fi;
+          sleep 2;  done;
         env:
         - name: KONG_LICENSE_DATA
           valueFrom:

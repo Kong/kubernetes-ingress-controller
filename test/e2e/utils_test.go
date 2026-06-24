@@ -172,6 +172,12 @@ func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool
 				t.Logf("failed patching migrations command (%v), using default manifest %v", err, baseManifestPath)
 				return manifestsReader
 			}
+
+			manifestsReader, err = patchWaitForMigrationsCommandForDistroless(manifestsReader)
+			if err != nil {
+				t.Logf("failed patching wait-for-migrations command (%v), using default manifest %v", err, baseManifestPath)
+				return manifestsReader
+			}
 		}
 
 	}

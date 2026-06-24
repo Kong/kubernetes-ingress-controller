@@ -258,6 +258,39 @@ const migrationCommandPatch = `- op: replace
   - migrations
   - bootstrap`
 
+// waitForMigrationsCommandPatch replaces the bash-loop wait command with a direct kong invocation.
+// Distroless images have no bash, so the original `/bin/bash -c "while true; do kong migrations list..."` cannot run.
+const waitForMigrationsCommandPatch = `- op: replace
+  path: /spec/template/spec/initContainers/0/command
+  value:
+  - kong
+  - migrations
+  - list`
+
+// patchWaitForMigrationsCommandForDistroless replaces the wait-for-migrations init container command
+// in the ingress-kong Deployment to remove the bash dependency. Required for distroless images.
+func patchWaitForMigrationsCommandForDistroless(baseManifestReader io.Reader) (io.Reader, error) {
+	kustomization := types.Kustomization{
+		Patches: []types.Patch{
+			{
+				Patch: waitForMigrationsCommandPatch,
+				Target: &types.Selector{
+					ResId: resid.ResId{
+						Gvk: resid.Gvk{
+							Group:   "apps",
+							Version: "v1",
+							Kind:    "Deployment",
+						},
+						Name:      controllerDeploymentName,
+						Namespace: namespace,
+					},
+				},
+			},
+		},
+	}
+	return kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
+}
+
 // patchMigrationsCommandForDistroless replaces the kong-migrations Job container command
 // to remove the bash dependency. Required for distroless images.
 func patchMigrationsCommandForDistroless(baseManifestReader io.Reader) (io.Reader, error) {

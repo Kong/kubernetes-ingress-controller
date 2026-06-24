@@ -192,6 +192,129 @@ const kongLicenseEnvPatch = `- op: add
         key: license
         name: kong-enterprise-license`
 
+const lifecycleHooksPatch = `- op: remove
+  path: /spec/template/spec/containers/0/lifecycle`
+
+// patchRemoveLifecycleHooks removes the lifecycle hooks (postStart/preStop) from the
+// proxy container of the given deployment. Required for distroless images that have no
+// bash or rm available.
+func patchRemoveLifecycleHooks(baseManifestReader io.Reader, deployment k8stypes.NamespacedName) (io.Reader, error) {
+	kustomization := types.Kustomization{
+		Patches: []types.Patch{
+			{
+				Patch: lifecycleHooksPatch,
+				Target: &types.Selector{
+					ResId: resid.ResId{
+						Gvk: resid.Gvk{
+							Group:   "apps",
+							Version: "v1",
+							Kind:    "Deployment",
+						},
+						Name:      deployment.Name,
+						Namespace: deployment.Namespace,
+					},
+				},
+			},
+		},
+	}
+	return kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
+}
+
+const waitForPostgresPatch = `- op: remove
+  path: /spec/template/spec/initContainers/0`
+
+// patchRemoveWaitForPostgres removes the wait-for-postgres init container from the
+// kong-migrations Job. Required for distroless images that have no bash available.
+func patchRemoveWaitForPostgres(baseManifestReader io.Reader) (io.Reader, error) {
+	kustomization := types.Kustomization{
+		Patches: []types.Patch{
+			{
+				Patch: waitForPostgresPatch,
+				Target: &types.Selector{
+					ResId: resid.ResId{
+						Gvk: resid.Gvk{
+							Group:   "batch",
+							Version: "v1",
+							Kind:    "Job",
+						},
+						Name:      "kong-migrations",
+						Namespace: namespace,
+					},
+				},
+			},
+		},
+	}
+	return kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
+}
+
+// migrationCommandPatch replaces the bash-chained migration command with a direct kong
+// invocation. Distroless images have no bash, so the original
+// `/bin/bash -c "kong migrations bootstrap && ..."` cannot run.
+// bootstrap alone is sufficient for fresh e2e databases; up/finish are no-ops on new installs.
+const migrationCommandPatch = `- op: replace
+  path: /spec/template/spec/containers/0/command
+  value:
+  - kong
+  - migrations
+  - bootstrap`
+
+// waitForMigrationsCommandPatch replaces the bash-loop wait command with a direct kong invocation.
+// Distroless images have no bash, so the original `/bin/bash -c "while true; do kong migrations list..."` cannot run.
+const waitForMigrationsCommandPatch = `- op: replace
+  path: /spec/template/spec/initContainers/0/command
+  value:
+  - kong
+  - migrations
+  - list`
+
+// patchWaitForMigrationsCommandForDistroless replaces the wait-for-migrations init container command
+// in the ingress-kong Deployment to remove the bash dependency. Required for distroless images.
+func patchWaitForMigrationsCommandForDistroless(baseManifestReader io.Reader) (io.Reader, error) {
+	kustomization := types.Kustomization{
+		Patches: []types.Patch{
+			{
+				Patch: waitForMigrationsCommandPatch,
+				Target: &types.Selector{
+					ResId: resid.ResId{
+						Gvk: resid.Gvk{
+							Group:   "apps",
+							Version: "v1",
+							Kind:    "Deployment",
+						},
+						Name:      controllerDeploymentName,
+						Namespace: namespace,
+					},
+				},
+			},
+		},
+	}
+	return kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
+}
+
+// patchMigrationsCommandForDistroless replaces the kong-migrations Job container command
+// to remove the bash dependency. Required for distroless images.
+func patchMigrationsCommandForDistroless(baseManifestReader io.Reader) (io.Reader, error) {
+	kustomization := types.Kustomization{
+		Patches: []types.Patch{
+			{
+				Patch: migrationCommandPatch,
+				Target: &types.Selector{
+					ResId: resid.ResId{
+						Gvk: resid.Gvk{
+							Group:   "batch",
+							Version: "v1",
+							Kind:    "Job",
+						},
+						Name:      "kong-migrations",
+						Namespace: namespace,
+					},
+				},
+			},
+		},
+	}
+	return kubectl.GetKustomizedManifest(kustomization, baseManifestReader)
+}
+
 // WithLicensePatch injects the enterprise license from the environment into the deployed
 // manifest. It adds the KONG_LICENSE_DATA env var (referencing the kong-enterprise-license
 // secret) to the proxy container of the given proxy deployment and appends the secret itself.

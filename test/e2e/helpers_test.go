@@ -890,7 +890,7 @@ func scaleDeployment(ctx context.Context, t *testing.T, env environments.Environ
 	}, time.Minute*3, time.Second, "deployment %s did not scale to %d replicas", deployment.Name, replicas)
 }
 
-func createGatewayAdminExposeService(ctx context.Context, t *testing.T, cluster clusters.Cluster, namespace string) *corev1.Service {
+func createGatewayAdminExposeService(ctx context.Context, t *testing.T, cluster clusters.Cluster, namespace string, selector map[string]string) *corev1.Service {
 	t.Helper()
 
 	service := &corev1.Service{
@@ -899,10 +899,8 @@ func createGatewayAdminExposeService(ctx context.Context, t *testing.T, cluster 
 			GenerateName: "kong-admin-expose-",
 		},
 		Spec: corev1.ServiceSpec{
-			Type: corev1.ServiceTypeLoadBalancer,
-			Selector: map[string]string{
-				"app": "proxy-kong",
-			},
+			Type:     corev1.ServiceTypeLoadBalancer,
+			Selector: selector,
 			Ports: []corev1.ServicePort{
 				{
 					Name:       "admin-tls",
@@ -919,11 +917,22 @@ func createGatewayAdminExposeService(ctx context.Context, t *testing.T, cluster 
 	return service
 }
 
+func getKongProxySelector(ctx context.Context, cluster clusters.Cluster, namespace string) map[string]string {
+	depList, err := cluster.Client().AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{
+		LabelSelector: "app in (ingress-kong,proxy-kong)",
+	})
+	if err != nil || len(depList.Items) == 0 {
+		return map[string]string{"app": "proxy-kong"}
+	}
+	return depList.Items[0].Spec.Selector.MatchLabels
+}
+
 func dumpKongConfiguration(ctx context.Context, t *testing.T, cluster clusters.Cluster, outputDir string) {
 	t.Helper()
 
 	t.Log("Creating a service to expose admin APIs to dump gateway configuration")
-	adminExposeService := createGatewayAdminExposeService(ctx, t, cluster, namespace)
+	selector := getKongProxySelector(ctx, cluster, namespace)
+	adminExposeService := createGatewayAdminExposeService(ctx, t, cluster, namespace, selector)
 	adminExposeServiceIP := ""
 	require.Eventually(t, func() bool {
 		serviceClient := cluster.Client().CoreV1().Services(namespace)

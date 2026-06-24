@@ -31,13 +31,21 @@ on:
         description: Run Istio E2E tests.
         type: boolean
         default: false
+      distroless-image:
+        description: |-
+          Whether the image is a distroless image.
+          This controls whether the tests need to adjust settings for distroless images.
+          If set to true, no lifecycle hooks will be used and stale pids will not be cleared.
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
 
 jobs:
   setup-e2e-tests:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 15) }}
     runs-on: ubuntu-latest
     outputs:
       test_names: ${{ steps.set_test_names.outputs.test_names }}
@@ -77,7 +85,7 @@ jobs:
         run: echo "Test names ${{ steps.set_test_names.outputs.test_names }}"
 
   dependencies-versions:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 15) }}
     runs-on: ubuntu-latest
     outputs:
       kind: ${{ steps.set-versions.outputs.kind }}
@@ -103,7 +111,7 @@ jobs:
           echo "istio=$(yq -r -ojson '.e2e.istio' < .github/test_dependencies.yaml | jq -c)" >> $GITHUB_OUTPUT
 
   kind:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 15) }}
     runs-on: ubuntu-latest
     if: ${{ !cancelled() }}
     needs:
@@ -188,6 +196,7 @@ jobs:
           KONG_CLUSTER_VERSION: ${{ matrix.kubernetes-version }}
           TEST_CONTROLLER_IMAGE: ${{ steps.split.outputs.kic-image }}
           TEST_CONTROLLER_TAG: ${{ steps.split.outputs.kic-tag }}
+          TEST_KONG_DISTROLESS_IMAGE: ${{ inputs.distroless-image }}
           TEST_KONG_LOAD_IMAGES: ${{ inputs.load-local-image }}
           TEST_KONG_IMAGE: ${{ steps.split.outputs.kong-image }}
           TEST_KONG_TAG: ${{ steps.split.outputs.kong-tag }}
@@ -294,6 +303,7 @@ jobs:
         env:
           MISE_VERBOSE: 1
           MISE_DEBUG: 1
+          TEST_KONG_DISTROLESS_IMAGE: ${{ inputs.distroless-image }}
           # NOTE: The limitation of the GKE setup is that we cannot run tests against a local image,
           # therefore we need to use the nightly one.
           # TODO: Once we have a way to load images into GKE, we can use the local image.
@@ -346,7 +356,7 @@ jobs:
           path: ${{ env.GOTESTSUM_JUNITFILE }}
 
   istio:
-    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 10) }}
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 15) }}
     if: ${{ inputs.run-istio }}
     runs-on: ubuntu-latest
     needs: dependencies-versions

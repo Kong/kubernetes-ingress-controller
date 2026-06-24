@@ -101,7 +101,7 @@ func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environm
 		service, err = env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, service.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 		return len(service.Status.LoadBalancer.Ingress) == 1
-	}, time.Minute, time.Second)
+	}, ingressWait, time.Second)
 }
 
 // getTestManifest gets a manifest io.Reader, applying optional patches to the base manifest provided.
@@ -150,6 +150,36 @@ func getTestManifest(t *testing.T, baseManifestPath string, skipTestPatches bool
 		if err != nil {
 			t.Logf("failed patching controller liveness (%v), using default manifest %v", err, baseManifestPath)
 			return manifestsReader
+		}
+
+		// Distroless images have no bash or rm; lifecycle hooks (postStart/preStop) and the
+		// wait-for-postgres init container that use those tools must be removed.
+		if testenv.KongDistrolessImage() != "" {
+			manifestsReader, err = patchRemoveLifecycleHooks(manifestsReader, deployments.ProxyNN)
+			if err != nil {
+				t.Logf("failed patching lifecycle hooks (%v), using default manifest %v", err, baseManifestPath)
+				return manifestsReader
+			}
+
+			manifestsReader, err = patchRemoveWaitForPostgres(manifestsReader)
+			if err != nil {
+				t.Logf("failed patching wait-for-postgres init container (%v), using default manifest %v", err, baseManifestPath)
+				return manifestsReader
+			}
+
+			manifestsReader, err = patchMigrationsCommandForDistroless(manifestsReader)
+			if err != nil {
+				t.Logf("failed patching migrations command (%v), using default manifest %v", err, baseManifestPath)
+				return manifestsReader
+			}
+
+			if strings.Contains(baseManifestPath, "postgres") {
+				manifestsReader, err = patchWaitForMigrationsCommandForDistroless(manifestsReader)
+				if err != nil {
+					t.Logf("failed patching wait-for-migrations command (%v), using default manifest %v", err, baseManifestPath)
+					return manifestsReader
+				}
+			}
 		}
 
 	}

@@ -32,6 +32,14 @@ on:
         description: Issue number to comment in, and close in case of success. Can be none.
         type: string
         required: false
+      distroless-image:
+        description: |-
+          Whether the image is a distroless image.
+          This controls whether the tests need to adjust settings for distroless images.
+          If set to true, no lifecycle hooks will be used and stale pids will not be cleared.
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -66,6 +74,7 @@ jobs:
     uses: ./.github/workflows/_e2e_tests.yaml
     secrets: inherit
     with:
+      distroless-image: ${{ fromJSON(github.event.inputs.distroless-image) }}
       kic-image: ${{ format('{0}:{1}', github.event.inputs.e2e-controller-image-repo, github.event.inputs.e2e-controller-image-tag) }}
       kong-image: ${{ format('{0}:{1}', github.event.inputs.kong-image-repo, github.event.inputs.kong-image-tag) }}
       load-local-image: false
@@ -78,6 +87,7 @@ jobs:
     uses: ./.github/workflows/_integration_tests.yaml
     secrets: inherit
     with:
+      distroless-image: ${{ fromJSON(github.event.inputs.distroless-image) }}
       kong-container-repo: ${{ github.event.inputs.kong-image-repo }}
       kong-container-tag: ${{ github.event.inputs.kong-image-tag }}
       kong-oss-effective-version: ${{ github.event.inputs.kong-effective-version }}

@@ -38,6 +38,14 @@ on:
         type: string
         default: ""
         required: false
+      distroless-image:
+        description: |-
+          Whether the image is a distroless image.
+          This controls whether the tests need to adjust settings for distroless images.
+          If set to true, no lifecycle hooks will be used and stale pids will not be cleared.
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -75,6 +83,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: dependencies-versions
     env:
+      TEST_KONG_DISTROLESS_IMAGE: ${{ inputs.distroless-image }}
       KONG_CLUSTER_VERSION: ${{ needs.dependencies-versions.outputs.kind }}
       TEST_KONG_ROUTER_FLAVOR: 'expressions'
       TEST_KONG_HELM_CHART_VERSION: ${{ needs.dependencies-versions.outputs.helm-kong }}

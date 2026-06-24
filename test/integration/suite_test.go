@@ -38,6 +38,11 @@ import (
 var kongGatewayVersion kongversion.Version
 
 func TestMain(m *testing.M) {
+	if testenv.IsKongGatewayVersionEnterpriseOnly() && testenv.KongLicenseData() == "" {
+		fmt.Println("ERROR: Kong 3.15+ used and no license provided")
+		os.Exit(1)
+	}
+
 	var code int
 	defer func() {
 		os.Exit(code)
@@ -67,6 +72,19 @@ func TestMain(m *testing.M) {
 	}
 	// add env for vaults.
 	kongbuilder.WithProxyEnvVar("vault_test_add_header_1", "h1:v1")
+	// When running with distroless images, we need to:
+	// - disable clearing stale PIDs because distroless images do not provide command line utilities like rm.
+	// - disable the wait image because distroless images do not provide command line utilities like curl.
+	//   (we could use a specific wait image, but "wait-for-db" template in chart
+	//    doesn't support it, only init container in migrations does)
+	if v := testenv.KongDistrolessImage(); v != "" {
+		kongbuilder.WithAdditionalValue("deployment.kong.initContainers.clearStalePid.enabled", "false")
+		kongbuilder.WithAdditionalValue("waitImage.enabled", "false")
+	}
+	// NOTE: specify postgres image for postgres tests as Kong chart 3.0 removed defaults.
+	kongbuilder.WithAdditionalValue("postgresql.image.tag", "13.11.0-debian-11-r20")
+	kongbuilder.WithAdditionalValue("postgresql.image.registry", "docker.io")
+	kongbuilder.WithAdditionalValue("postgresql.image.repository", "bitnamilegacy/postgresql")
 
 	// Pin the Helm chart version.
 	kongbuilder.WithHelmChartVersion(testenv.KongHelmChartVersion())

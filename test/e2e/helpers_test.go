@@ -648,21 +648,52 @@ func verifyEnterpriseWithPostgres(ctx context.Context, t *testing.T, env environ
 	require.Equal(t, 1, len(service.Status.LoadBalancer.Ingress))
 	adminIP := service.Status.LoadBalancer.Ingress[0].IP
 
-	t.Log("building a POST request to create a new kong workspace")
-	form := url.Values{"name": {"kic-e2e-tests"}}
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("http://%s/workspaces", adminIP), strings.NewReader(form.Encode()))
-	require.NoError(t, err)
+	t.Log("creating a workspace to validate enterprise functionality")
+	workspaceName := fmt.Sprintf("kic-e2e-tests-%s", uuid.NewString())
+	adminURL := fmt.Sprintf("http://%s/workspaces", adminIP)
+	var lastResponse string
+	require.Eventually(t, func() bool {
+		success, response, err := createEnterpriseWorkspace(ctx, helpers.DefaultHTTPClient(), adminURL, adminPassword, workspaceName)
+		if err != nil {
+			lastResponse = err.Error()
+			return false
+		}
+		lastResponse = response
+		return success
+	}, adminAPIWait, time.Second, "failed creating enterprise workspace via admin API: %s", lastResponse)
+}
+
+func createEnterpriseWorkspace(
+	ctx context.Context,
+	client *http.Client,
+	adminURL, adminPassword, workspaceName string,
+) (bool, string, error) {
+	form := url.Values{"name": {workspaceName}}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, adminURL, strings.NewReader(form.Encode()))
+	if err != nil {
+		return false, "", err
+	}
 	req.Header.Set("Kong-Admin-Token", adminPassword)
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	t.Log("creating a workspace to validate enterprise functionality")
-
-	resp, err := helpers.DefaultHTTPClient().Do(req)
-	require.NoError(t, err)
+	resp, err := client.Do(req)
+	if err != nil {
+		return false, "", err
+	}
 	defer resp.Body.Close()
+
 	body, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusCreated, resp.StatusCode, fmt.Sprintf("STATUS=(%s), BODY=(%s)", resp.Status, string(body)))
+	if err != nil {
+		return false, "", err
+	}
+
+	response := fmt.Sprintf("STATUS=(%s), BODY=(%s)", resp.Status, string(body))
+	switch resp.StatusCode {
+	case http.StatusCreated, http.StatusConflict:
+		return true, response, nil
+	default:
+		return false, response, nil
+	}
 }
 
 // licenseOutput is the license section of the admin API root response.

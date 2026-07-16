@@ -48,14 +48,52 @@ func (t *Translator) getCACerts() []kong.CACertificate {
 		return intermediateT{obj: configmap.DeepCopy(), data: configmap.Data}
 	})...)
 
-	caCerts := make([]kong.CACertificate, 0, len(caCertSecrets)+len(caCertConfigMaps))
+	// pickWinner returns the preferred and rejected intermediate for a shared ID.
+	// Priority: earliest creation timestamp → lexicographically smallest namespace → smallest name.
+	pickWinner := func(a, b intermediateT) (winner, loser intermediateT) {
+		aTime, bTime := a.obj.GetCreationTimestamp(), b.obj.GetCreationTimestamp()
+		if aTime.Before(&bTime) {
+			return a, b
+		}
+		if bTime.Before(&aTime) {
+			return b, a
+		}
+		aNS, bNS := a.obj.GetNamespace(), b.obj.GetNamespace()
+		if aNS < bNS {
+			return a, b
+		}
+		if bNS < aNS {
+			return b, a
+		}
+		if a.obj.GetName() <= b.obj.GetName() {
+			return a, b
+		}
+		return b, a
+	}
+
+	// First pass: report missing-ID failures and build a winners map (one entry per ID).
+	// When multiple objects share the same ID, keep the one with the earliest creation time
+	// (breaking ties by namespace then name). Non-winners are reported as translation failures immediately.
+	winners := make(map[string]intermediateT)
 	for _, caCertData := range caCertsData {
-		secretID, ok := caCertData.data["id"]
+		id, ok := caCertData.data["id"]
 		if !ok {
 			t.registerTranslationFailure("invalid secret CA certificate: missing 'id' field in data", caCertData.obj)
 			continue
 		}
+		existing, seen := winners[id]
+		if !seen {
+			winners[id] = caCertData
+			continue
+		}
+		winner, loser := pickWinner(existing, caCertData)
+		winners[id] = winner
+		t.registerTranslationFailure("invalid secret CA certificate: duplicate 'id' field in multiple objects", loser.obj)
+	}
 
+	// Second pass: validate and translate the single winner for each ID.
+	caCerts := make([]kong.CACertificate, 0, len(winners))
+	for secretID, caCertData := range winners {
 		// Allow the certificate key to be named either "cert" or "ca.crt".
 		caCertStr, certExists := caCertData.data["cert"]
 		if !certExists {

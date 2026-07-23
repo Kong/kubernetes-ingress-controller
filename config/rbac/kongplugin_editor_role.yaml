@@ -5,7 +5,7 @@ metadata:
   name: kongplugin-editor-role
 rules:
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongplugins
   verbs:
@@ -17,7 +17,7 @@ rules:
   - update
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongplugins/status
   verbs:

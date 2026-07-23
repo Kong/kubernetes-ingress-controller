@@ -162,7 +162,7 @@ func (h RequestHandler) handleValidation(ctx context.Context, request admissionv
 	}
 }
 
-// +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongconsumers,versions=v1,name=kongconsumers.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
+// +kubebuilder:webhook:verbs=create;update,groups=configuration.acceldata.io,resources=kongconsumers,versions=v1,name=kongconsumers.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
 func (h RequestHandler) handleKongConsumer(
 	ctx context.Context,
@@ -203,7 +203,7 @@ func (h RequestHandler) handleKongConsumer(
 	}
 }
 
-// +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongconsumergroups,versions=v1beta1,name=kongconsumergroups.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
+// +kubebuilder:webhook:verbs=create;update,groups=configuration.acceldata.io,resources=kongconsumergroups,versions=v1beta1,name=kongconsumergroups.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
 func (h RequestHandler) handleKongConsumerGroup(
 	ctx context.Context,
@@ -222,7 +222,7 @@ func (h RequestHandler) handleKongConsumerGroup(
 	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }
 
-// +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongplugins,versions=v1,name=kongplugins.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
+// +kubebuilder:webhook:verbs=create;update,groups=configuration.acceldata.io,resources=kongplugins,versions=v1,name=kongplugins.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
 func (h RequestHandler) handleKongPlugin(
 	ctx context.Context,
@@ -243,7 +243,7 @@ func (h RequestHandler) handleKongPlugin(
 	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }
 
-// +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongclusterplugins,versions=v1,name=kongclusterplugins.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
+// +kubebuilder:webhook:verbs=create;update,groups=configuration.acceldata.io,resources=kongclusterplugins,versions=v1,name=kongclusterplugins.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
 func (h RequestHandler) handleKongClusterPlugin(
 	ctx context.Context,
@@ -411,7 +411,7 @@ const (
 	upstreamWarning = "'upstream' is DEPRECATED and will be removed in a future version. Use a KongUpstreamPolicy resource instead."
 )
 
-// +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongingresses,versions=v1,name=kongingresses.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
+// +kubebuilder:webhook:verbs=create;update,groups=configuration.acceldata.io,resources=kongingresses,versions=v1,name=kongingresses.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
 func (h RequestHandler) handleKongIngress(_ context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
 	kongIngress := kongv1.KongIngress{}
@@ -479,7 +479,7 @@ func (h RequestHandler) handleIngress(ctx context.Context, request admissionv1.A
 	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }
 
-// +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongvaults,versions=v1alpha1,name=kongvaults.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
+// +kubebuilder:webhook:verbs=create;update,groups=configuration.acceldata.io,resources=kongvaults,versions=v1alpha1,name=kongvaults.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
 func (h RequestHandler) handleKongVault(ctx context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
 	kongVault := kongv1alpha1.KongVault{}
@@ -495,7 +495,7 @@ func (h RequestHandler) handleKongVault(ctx context.Context, request admissionv1
 	return responseBuilder.Allowed(ok).WithMessage(message).Build(), nil
 }
 
-// +kubebuilder:webhook:verbs=create;update,groups=configuration.konghq.com,resources=kongcustomentities,versions=v1alpha1,name=kongcustomentities.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
+// +kubebuilder:webhook:verbs=create;update,groups=configuration.acceldata.io,resources=kongcustomentities,versions=v1alpha1,name=kongcustomentities.validation.ingress-controller.konghq.com,path=/,webhookVersions=v1,matchPolicy=equivalent,mutating=false,failurePolicy=fail,sideEffects=None,admissionReviewVersions=v1
 
 func (h RequestHandler) handleKongCustomEntity(ctx context.Context, request admissionv1.AdmissionRequest, responseBuilder *ResponseBuilder) (*admissionv1.AdmissionResponse, error) {
 	kongCustomEntity := kongv1alpha1.KongCustomEntity{}

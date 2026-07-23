@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.15.0
-  name: kongingresses.configuration.konghq.com
+  name: kongingresses.configuration.acceldata.io
 spec:
-  group: configuration.konghq.com
+  group: configuration.acceldata.io
   names:
     categories:
     - kong-ingress-controller

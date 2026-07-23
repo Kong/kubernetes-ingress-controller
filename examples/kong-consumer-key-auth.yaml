@@ -8,7 +8,7 @@ type: Opaque
 stringData:
   key: password
 ---
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongConsumer
 metadata:
   name: consumer1
@@ -55,7 +55,7 @@ spec:
     app: httpbin
   type: ClusterIP
 ---
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongPlugin
 metadata:
   name: key-auth-1

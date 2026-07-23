@@ -164,7 +164,7 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 				{
 					Type: gatewayapi.HTTPRouteFilterExtensionRef,
 					ExtensionRef: &gatewayapi.LocalObjectReference{
-						Group: gatewayapi.Group("configuration.konghq.com"),
+						Group: gatewayapi.Group("configuration.acceldata.io"),
 						Kind:  gatewayapi.Kind("KongPlugin"),
 						Name:  "plugin1",
 					},
@@ -172,7 +172,7 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 				{
 					Type: gatewayapi.HTTPRouteFilterExtensionRef,
 					ExtensionRef: &gatewayapi.LocalObjectReference{
-						Group: gatewayapi.Group("configuration.konghq.com"),
+						Group: gatewayapi.Group("configuration.acceldata.io"),
 						Kind:  gatewayapi.Kind("KongPlugin"),
 						Name:  "plugin2",
 					},
@@ -207,13 +207,13 @@ func TestGeneratePluginsFromHTTPRouteFilters(t *testing.T) {
 				{
 					Type: gatewayapi.HTTPRouteFilterExtensionRef,
 					ExtensionRef: &gatewayapi.LocalObjectReference{
-						Group: gatewayapi.Group("configuration.konghq.com"),
+						Group: gatewayapi.Group("configuration.acceldata.io"),
 						Kind:  gatewayapi.Kind("WrongKind"),
 						Name:  "plugin1",
 					},
 				},
 			},
-			expectedErr: errors.New("plugin configuration.konghq.com/WrongKind unsupported"),
+			expectedErr: errors.New("plugin configuration.acceldata.io/WrongKind unsupported"),
 		},
 		{
 			name: "RequestHeaderModifier and PrefixMatchHTTPPathModifier",

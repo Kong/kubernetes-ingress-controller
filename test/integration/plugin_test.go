@@ -639,14 +639,14 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 		Spec: gatewayapi.ReferenceGrantSpec{
 			From: []gatewayapi.ReferenceGrantFrom{
 				{
-					Group:     gatewayapi.Group("configuration.konghq.com"),
+					Group:     gatewayapi.Group("configuration.acceldata.io"),
 					Kind:      gatewayapi.Kind("KongConsumer"),
 					Namespace: gatewayapi.Namespace(remote.Name),
 				},
 			},
 			To: []gatewayapi.ReferenceGrantTo{
 				{
-					Group: gatewayapi.Group("configuration.konghq.com"),
+					Group: gatewayapi.Group("configuration.acceldata.io"),
 					Kind:  gatewayapi.Kind("KongPlugin"),
 				},
 			},

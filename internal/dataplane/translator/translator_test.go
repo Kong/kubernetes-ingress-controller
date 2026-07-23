@@ -2650,7 +2650,7 @@ func TestDefaultBackend(t *testing.T) {
 			lo.ToPtr("k8s-name:foo-facade"),
 			lo.ToPtr("k8s-namespace:default"),
 			lo.ToPtr("k8s-kind:KongServiceFacade"),
-			lo.ToPtr("k8s-group:incubator.ingress-controller.konghq.com"),
+			lo.ToPtr("k8s-group:incubator.ingress-controller.acceldata.io"),
 			lo.ToPtr("k8s-version:v1alpha1"),
 		}, service.Tags, "tags are populated with KongServiceFacade as a parent")
 	})

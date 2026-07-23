@@ -1,7 +1,7 @@
 # In this test case we have a broken KongUpstreamPolicy resource that is referenced by a Service and a KongServiceFacade
 # that are used by an Ingress.
 # We expect empty config as the KongUpstreamPolicy is broken and affects all the resources.
-apiVersion: configuration.konghq.com/v1beta1
+apiVersion: configuration.acceldata.io/v1beta1
 kind: KongUpstreamPolicy
 metadata:
   name: policy
@@ -65,7 +65,7 @@ spec:
             pathType: Exact
           - backend:
               resource:
-                apiGroup: incubator.ingress-controller.konghq.com
+                apiGroup: incubator.ingress-controller.acceldata.io
                 kind: KongServiceFacade
                 name: servicefacade
             path: /ingress-facade
@@ -82,7 +82,7 @@ spec:
   ports:
     - port: 80
 ---
-apiVersion: incubator.ingress-controller.konghq.com/v1alpha1
+apiVersion: incubator.ingress-controller.acceldata.io/v1alpha1
 kind: KongServiceFacade
 metadata:
   annotations:

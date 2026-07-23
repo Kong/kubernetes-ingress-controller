@@ -1,18 +1,18 @@
-apiVersion: configuration.konghq.com/v1beta1
+apiVersion: configuration.acceldata.io/v1beta1
 kind: KongConsumerGroup
 metadata:
   name: consumer-group-2
   annotations:
     kubernetes.io/ingress.class: kong
 ---
-apiVersion: configuration.konghq.com/v1beta1
+apiVersion: configuration.acceldata.io/v1beta1
 kind: KongConsumerGroup
 metadata:
   name: consumer-group-1
   annotations:
     kubernetes.io/ingress.class: kong
 ---
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongConsumer
 metadata:
   name: consumer-1
@@ -22,7 +22,7 @@ username: consumer-1
 consumerGroups:
   - consumer-group-1
 ---
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongConsumer
 metadata:
   name: consumer-2

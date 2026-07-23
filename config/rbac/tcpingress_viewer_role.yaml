@@ -5,7 +5,7 @@ metadata:
   name: tcpingress-viewer-role
 rules:
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - tcpingresses
   verbs:
@@ -13,7 +13,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - tcpingresses/status
   verbs:

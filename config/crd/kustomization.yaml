@@ -4,18 +4,18 @@ kind: Kustomization
 # since it depends on service name and namespace that are out of this kustomize package.
 # It should be run by config/default
 resources:
-- bases/configuration.konghq.com_tcpingresses.yaml
-- bases/configuration.konghq.com_udpingresses.yaml
-- bases/configuration.konghq.com_kongclusterplugins.yaml
-- bases/configuration.konghq.com_kongconsumers.yaml
-- bases/configuration.konghq.com_kongconsumergroups.yaml
-- bases/configuration.konghq.com_kongingresses.yaml
-- bases/configuration.konghq.com_kongplugins.yaml
-- bases/configuration.konghq.com_ingressclassparameterses.yaml
-- bases/configuration.konghq.com_kongupstreampolicies.yaml
-- bases/configuration.konghq.com_kongvaults.yaml
-- bases/configuration.konghq.com_konglicenses.yaml
-- bases/configuration.konghq.com_kongcustomentities.yaml
+- bases/configuration.acceldata.io_tcpingresses.yaml
+- bases/configuration.acceldata.io_udpingresses.yaml
+- bases/configuration.acceldata.io_kongclusterplugins.yaml
+- bases/configuration.acceldata.io_kongconsumers.yaml
+- bases/configuration.acceldata.io_kongconsumergroups.yaml
+- bases/configuration.acceldata.io_kongingresses.yaml
+- bases/configuration.acceldata.io_kongplugins.yaml
+- bases/configuration.acceldata.io_ingressclassparameterses.yaml
+- bases/configuration.acceldata.io_kongupstreampolicies.yaml
+- bases/configuration.acceldata.io_kongvaults.yaml
+- bases/configuration.acceldata.io_konglicenses.yaml
+- bases/configuration.acceldata.io_kongcustomentities.yaml
 #+kubebuilder:scaffold:crdkustomizeresource
 
 # [WEBHOOK] To enable webhook, uncomment all the sections with [WEBHOOK] prefix.

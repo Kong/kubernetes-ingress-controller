@@ -53,7 +53,7 @@ spec:
   selector:
     app: httpbin
 ---
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongConsumer
 metadata:
   name: admin
@@ -63,7 +63,7 @@ metadata:
     konghq.com/plugins: test
 username: admin
 ---
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongPlugin
 metadata:
   name: test
@@ -83,7 +83,7 @@ spec:
     kind: Service
     namespace: fwuh
   to:
-  - group: "configuration.konghq.com"
+  - group: "configuration.acceldata.io"
     kind: KongPlugin
     name: test # Optional, to limit external resources to a specific KongPlugin only.
 ---

@@ -1,4 +1,4 @@
-apiVersion: configuration.konghq.com/v1beta1
+apiVersion: configuration.acceldata.io/v1beta1
 kind: TCPIngress
 metadata:
   name: tcpingress-sample

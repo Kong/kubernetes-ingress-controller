@@ -47,7 +47,7 @@ webhooks:
   admissionReviewVersions: ["v1", "v1beta1"]
   rules:
   - apiGroups:
-    - configuration.konghq.com
+    - configuration.acceldata.io
     apiVersions:
     - '*'
     operations:

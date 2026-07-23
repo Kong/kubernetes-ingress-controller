@@ -551,8 +551,8 @@ func (r *KongV1KongIngressReconciler) SetLogger(l logr.Logger) {
 	r.Log = l
 }
 
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongingresses,verbs=get;list;watch
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongingresses/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=configuration.acceldata.io,resources=kongingresses,verbs=get;list;watch
+//+kubebuilder:rbac:groups=configuration.acceldata.io,resources=kongingresses/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *KongV1KongIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -634,8 +634,8 @@ func (r *KongV1KongPluginReconciler) SetLogger(l logr.Logger) {
 	r.Log = l
 }
 
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongplugins,verbs=get;list;watch
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongplugins/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=configuration.acceldata.io,resources=kongplugins,verbs=get;list;watch
+//+kubebuilder:rbac:groups=configuration.acceldata.io,resources=kongplugins/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *KongV1KongPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -771,8 +771,8 @@ func (r *KongV1KongClusterPluginReconciler) SetLogger(l logr.Logger) {
 	r.Log = l
 }
 
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongclusterplugins,verbs=get;list;watch
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongclusterplugins/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=configuration.acceldata.io,resources=kongclusterplugins,verbs=get;list;watch
+//+kubebuilder:rbac:groups=configuration.acceldata.io,resources=kongclusterplugins/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *KongV1KongClusterPluginReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -894,7 +894,7 @@ func (r *KongV1KongConsumerReconciler) SetupWithManager(mgr ctrl.Manager) error 
 		blder.WatchesRawSource(
 			source.Channel(
 				r.StatusQueue.Subscribe(schema.GroupVersionKind{
-					Group:   "configuration.konghq.com",
+					Group:   "configuration.acceldata.io",
 					Version: "v1",
 					Kind:    "KongConsumer",
 				}),
@@ -942,8 +942,8 @@ func (r *KongV1KongConsumerReconciler) SetLogger(l logr.Logger) {
 	r.Log = l
 }
 
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumers,verbs=get;list;watch
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumers/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=configuration.acceldata.io,resources=kongconsumers,verbs=get;list;watch
+//+kubebuilder:rbac:groups=configuration.acceldata.io,resources=kongconsumers/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *KongV1KongConsumerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -1080,7 +1080,7 @@ func (r *KongV1Beta1KongConsumerGroupReconciler) SetupWithManager(mgr ctrl.Manag
 		blder.WatchesRawSource(
 			source.Channel(
 				r.StatusQueue.Subscribe(schema.GroupVersionKind{
-					Group:   "configuration.konghq.com",
+					Group:   "configuration.acceldata.io",
 					Version: "v1beta1",
 					Kind:    "KongConsumerGroup",
 				}),
@@ -1128,8 +1128,8 @@ func (r *KongV1Beta1KongConsumerGroupReconciler) SetLogger(l logr.Logger) {
 	r.Log = l
 }
 
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumergroups,verbs=get;list;watch
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongconsumergroups/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=configuration.acceldata.io,resources=kongconsumergroups,verbs=get;list;watch
+//+kubebuilder:rbac:groups=configuration.acceldata.io,resources=kongconsumergroups/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *KongV1Beta1KongConsumerGroupReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -1268,7 +1268,7 @@ func (r *KongV1Beta1TCPIngressReconciler) SetupWithManager(mgr ctrl.Manager) err
 		blder.WatchesRawSource(
 			source.Channel(
 				r.StatusQueue.Subscribe(schema.GroupVersionKind{
-					Group:   "configuration.konghq.com",
+					Group:   "configuration.acceldata.io",
 					Version: "v1beta1",
 					Kind:    "TCPIngress",
 				}),
@@ -1316,8 +1316,8 @@ func (r *KongV1Beta1TCPIngressReconciler) SetLogger(l logr.Logger) {
 	r.Log = l
 }
 
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=tcpingresses,verbs=get;list;watch
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=tcpingresses/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=configuration.acceldata.io,resources=tcpingresses,verbs=get;list;watch
+//+kubebuilder:rbac:groups=configuration.acceldata.io,resources=tcpingresses/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *KongV1Beta1TCPIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -1465,7 +1465,7 @@ func (r *KongV1Beta1UDPIngressReconciler) SetupWithManager(mgr ctrl.Manager) err
 		blder.WatchesRawSource(
 			source.Channel(
 				r.StatusQueue.Subscribe(schema.GroupVersionKind{
-					Group:   "configuration.konghq.com",
+					Group:   "configuration.acceldata.io",
 					Version: "v1beta1",
 					Kind:    "UDPIngress",
 				}),
@@ -1513,8 +1513,8 @@ func (r *KongV1Beta1UDPIngressReconciler) SetLogger(l logr.Logger) {
 	r.Log = l
 }
 
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses,verbs=get;list;watch
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=udpingresses/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=configuration.acceldata.io,resources=udpingresses,verbs=get;list;watch
+//+kubebuilder:rbac:groups=configuration.acceldata.io,resources=udpingresses/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *KongV1Beta1UDPIngressReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -1640,7 +1640,7 @@ func (r *KongV1Alpha1IngressClassParametersReconciler) SetLogger(l logr.Logger) 
 	r.Log = l
 }
 
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=ingressclassparameterses,verbs=get;list;watch
+//+kubebuilder:rbac:groups=configuration.acceldata.io,resources=ingressclassparameterses,verbs=get;list;watch
 
 // Reconcile processes the watched objects
 func (r *KongV1Alpha1IngressClassParametersReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -1721,7 +1721,7 @@ func (r *IncubatorV1Alpha1KongServiceFacadeReconciler) SetupWithManager(mgr ctrl
 		blder.WatchesRawSource(
 			source.Channel(
 				r.StatusQueue.Subscribe(schema.GroupVersionKind{
-					Group:   "incubator.ingress-controller.konghq.com",
+					Group:   "incubator.ingress-controller.acceldata.io",
 					Version: "v1alpha1",
 					Kind:    "KongServiceFacade",
 				}),
@@ -1769,8 +1769,8 @@ func (r *IncubatorV1Alpha1KongServiceFacadeReconciler) SetLogger(l logr.Logger) 
 	r.Log = l
 }
 
-//+kubebuilder:rbac:groups=incubator.ingress-controller.konghq.com,resources=kongservicefacades,verbs=get;list;watch
-//+kubebuilder:rbac:groups=incubator.ingress-controller.konghq.com,resources=kongservicefacades/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=incubator.ingress-controller.acceldata.io,resources=kongservicefacades,verbs=get;list;watch
+//+kubebuilder:rbac:groups=incubator.ingress-controller.acceldata.io,resources=kongservicefacades/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *IncubatorV1Alpha1KongServiceFacadeReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -1887,7 +1887,7 @@ func (r *KongV1Alpha1KongVaultReconciler) SetupWithManager(mgr ctrl.Manager) err
 		blder.WatchesRawSource(
 			source.Channel(
 				r.StatusQueue.Subscribe(schema.GroupVersionKind{
-					Group:   "configuration.konghq.com",
+					Group:   "configuration.acceldata.io",
 					Version: "v1alpha1",
 					Kind:    "KongVault",
 				}),
@@ -1935,8 +1935,8 @@ func (r *KongV1Alpha1KongVaultReconciler) SetLogger(l logr.Logger) {
 	r.Log = l
 }
 
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongvaults,verbs=get;list;watch
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongvaults/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=configuration.acceldata.io,resources=kongvaults,verbs=get;list;watch
+//+kubebuilder:rbac:groups=configuration.acceldata.io,resources=kongvaults/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *KongV1Alpha1KongVaultReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
@@ -2052,7 +2052,7 @@ func (r *KongV1Alpha1KongCustomEntityReconciler) SetupWithManager(mgr ctrl.Manag
 		blder.WatchesRawSource(
 			source.Channel(
 				r.StatusQueue.Subscribe(schema.GroupVersionKind{
-					Group:   "configuration.konghq.com",
+					Group:   "configuration.acceldata.io",
 					Version: "v1alpha1",
 					Kind:    "KongCustomEntity",
 				}),
@@ -2100,8 +2100,8 @@ func (r *KongV1Alpha1KongCustomEntityReconciler) SetLogger(l logr.Logger) {
 	r.Log = l
 }
 
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongcustomentities,verbs=get;list;watch
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongcustomentities/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=configuration.acceldata.io,resources=kongcustomentities,verbs=get;list;watch
+//+kubebuilder:rbac:groups=configuration.acceldata.io,resources=kongcustomentities/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
 func (r *KongV1Alpha1KongCustomEntityReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

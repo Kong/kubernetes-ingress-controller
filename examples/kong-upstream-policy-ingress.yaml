@@ -85,7 +85,7 @@ spec:
 # the httpbin-deployment Service. In this case those would be following Kong Upstreams:
 # - default.httpbin-deployment.80
 # - default.httpbin-deployment.8080
-apiVersion: configuration.konghq.com/v1beta1
+apiVersion: configuration.acceldata.io/v1beta1
 kind: KongUpstreamPolicy
 metadata:
   name: httpbin-upstream-policy

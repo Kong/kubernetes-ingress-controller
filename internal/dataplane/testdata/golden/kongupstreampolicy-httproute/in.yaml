@@ -71,7 +71,7 @@ spec:
 # This policy will be applied to all Upstreams generated for the annotated Services:
 # - httproute.default.httpbin.0
 # - httproute.default.httpbin.1
-apiVersion: configuration.konghq.com/v1beta1
+apiVersion: configuration.acceldata.io/v1beta1
 kind: KongUpstreamPolicy
 metadata:
   name: httpbin-httproute

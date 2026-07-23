@@ -4,31 +4,36 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.15.0
-  name: kongservicefacades.incubator.ingress-controller.konghq.com
+  name: kongconsumers.configuration.acceldata.io
 spec:
-  group: incubator.ingress-controller.konghq.com
+  group: configuration.acceldata.io
   names:
     categories:
     - kong-ingress-controller
-    kind: KongServiceFacade
-    listKind: KongServiceFacadeList
-    plural: kongservicefacades
-    singular: kongservicefacade
+    kind: KongConsumer
+    listKind: KongConsumerList
+    plural: kongconsumers
+    shortNames:
+    - kc
+    singular: kongconsumer
   scope: Namespaced
   versions:
-  - name: v1alpha1
+  - additionalPrinterColumns:
+    - description: Username of a Kong Consumer
+      jsonPath: .username
+      name: Username
+      type: string
+    - description: Age
+      jsonPath: .metadata.creationTimestamp
+      name: Age
+      type: date
+    - jsonPath: .status.conditions[?(@.type=="Programmed")].status
+      name: Programmed
+      type: string
+    name: v1
     schema:
       openAPIV3Schema:
-        description: |-
-          KongServiceFacade allows creating separate Kong Services for a single Kubernetes
-          Service. It can be used as Kubernetes Ingress' backend (via its path's `backend.resource`
-          field). It's designed to enable creating two "virtual" Services in Kong that will point
-          to the same Kubernetes Service, but will have different configuration (e.g. different
-          set of plugins, different load balancing algorithm, etc.).
-
-
-          KongServiceFacade requires `kubernetes.io/ingress.class` annotation with a value
-          matching the ingressClass of the Kong Ingress Controller (`kong` by default) to be reconciled.
+        description: KongConsumer is the Schema for the kongconsumers API.
         properties:
           apiVersion:
             description: |-
@@ -36,6 +41,27 @@ spec:
               Servers should convert recognized schemas to the latest internal value, and
               may reject unrecognized values.
               More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources
+            type: string
+          consumerGroups:
+            description: |-
+              ConsumerGroups are references to consumer groups (that consumer wants to be part of)
+              provisioned in Kong.
+            items:
+              type: string
+            type: array
+            x-kubernetes-list-type: set
+          credentials:
+            description: |-
+              Credentials are references to secrets containing a credential to be
+              provisioned in Kong.
+            items:
+              type: string
+            type: array
+            x-kubernetes-list-type: set
+          custom_id:
+            description: |-
+              CustomID is a Kong cluster-unique existing ID for the consumer - useful for mapping
+              Kong with users in your existing database.
             type: string
           kind:
             description: |-
@@ -47,30 +73,9 @@ spec:
             type: string
           metadata:
             type: object
-          spec:
-            description: KongServiceFacadeSpec defines the desired state of KongServiceFacade.
-            properties:
-              backendRef:
-                description: |-
-                  Backend is a reference to a Kubernetes Service that is used as a backend
-                  for this Kong Service Facade.
-                properties:
-                  name:
-                    description: Name is the name of the referenced Kubernetes Service.
-                    type: string
-                  port:
-                    description: Port is the port of the referenced Kubernetes Service.
-                    format: int32
-                    type: integer
-                required:
-                - name
-                - port
-                type: object
-            required:
-            - backendRef
-            type: object
           status:
-            description: KongServiceFacadeStatus defines the observed state of KongServiceFacade.
+            description: Status represents the current status of the KongConsumer
+              resource.
             properties:
               conditions:
                 default:
@@ -80,7 +85,7 @@ spec:
                   status: Unknown
                   type: Programmed
                 description: |-
-                  Conditions describe the current conditions of the KongServiceFacade.
+                  Conditions describe the current conditions of the KongConsumer.
 
 
                   Known condition types are:
@@ -160,9 +165,13 @@ spec:
                 - type
                 x-kubernetes-list-type: map
             type: object
-        required:
-        - spec
+          username:
+            description: Username is a Kong cluster-unique username of the consumer.
+            type: string
         type: object
+        x-kubernetes-validations:
+        - message: Need to provide either username or custom_id
+          rule: has(self.username) || has(self.custom_id)
     served: true
     storage: true
     subresources:

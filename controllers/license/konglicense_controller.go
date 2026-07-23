@@ -143,7 +143,7 @@ func (r *KongV1Alpha1KongLicenseReconciler) SetupWithManager(mgr ctrl.Manager) e
 	if r.StatusQueue != nil {
 		blder.WatchesRawSource(
 			source.Channel(r.StatusQueue.Subscribe(schema.GroupVersionKind{
-				Group:   "configuration.konghq.com",
+				Group:   "configuration.acceldata.io",
 				Version: "v1alpha1",
 				Kind:    "KongLicense",
 			}),
@@ -163,8 +163,8 @@ func (r *KongV1Alpha1KongLicenseReconciler) SetLogger(l logr.Logger) {
 	r.Log = l
 }
 
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=konglicenses,verbs=get;list;watch
-//+kubebuilder:rbac:groups=configuration.konghq.com,resources=konglicenses/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=configuration.acceldata.io,resources=konglicenses,verbs=get;list;watch
+//+kubebuilder:rbac:groups=configuration.acceldata.io,resources=konglicenses/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects.
 func (r *KongV1Alpha1KongLicenseReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

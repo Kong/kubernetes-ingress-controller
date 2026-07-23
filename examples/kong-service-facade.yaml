@@ -84,7 +84,7 @@ spec:
 ---
 # KongServiceFacade pointing to the httpbin-deployment,
 # secured with key-auth plugin.
-apiVersion: incubator.ingress-controller.konghq.com/v1alpha1
+apiVersion: incubator.ingress-controller.acceldata.io/v1alpha1
 kind: KongServiceFacade
 metadata:
   name: svc-facade-alpha
@@ -99,7 +99,7 @@ spec:
 ---
 # KongServiceFacade pointing to the same httpbin-deployment,
 # secured with basic-auth plugin.
-apiVersion: incubator.ingress-controller.konghq.com/v1alpha1
+apiVersion: incubator.ingress-controller.acceldata.io/v1alpha1
 kind: KongServiceFacade
 metadata:
   name: svc-facade-beta
@@ -129,7 +129,7 @@ spec:
             backend:
               # The /alpha path uses the KongServiceFacade secured with key-auth plugin.
               resource:
-                apiGroup: incubator.ingress-controller.konghq.com
+                apiGroup: incubator.ingress-controller.acceldata.io
                 kind: KongServiceFacade
                 name: svc-facade-alpha
           - path: /beta
@@ -137,7 +137,7 @@ spec:
             backend:
               # The /beta path uses the KongServiceFacade secured with basic-auth plugin.
               resource:
-                apiGroup: incubator.ingress-controller.konghq.com
+                apiGroup: incubator.ingress-controller.acceldata.io
                 kind: KongServiceFacade
                 name: svc-facade-beta
 ---
@@ -149,7 +149,7 @@ spec:
 #
 # For basic-auth it sets up a KongConsumer `bob` that can be authenticated by
 # setting the `Authorization` header to `Basic <base64("bob:bob-password")>`.
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongPlugin
 metadata:
   name: key-auth
@@ -171,7 +171,7 @@ type: Opaque
 stringData:
   key: "alice-password"
 ---
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongConsumer
 metadata:
   name: alice
@@ -182,7 +182,7 @@ username: alice
 credentials:
   - alice-credentials
 ---
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongPlugin
 metadata:
   name: basic-auth
@@ -203,7 +203,7 @@ stringData:
   username: "bob"
   password: "bob-password"
 ---
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongConsumer
 metadata:
   name: bob

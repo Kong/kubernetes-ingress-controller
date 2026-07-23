@@ -113,7 +113,7 @@ spec:
             port:
               number: 80
 ---
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongPlugin
 metadata:
   namespace: default
@@ -124,7 +124,7 @@ config:
 ---
 # This route serves endpoint `/contacts` which extracts column `name` of all rows in `contacts` table in your `hasura_data` DB.
 # You can use other query in the `query` field for fetching other data.
-apiVersion: configuration.konghq.com/v1alpha1
+apiVersion: configuration.acceldata.io/v1alpha1
 kind: KongCustomEntity
 metadata:
   namespace: default
@@ -133,7 +133,7 @@ spec:
   controllerName: kong
   type: degraphql_routes
   parentRef:
-    group: "configuration.konghq.com"
+    group: "configuration.acceldata.io"
     kind: "KongPlugin"
     name: "degraphql-example"
   fields:

@@ -35,7 +35,7 @@ func TestKongIngressValidationWebhook(t *testing.T) {
 		[]admregv1.RuleWithOperations{
 			{
 				Rule: admregv1.Rule{
-					APIGroups:   []string{"configuration.konghq.com"},
+					APIGroups:   []string{"configuration.acceldata.io"},
 					APIVersions: []string{"v1"},
 					Resources:   []string{"kongingresses"},
 				},

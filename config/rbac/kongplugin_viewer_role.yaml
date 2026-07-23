@@ -5,7 +5,7 @@ metadata:
   name: kongplugin-viewer-role
 rules:
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongplugins
   verbs:
@@ -13,7 +13,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongplugins/status
   verbs:

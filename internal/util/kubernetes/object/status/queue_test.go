@@ -133,12 +133,12 @@ var (
 		Kind:    "Ingress",
 	}
 	tcpGVK = schema.GroupVersionKind{
-		Group:   "configuration.konghq.com",
+		Group:   "configuration.acceldata.io",
 		Version: "v1beta1",
 		Kind:    "TCPIngress",
 	}
 	udpGVK = schema.GroupVersionKind{
-		Group:   "configuration.konghq.com",
+		Group:   "configuration.acceldata.io",
 		Version: "v1beta1",
 		Kind:    "UDPIngress",
 	}

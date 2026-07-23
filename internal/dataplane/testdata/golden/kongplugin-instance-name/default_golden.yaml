@@ -9,7 +9,7 @@ plugins:
   - k8s-name:kong-id
   - k8s-namespace:default
   - k8s-kind:KongPlugin
-  - k8s-group:configuration.konghq.com
+  - k8s-group:configuration.acceldata.io
   - k8s-version:v1
 - config:
     header_name: kong-id
@@ -20,7 +20,7 @@ plugins:
   - k8s-name:kong-id
   - k8s-namespace:default
   - k8s-kind:KongPlugin
-  - k8s-group:configuration.konghq.com
+  - k8s-group:configuration.acceldata.io
   - k8s-version:v1
 - config:
     header_name: kong-id
@@ -31,7 +31,7 @@ plugins:
   - k8s-name:kong-id
   - k8s-namespace:default
   - k8s-kind:KongPlugin
-  - k8s-group:configuration.konghq.com
+  - k8s-group:configuration.acceldata.io
   - k8s-version:v1
 services:
 - connect_timeout: 60000

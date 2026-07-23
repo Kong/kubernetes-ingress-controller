@@ -108,7 +108,7 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 				"core/Service:test-namespace/test-service": {
 					"networking.k8s.io/Ingress:test-namespace/test-ingress",
 				},
-				"incubator.ingress-controller.konghq.com/KongServiceFacade:test-namespace/test-kong-service-facade": {
+				"incubator.ingress-controller.acceldata.io/KongServiceFacade:test-namespace/test-kong-service-facade": {
 					"networking.k8s.io/Ingress:test-namespace/test-ingress",
 				},
 			},
@@ -150,10 +150,10 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 				"core/Service:test-namespace/1": {
 					"gateway.networking.k8s.io/HTTPRoute:test-namespace/test-route",
 				},
-				"configuration.konghq.com/KongPlugin:test-namespace/1": {
+				"configuration.acceldata.io/KongPlugin:test-namespace/1": {
 					"gateway.networking.k8s.io/HTTPRoute:test-namespace/test-route",
 				},
-				"configuration.konghq.com/KongClusterPlugin:test-namespace/cluster-1": {
+				"configuration.acceldata.io/KongClusterPlugin:test-namespace/cluster-1": {
 					"gateway.networking.k8s.io/HTTPRoute:test-namespace/test-route",
 				},
 			},
@@ -193,10 +193,10 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 				"core/Service:test-namespace/1": {
 					"gateway.networking.k8s.io/TLSRoute:test-namespace/test-route",
 				},
-				"configuration.konghq.com/KongPlugin:test-namespace/1": {
+				"configuration.acceldata.io/KongPlugin:test-namespace/1": {
 					"gateway.networking.k8s.io/TLSRoute:test-namespace/test-route",
 				},
-				"configuration.konghq.com/KongClusterPlugin:test-namespace/cluster-1": {
+				"configuration.acceldata.io/KongClusterPlugin:test-namespace/cluster-1": {
 					"gateway.networking.k8s.io/TLSRoute:test-namespace/test-route",
 				},
 			},
@@ -236,10 +236,10 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 				"core/Service:test-namespace/1": {
 					"gateway.networking.k8s.io/TCPRoute:test-namespace/test-route",
 				},
-				"configuration.konghq.com/KongPlugin:test-namespace/1": {
+				"configuration.acceldata.io/KongPlugin:test-namespace/1": {
 					"gateway.networking.k8s.io/TCPRoute:test-namespace/test-route",
 				},
-				"configuration.konghq.com/KongClusterPlugin:test-namespace/cluster-1": {
+				"configuration.acceldata.io/KongClusterPlugin:test-namespace/cluster-1": {
 					"gateway.networking.k8s.io/TCPRoute:test-namespace/test-route",
 				},
 			},
@@ -279,10 +279,10 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 				"core/Service:test-namespace/1": {
 					"gateway.networking.k8s.io/UDPRoute:test-namespace/test-route",
 				},
-				"configuration.konghq.com/KongPlugin:test-namespace/1": {
+				"configuration.acceldata.io/KongPlugin:test-namespace/1": {
 					"gateway.networking.k8s.io/UDPRoute:test-namespace/test-route",
 				},
-				"configuration.konghq.com/KongClusterPlugin:test-namespace/cluster-1": {
+				"configuration.acceldata.io/KongClusterPlugin:test-namespace/cluster-1": {
 					"gateway.networking.k8s.io/UDPRoute:test-namespace/test-route",
 				},
 			},
@@ -324,10 +324,10 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 				"core/Service:test-namespace/1": {
 					"gateway.networking.k8s.io/GRPCRoute:test-namespace/test-route",
 				},
-				"configuration.konghq.com/KongPlugin:test-namespace/1": {
+				"configuration.acceldata.io/KongPlugin:test-namespace/1": {
 					"gateway.networking.k8s.io/GRPCRoute:test-namespace/test-route",
 				},
-				"configuration.konghq.com/KongClusterPlugin:test-namespace/cluster-1": {
+				"configuration.acceldata.io/KongClusterPlugin:test-namespace/cluster-1": {
 					"gateway.networking.k8s.io/GRPCRoute:test-namespace/test-route",
 				},
 			},

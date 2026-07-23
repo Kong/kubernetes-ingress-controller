@@ -50,7 +50,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - ingressclassparameterses
   verbs:
@@ -58,7 +58,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongclusterplugins
   verbs:
@@ -66,7 +66,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongclusterplugins/status
   verbs:
@@ -74,7 +74,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongconsumergroups
   verbs:
@@ -82,7 +82,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongconsumergroups/status
   verbs:
@@ -90,7 +90,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongconsumers
   verbs:
@@ -98,7 +98,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongconsumers/status
   verbs:
@@ -106,7 +106,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongcustomentities
   verbs:
@@ -114,7 +114,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongcustomentities/status
   verbs:
@@ -122,7 +122,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongingresses
   verbs:
@@ -130,7 +130,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongingresses/status
   verbs:
@@ -138,7 +138,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - konglicenses
   verbs:
@@ -146,7 +146,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - konglicenses/status
   verbs:
@@ -154,7 +154,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongplugins
   verbs:
@@ -162,7 +162,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongplugins/status
   verbs:
@@ -170,7 +170,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongupstreampolicies
   verbs:
@@ -178,7 +178,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongupstreampolicies/status
   verbs:
@@ -186,7 +186,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongvaults
   verbs:
@@ -194,7 +194,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongvaults/status
   verbs:
@@ -202,7 +202,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - tcpingresses
   verbs:
@@ -210,7 +210,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - tcpingresses/status
   verbs:
@@ -218,7 +218,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - udpingresses
   verbs:
@@ -226,7 +226,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - udpingresses/status
   verbs:
@@ -250,7 +250,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - incubator.ingress-controller.konghq.com
+  - incubator.ingress-controller.acceldata.io
   resources:
   - kongservicefacades
   verbs:
@@ -258,7 +258,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - incubator.ingress-controller.konghq.com
+  - incubator.ingress-controller.acceldata.io
   resources:
   - kongservicefacades/status
   verbs:

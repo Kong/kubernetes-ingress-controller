@@ -34,7 +34,7 @@ type ConfigurationV1alpha1Interface interface {
 	KongVaultsGetter
 }
 
-// ConfigurationV1alpha1Client is used to interact with features provided by the configuration.konghq.com group.
+// ConfigurationV1alpha1Client is used to interact with features provided by the configuration.acceldata.io group.
 type ConfigurationV1alpha1Client struct {
 	restClient rest.Interface
 }

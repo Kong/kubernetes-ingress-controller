@@ -4,21 +4,25 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.15.0
-  name: kongconsumergroups.configuration.konghq.com
+  name: kongcustomentities.configuration.acceldata.io
 spec:
-  group: configuration.konghq.com
+  group: configuration.acceldata.io
   names:
     categories:
     - kong-ingress-controller
-    kind: KongConsumerGroup
-    listKind: KongConsumerGroupList
-    plural: kongconsumergroups
+    kind: KongCustomEntity
+    listKind: KongCustomEntityList
+    plural: kongcustomentities
     shortNames:
-    - kcg
-    singular: kongconsumergroup
+    - kce
+    singular: kongcustomentity
   scope: Namespaced
   versions:
   - additionalPrinterColumns:
+    - description: type of the Kong entity
+      jsonPath: .spec.type
+      name: Entity Type
+      type: string
     - description: Age
       jsonPath: .metadata.creationTimestamp
       name: Age
@@ -26,10 +30,11 @@ spec:
     - jsonPath: .status.conditions[?(@.type=="Programmed")].status
       name: Programmed
       type: string
-    name: v1beta1
+    name: v1alpha1
     schema:
       openAPIV3Schema:
-        description: KongConsumerGroup is the Schema for the kongconsumergroups API.
+        description: KongCustomEntity defines a "custom" Kong entity that KIC cannot
+          support the entity type directly.
         properties:
           apiVersion:
             description: |-
@@ -48,9 +53,45 @@ spec:
             type: string
           metadata:
             type: object
+          spec:
+            properties:
+              controllerName:
+                description: ControllerName specifies the controller that should reconcile
+                  it, like ingress class.
+                type: string
+              fields:
+                description: Fields defines the fields of the Kong entity itself.
+                x-kubernetes-preserve-unknown-fields: true
+              parentRef:
+                description: |-
+                  ParentRef references the kubernetes resource it attached to when its scope is "attached".
+                  Currently only KongPlugin/KongClusterPlugin allowed. This will make the custom entity to be attached
+                  to the entity(service/route/consumer) where the plugin is attached.
+                properties:
+                  group:
+                    type: string
+                  kind:
+                    type: string
+                  name:
+                    type: string
+                  namespace:
+                    description: Empty namespace means the same namespace of the owning
+                      object.
+                    type: string
+                required:
+                - name
+                type: object
+              type:
+                description: EntityType is the type of the Kong entity. The type is
+                  used in generating declarative configuration.
+                type: string
+            required:
+            - controllerName
+            - fields
+            - type
+            type: object
           status:
-            description: Status represents the current status of the KongConsumerGroup
-              resource.
+            description: Status stores the reconciling status of the resource.
             properties:
               conditions:
                 default:
@@ -60,7 +101,7 @@ spec:
                   status: Unknown
                   type: Programmed
                 description: |-
-                  Conditions describe the current conditions of the KongConsumerGroup.
+                  Conditions describe the current conditions of the KongCustomEntityStatus.
 
 
                   Known condition types are:
@@ -139,8 +180,17 @@ spec:
                 x-kubernetes-list-map-keys:
                 - type
                 x-kubernetes-list-type: map
+            required:
+            - conditions
             type: object
+        required:
+        - spec
         type: object
+        x-kubernetes-validations:
+        - message: The spec.type field is immutable
+          rule: self.spec.type == oldSelf.spec.type
+        - message: The spec.type field cannot be known Kong entity types
+          rule: '!(self.spec.type in [''services'',''routes'',''upstreams'',''targets'',''plugins'',''consumers'',''consumer_groups''])'
     served: true
     storage: true
     subresources:

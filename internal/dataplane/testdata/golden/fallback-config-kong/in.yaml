@@ -9,7 +9,7 @@ spec:
   ports:
     - port: 80
 ---
-apiVersion: incubator.ingress-controller.konghq.com/v1alpha1
+apiVersion: incubator.ingress-controller.acceldata.io/v1alpha1
 kind: KongServiceFacade
 metadata:
   name: servicefacade
@@ -23,7 +23,7 @@ spec:
     name: service
     port: 80
 ---
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongConsumer
 metadata:
   name: consumer
@@ -36,7 +36,7 @@ username: consumer
 consumerGroups:
   - consumer-group
 ---
-apiVersion: configuration.konghq.com/v1beta1
+apiVersion: configuration.acceldata.io/v1beta1
 kind: KongConsumerGroup
 metadata:
   name: consumer-group
@@ -46,7 +46,7 @@ metadata:
     kubernetes.io/ingress.class: kong
     test.konghq.com/broken: "true"
 ---
-apiVersion: configuration.konghq.com/v1beta1
+apiVersion: configuration.acceldata.io/v1beta1
 kind: UDPIngress
 metadata:
   name: udpingress
@@ -62,7 +62,7 @@ spec:
         servicePort: 80
       port: 9999
 ---
-apiVersion: configuration.konghq.com/v1beta1
+apiVersion: configuration.acceldata.io/v1beta1
 kind: TCPIngress
 metadata:
   name: tcpingress
@@ -91,13 +91,13 @@ spec:
         paths:
           - backend:
               resource:
-                apiGroup: incubator.ingress-controller.konghq.com
+                apiGroup: incubator.ingress-controller.acceldata.io
                 kind: KongServiceFacade
                 name: servicefacade
             path: /ingress
             pathType: Exact
 ---
-apiVersion: configuration.konghq.com/v1alpha1
+apiVersion: configuration.acceldata.io/v1alpha1
 kind: KongVault
 metadata:
   name: vault

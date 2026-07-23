@@ -160,7 +160,7 @@ spec:
       port: 8080
       weight: 25
 ---
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongPlugin
 metadata:
   name: key-auth

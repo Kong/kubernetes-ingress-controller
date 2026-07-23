@@ -306,11 +306,11 @@ func doesObjectReferUpstreamPolicy(obj client.Object) bool {
 // KongUpstreamPolicy Controller - Reconciliation
 // -----------------------------------------------------------------------------
 
-// +kubebuilder:rbac:groups=configuration.konghq.com,resources=kongupstreampolicies,verbs=get;list;watch
-// +kubebuilder:rbac:groups=configuration.konghq.com,resources=kongupstreampolicies/status,verbs=get;update;patch
+// +kubebuilder:rbac:groups=configuration.acceldata.io,resources=kongupstreampolicies,verbs=get;list;watch
+// +kubebuilder:rbac:groups=configuration.acceldata.io,resources=kongupstreampolicies/status,verbs=get;update;patch
 // +kubebuilder:rbac:groups=gateway.networking.k8s.io,resources=httproutes,verbs=get;list;watch
 // +kubebuilder:rbac:groups="",resources=services,verbs=get;list;watch
-// +kubebuilder:rbac:groups=incubator.ingress-controller.konghq.com,resources=kongservicefacades,verbs=get;list;watch
+// +kubebuilder:rbac:groups=incubator.ingress-controller.acceldata.io,resources=kongservicefacades,verbs=get;list;watch
 
 // Reconcile processes the watched objects.
 func (r *KongUpstreamPolicyReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {

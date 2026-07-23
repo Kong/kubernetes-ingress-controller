@@ -53,7 +53,7 @@ func TestGetIngressClassParameters(t *testing.T) {
 				Name: "some-cm",
 			},
 			parameterSpec: defaultIcpSpec,
-			err:           fmt.Errorf("IngressClass nil-apigroup should reference parameters in apiGroup:configuration.konghq.com"),
+			err:           fmt.Errorf("IngressClass nil-apigroup should reference parameters in apiGroup:configuration.acceldata.io"),
 		},
 		{
 			name: "nil-scope",

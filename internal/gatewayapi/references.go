@@ -97,7 +97,7 @@ func (rc RefChecker[T]) IsRefAllowedByGrant(
 			rc.log,
 			(br.Namespace),
 			(br.Name),
-			"configuration.konghq.com", // TODO https://github.com/Kong/kubernetes-ingress-controller/issues/6000
+			"configuration.acceldata.io", // TODO https://github.com/Kong/kubernetes-ingress-controller/issues/6000
 			"KongPlugin",               // TODO These magic strings should become unnecessary once we work with client.Object
 			allowedRefs,
 		)

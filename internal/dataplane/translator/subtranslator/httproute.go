@@ -594,7 +594,7 @@ func generateRequestRedirectKongPlugin(modifier *gatewayapi.HTTPRequestRedirectF
 }
 
 func generateExtensionRefKongPlugin(modifier *gatewayapi.LocalObjectReference) (string, error) {
-	if modifier.Group != "configuration.konghq.com" || modifier.Kind != "KongPlugin" {
+	if modifier.Group != "configuration.acceldata.io" || modifier.Kind != "KongPlugin" {
 		return "", fmt.Errorf("plugin %s/%s unsupported", modifier.Group, modifier.Kind)
 	}
 	return string(modifier.Name), nil

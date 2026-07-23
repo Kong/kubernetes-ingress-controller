@@ -16,5 +16,5 @@ limitations under the License.
 
 // Package v1 contains API Schema definitions for the konghq.com v1 API group.
 // +kubebuilder:object:generate=true
-// +groupName=configuration.konghq.com
+// +groupName=configuration.acceldata.io
 package v1

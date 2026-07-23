@@ -4,9 +4,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.15.0
-  name: ingressclassparameterses.configuration.konghq.com
+  name: ingressclassparameterses.configuration.acceldata.io
 spec:
-  group: configuration.konghq.com
+  group: configuration.acceldata.io
   names:
     kind: IngressClassParameters
     listKind: IngressClassParametersList

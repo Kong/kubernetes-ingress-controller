@@ -200,7 +200,7 @@ its port number `80`, you can run:
 
 ```shell
 kubectl apply -f - <<EOF
-apiVersion: incubator.ingress-controller.konghq.com/v1alpha1
+apiVersion: incubator.ingress-controller.acceldata.io/v1alpha1
 kind: KongServiceFacade
 metadata:
   name: my-service-facade
@@ -237,7 +237,7 @@ spec:
         pathType: Prefix
         backend:
           resource:
-            apiGroup: incubator.ingress-controller.konghq.com
+            apiGroup: incubator.ingress-controller.acceldata.io
             kind: KongServiceFacade
             name: my-service-facade
 EOF

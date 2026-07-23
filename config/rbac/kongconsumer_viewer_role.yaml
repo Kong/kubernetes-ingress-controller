@@ -5,7 +5,7 @@ metadata:
   name: kongconsumer-viewer-role
 rules:
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongconsumers
   verbs:
@@ -13,7 +13,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongconsumers/status
   verbs:

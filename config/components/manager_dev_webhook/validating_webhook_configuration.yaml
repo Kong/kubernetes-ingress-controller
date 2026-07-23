@@ -19,7 +19,7 @@ webhooks:
   name: validations.kong.konghq.com
   rules:
   - apiGroups:
-    - configuration.konghq.com
+    - configuration.acceldata.io
     apiVersions:
     - '*'
     operations:

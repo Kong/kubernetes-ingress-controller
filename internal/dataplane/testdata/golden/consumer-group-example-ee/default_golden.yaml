@@ -12,27 +12,27 @@ consumer_groups:
   tags:
   - k8s-name:consumer-group-2
   - k8s-kind:KongConsumerGroup
-  - k8s-group:configuration.konghq.com
+  - k8s-group:configuration.acceldata.io
   - k8s-version:v1beta1
 - id: dc176b3e-97a3-55b5-935a-b6edda29067d
   name: consumer-group-1
   tags:
   - k8s-name:consumer-group-1
   - k8s-kind:KongConsumerGroup
-  - k8s-group:configuration.konghq.com
+  - k8s-group:configuration.acceldata.io
   - k8s-version:v1beta1
 consumers:
 - id: 71168e5f-1d0b-5465-8bb9-a3b032fbc4c4
   tags:
   - k8s-name:consumer-2
   - k8s-kind:KongConsumer
-  - k8s-group:configuration.konghq.com
+  - k8s-group:configuration.acceldata.io
   - k8s-version:v1
   username: consumer-2
 - id: e23d9ef8-1cc4-5b55-abd1-db89aa90346c
   tags:
   - k8s-name:consumer-1
   - k8s-kind:KongConsumer
-  - k8s-group:configuration.konghq.com
+  - k8s-group:configuration.acceldata.io
   - k8s-version:v1
   username: consumer-1

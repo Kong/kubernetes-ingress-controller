@@ -4,19 +4,19 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.15.0
-  name: kongplugins.configuration.konghq.com
+  name: kongclusterplugins.configuration.acceldata.io
 spec:
-  group: configuration.konghq.com
+  group: configuration.acceldata.io
   names:
     categories:
     - kong-ingress-controller
-    kind: KongPlugin
-    listKind: KongPluginList
-    plural: kongplugins
+    kind: KongClusterPlugin
+    listKind: KongClusterPluginList
+    plural: kongclusterplugins
     shortNames:
-    - kp
-    singular: kongplugin
-  scope: Namespaced
+    - kcp
+    singular: kongclusterplugin
+  scope: Cluster
   versions:
   - additionalPrinterColumns:
     - description: Name of the plugin
@@ -43,7 +43,7 @@ spec:
     name: v1
     schema:
       openAPIV3Schema:
-        description: KongPlugin is the Schema for the kongplugins API.
+        description: KongClusterPlugin is the Schema for the kongclusterplugins API.
         properties:
           apiVersion:
             description: |-
@@ -59,7 +59,7 @@ spec:
               Please read the documentation of the plugin being configured to set values
               in here. For any plugin in Kong, anything that goes in the `config` JSON
               key in the Admin API request, goes into this property.
-              Only one of `config` or `configFrom` may be used in a KongPlugin, not both at once.
+              Only one of `config` or `configFrom` may be used in a KongClusterPlugin, not both at once.
             type: object
             x-kubernetes-preserve-unknown-fields: true
           configFrom:
@@ -67,11 +67,11 @@ spec:
               ConfigFrom references a secret containing the plugin configuration.
               This should be used when the plugin configuration contains sensitive information,
               such as AWS credentials in the Lambda plugin or the client secret in the OIDC plugin.
-              Only one of `config` or `configFrom` may be used in a KongPlugin, not both at once.
+              Only one of `config` or `configFrom` may be used in a KongClusterPlugin, not both at once.
             properties:
               secretKeyRef:
-                description: Specifies a name and a key of a secret to refer to. The
-                  namespace is implicitly set to the one of referring object.
+                description: Specifies a name, a namespace, and a key of a secret
+                  to refer to.
                 properties:
                   key:
                     description: The key containing the value.
@@ -79,9 +79,13 @@ spec:
                   name:
                     description: The secret containing the key.
                     type: string
+                  namespace:
+                    description: The namespace containing the secret.
+                    type: string
                 required:
                 - key
                 - name
+                - namespace
                 type: object
             required:
             - secretKeyRef
@@ -96,22 +100,19 @@ spec:
               Otherwise, patches will be applied to an empty object.
             items:
               description: |-
-                ConfigPatch is a JSON patch (RFC6902) to add values from Secret to the generated configuration.
-                It is an equivalent of the following patch:
-                `{"op": "add", "path": {.Path}, "value": {.ComputedValueFrom}}`.
+                NamespacedConfigPatch is a JSON patch to add values from secrets to KongClusterPlugin
+                to the generated configuration of plugin in Kong.
               properties:
                 path:
-                  description: Path is the JSON-Pointer value (RFC6901) that references
-                    a location within the target configuration.
+                  description: Path is the JSON path to add the patch.
                   type: string
                 valueFrom:
                   description: ValueFrom is the reference to a key of a secret where
                     the patched value comes from.
                   properties:
                     secretKeyRef:
-                      description: Specifies a name and a key of a secret to refer
-                        to. The namespace is implicitly set to the one of referring
-                        object.
+                      description: Specifies a name, a namespace, and a key of a secret
+                        to refer to.
                       properties:
                         key:
                           description: The key containing the value.
@@ -119,9 +120,13 @@ spec:
                         name:
                           description: The secret containing the key.
                           type: string
+                        namespace:
+                          description: The namespace containing the secret.
+                          type: string
                       required:
                       - key
                       - name
+                      - namespace
                       type: object
                   required:
                   - secretKeyRef
@@ -209,7 +214,8 @@ spec:
             - all
             type: string
           status:
-            description: Status represents the current status of the KongPlugin resource.
+            description: Status represents the current status of the KongClusterPlugin
+              resource.
             properties:
               conditions:
                 default:
@@ -219,7 +225,7 @@ spec:
                   status: Unknown
                   type: Programmed
                 description: |-
-                  Conditions describe the current conditions of the KongPluginStatus.
+                  Conditions describe the current conditions of the KongClusterPluginStatus.
 
 
                   Known condition types are:

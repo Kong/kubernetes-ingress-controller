@@ -81,7 +81,7 @@ webhooks:
   name: kongclusterplugins.validation.ingress-controller.konghq.com
   rules:
   - apiGroups:
-    - configuration.konghq.com
+    - configuration.acceldata.io
     apiVersions:
     - v1
     operations:
@@ -102,7 +102,7 @@ webhooks:
   name: kongconsumergroups.validation.ingress-controller.konghq.com
   rules:
   - apiGroups:
-    - configuration.konghq.com
+    - configuration.acceldata.io
     apiVersions:
     - v1beta1
     operations:
@@ -123,7 +123,7 @@ webhooks:
   name: kongconsumers.validation.ingress-controller.konghq.com
   rules:
   - apiGroups:
-    - configuration.konghq.com
+    - configuration.acceldata.io
     apiVersions:
     - v1
     operations:
@@ -144,7 +144,7 @@ webhooks:
   name: kongcustomentities.validation.ingress-controller.konghq.com
   rules:
   - apiGroups:
-    - configuration.konghq.com
+    - configuration.acceldata.io
     apiVersions:
     - v1alpha1
     operations:
@@ -165,7 +165,7 @@ webhooks:
   name: kongingresses.validation.ingress-controller.konghq.com
   rules:
   - apiGroups:
-    - configuration.konghq.com
+    - configuration.acceldata.io
     apiVersions:
     - v1
     operations:
@@ -186,7 +186,7 @@ webhooks:
   name: kongplugins.validation.ingress-controller.konghq.com
   rules:
   - apiGroups:
-    - configuration.konghq.com
+    - configuration.acceldata.io
     apiVersions:
     - v1
     operations:
@@ -207,7 +207,7 @@ webhooks:
   name: kongvaults.validation.ingress-controller.konghq.com
   rules:
   - apiGroups:
-    - configuration.konghq.com
+    - configuration.acceldata.io
     apiVersions:
     - v1alpha1
     operations:

@@ -110,7 +110,7 @@ func TestHTTPRouteWithBrokenPluginFallback(t *testing.T) {
 				assert.Equal(t, response.Status, diagnostics.FallbackStatusTriggered)
 				assert.NotEmpty(t, response.ExcludedObjects)
 				contains := lo.ContainsBy(response.ExcludedObjects, func(obj diagnostics.FallbackAffectedObjectMeta) bool {
-					return obj.Group == "configuration.konghq.com" && obj.Kind == "KongPlugin" && obj.Name == "key-auth"
+					return obj.Group == "configuration.acceldata.io" && obj.Kind == "KongPlugin" && obj.Name == "key-auth"
 				})
 				assert.Truef(t, contains, "expected to find KongPlugin key-auth in excluded objects, got: %v", response.ExcludedObjects)
 			}, consts.IngressWait, consts.WaitTick)

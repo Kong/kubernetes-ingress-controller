@@ -42,7 +42,7 @@ spec:
   ports:
     - port: 80
 ---
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongPlugin
 metadata:
   name: plugin
@@ -53,7 +53,7 @@ configFrom:
     key: key
 plugin: key-auth
 ---
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongClusterPlugin
 metadata:
   name: plugin

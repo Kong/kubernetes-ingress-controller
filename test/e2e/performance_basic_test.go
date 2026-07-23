@@ -41,7 +41,7 @@ var (
 	// Instead, a fixed secret `consumer-key-auth-secret` is used.
 	rulesTpl = `
 ---
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongPlugin
 metadata:
   name: auth-plugin-%d
@@ -82,7 +82,7 @@ metadata:
 type: Opaque
 
 ---
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongConsumer
 metadata:
   name: consumer-%d

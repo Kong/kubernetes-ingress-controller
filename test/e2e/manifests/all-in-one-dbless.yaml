@@ -10,9 +10,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.15.0
-  name: ingressclassparameterses.configuration.konghq.com
+  name: ingressclassparameterses.configuration.acceldata.io
 spec:
-  group: configuration.konghq.com
+  group: configuration.acceldata.io
   names:
     kind: IngressClassParameters
     listKind: IngressClassParametersList
@@ -67,9 +67,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.15.0
-  name: kongclusterplugins.configuration.konghq.com
+  name: kongclusterplugins.configuration.acceldata.io
 spec:
-  group: configuration.konghq.com
+  group: configuration.acceldata.io
   names:
     categories:
     - kong-ingress-controller
@@ -388,9 +388,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.15.0
-  name: kongconsumergroups.configuration.konghq.com
+  name: kongconsumergroups.configuration.acceldata.io
 spec:
-  group: configuration.konghq.com
+  group: configuration.acceldata.io
   names:
     categories:
     - kong-ingress-controller
@@ -535,9 +535,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.15.0
-  name: kongconsumers.configuration.konghq.com
+  name: kongconsumers.configuration.acceldata.io
 spec:
-  group: configuration.konghq.com
+  group: configuration.acceldata.io
   names:
     categories:
     - kong-ingress-controller
@@ -713,9 +713,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.15.0
-  name: kongcustomentities.configuration.konghq.com
+  name: kongcustomentities.configuration.acceldata.io
 spec:
-  group: configuration.konghq.com
+  group: configuration.acceldata.io
   names:
     categories:
     - kong-ingress-controller
@@ -910,9 +910,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.15.0
-  name: kongingresses.configuration.konghq.com
+  name: kongingresses.configuration.acceldata.io
 spec:
-  group: configuration.konghq.com
+  group: configuration.acceldata.io
   names:
     categories:
     - kong-ingress-controller
@@ -1301,9 +1301,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.15.0
-  name: konglicenses.configuration.konghq.com
+  name: konglicenses.configuration.acceldata.io
 spec:
-  group: configuration.konghq.com
+  group: configuration.acceldata.io
   names:
     categories:
     - kong-ingress-controller
@@ -1514,9 +1514,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.15.0
-  name: kongplugins.configuration.konghq.com
+  name: kongplugins.configuration.acceldata.io
 spec:
-  group: configuration.konghq.com
+  group: configuration.acceldata.io
   names:
     categories:
     - kong-ingress-controller
@@ -1831,9 +1831,9 @@ metadata:
     controller-gen.kubebuilder.io/version: v0.15.0
   labels:
     gateway.networking.k8s.io/policy: direct
-  name: kongupstreampolicies.configuration.konghq.com
+  name: kongupstreampolicies.configuration.acceldata.io
 spec:
-  group: configuration.konghq.com
+  group: configuration.acceldata.io
   names:
     categories:
     - kong-ingress-controller
@@ -2567,9 +2567,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.15.0
-  name: kongvaults.configuration.konghq.com
+  name: kongvaults.configuration.acceldata.io
 spec:
-  group: configuration.konghq.com
+  group: configuration.acceldata.io
   names:
     categories:
     - kong-ingress-controller
@@ -2764,9 +2764,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.15.0
-  name: tcpingresses.configuration.konghq.com
+  name: tcpingresses.configuration.acceldata.io
 spec:
-  group: configuration.konghq.com
+  group: configuration.acceldata.io
   names:
     categories:
     - kong-ingress-controller
@@ -2973,9 +2973,9 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.15.0
-  name: udpingresses.configuration.konghq.com
+  name: udpingresses.configuration.acceldata.io
 spec:
-  group: configuration.konghq.com
+  group: configuration.acceldata.io
   names:
     categories:
     - kong-ingress-controller
@@ -3236,7 +3236,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - ingressclassparameterses
   verbs:
@@ -3244,7 +3244,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongclusterplugins
   verbs:
@@ -3252,7 +3252,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongclusterplugins/status
   verbs:
@@ -3260,7 +3260,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongconsumergroups
   verbs:
@@ -3268,7 +3268,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongconsumergroups/status
   verbs:
@@ -3276,7 +3276,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongconsumers
   verbs:
@@ -3284,7 +3284,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongconsumers/status
   verbs:
@@ -3292,7 +3292,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongcustomentities
   verbs:
@@ -3300,7 +3300,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongcustomentities/status
   verbs:
@@ -3308,7 +3308,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongingresses
   verbs:
@@ -3316,7 +3316,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongingresses/status
   verbs:
@@ -3324,7 +3324,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - konglicenses
   verbs:
@@ -3332,7 +3332,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - konglicenses/status
   verbs:
@@ -3340,7 +3340,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongplugins
   verbs:
@@ -3348,7 +3348,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongplugins/status
   verbs:
@@ -3356,7 +3356,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongupstreampolicies
   verbs:
@@ -3364,7 +3364,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongupstreampolicies/status
   verbs:
@@ -3372,7 +3372,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongvaults
   verbs:
@@ -3380,7 +3380,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - kongvaults/status
   verbs:
@@ -3388,7 +3388,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - tcpingresses
   verbs:
@@ -3396,7 +3396,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - tcpingresses/status
   verbs:
@@ -3404,7 +3404,7 @@ rules:
   - patch
   - update
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - udpingresses
   verbs:
@@ -3412,7 +3412,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - udpingresses/status
   verbs:
@@ -3436,7 +3436,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - incubator.ingress-controller.konghq.com
+  - incubator.ingress-controller.acceldata.io
   resources:
   - kongservicefacades
   verbs:
@@ -3444,7 +3444,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - incubator.ingress-controller.konghq.com
+  - incubator.ingress-controller.acceldata.io
   resources:
   - kongservicefacades/status
   verbs:

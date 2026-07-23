@@ -135,12 +135,12 @@ func TestValidationWebhook(t *testing.T) {
 						"request": {
 							"uid": "b2df61dd-ab5b-4cb4-9be0-878533c83892",
 							"resource": {
-								"group": "configuration.konghq.com",
+								"group": "configuration.acceldata.io",
 								"version": "v1",
 								"resource": "kongconsumers"
 							},
 							"object": {
-								"apiVersion": "configuration.konghq.com/v1",
+								"apiVersion": "configuration.acceldata.io/v1",
 								"kind": "KongConsumer"
 							},
 						"operation": "CREATE"
@@ -163,17 +163,17 @@ func TestValidationWebhook(t *testing.T) {
 						"request": {
 							"uid": "b2df61dd-ab5b-4cb4-9be0-878533c83892",
 							"resource": {
-								"group": "configuration.konghq.com",
+								"group": "configuration.acceldata.io",
 								"version": "v1",
 								"resource": "kongconsumers"
 							},
 							"object": {
-								"apiVersion": "configuration.konghq.com/v1",
+								"apiVersion": "configuration.acceldata.io/v1",
 								"kind": "KongConsumer",
 							"username":"foo"
 							},
 							"oldObject": {
-								"apiVersion": "configuration.konghq.com/v1",
+								"apiVersion": "configuration.acceldata.io/v1",
 								"kind": "KongConsumer",
 							"username":"bar"
 							},
@@ -198,17 +198,17 @@ func TestValidationWebhook(t *testing.T) {
 						"request": {
 							"uid": "b2df61dd-ab5b-4cb4-9be0-878533c83892",
 							"resource": {
-								"group": "configuration.konghq.com",
+								"group": "configuration.acceldata.io",
 								"version": "v1",
 								"resource": "kongconsumers"
 							},
 							"object": {
-								"apiVersion": "configuration.konghq.com/v1",
+								"apiVersion": "configuration.acceldata.io/v1",
 								"kind": "KongConsumer",
 							"username":"foo"
 							},
 							"oldObject": {
-								"apiVersion": "configuration.konghq.com/v1",
+								"apiVersion": "configuration.acceldata.io/v1",
 								"kind": "KongConsumer",
 							"username":"foo"
 							},
@@ -232,12 +232,12 @@ func TestValidationWebhook(t *testing.T) {
 						"request": {
 							"uid": "b2df61dd-ab5b-4cb4-9be0-878533c83892",
 							"resource": {
-								"group": "configuration.konghq.com",
+								"group": "configuration.acceldata.io",
 								"version": "v1",
 								"resource": "kongconsumers"
 							},
 							"object": {
-								"apiVersion": "configuration.konghq.com/v1",
+								"apiVersion": "configuration.acceldata.io/v1",
 								"kind": "KongConsumer"
 							},
 						"operation": "CREATE"
@@ -263,12 +263,12 @@ func TestValidationWebhook(t *testing.T) {
 						"request": {
 							"uid": "b2df61dd-ab5b-4cb4-9be0-878533c83892",
 							"resource": {
-								"group": "configuration.konghq.com",
+								"group": "configuration.acceldata.io",
 								"version": "v1",
 								"resource": "kongconsumers"
 							},
 							"object": {
-								"apiVersion": "configuration.konghq.com/v1",
+								"apiVersion": "configuration.acceldata.io/v1",
 								"kind": "KongConsumer"
 							},
 						"operation": "CREATE"
@@ -287,17 +287,17 @@ func TestValidationWebhook(t *testing.T) {
 						"request": {
 							"uid": "b2df61dd-ab5b-4cb4-9be0-878533c83892",
 							"resource": {
-								"group": "configuration.konghq.com",
+								"group": "configuration.acceldata.io",
 								"version": "v1",
 								"resource": "kongconsumers"
 							},
 							"object": {
-								"apiVersion": "configuration.konghq.com/v1",
+								"apiVersion": "configuration.acceldata.io/v1",
 								"kind": "KongConsumer",
 							"username":"foo"
 							},
 							"oldObject": {
-								"apiVersion": "configuration.konghq.com/v1",
+								"apiVersion": "configuration.acceldata.io/v1",
 								"kind": "KongConsumer",
 							"username":"bar"
 							},
@@ -317,12 +317,12 @@ func TestValidationWebhook(t *testing.T) {
 						"request": {
 							"uid": "b2df61dd-ab5b-4cb4-9be0-878533c83892",
 							"resource": {
-								"group": "configuration.konghq.com",
+								"group": "configuration.acceldata.io",
 								"version": "v1",
 								"resource": "kongunknown"
 							},
 							"object": {
-								"apiVersion": "configuration.konghq.com/v1",
+								"apiVersion": "configuration.acceldata.io/v1",
 								"kind": "KongConsumer"
 							},
 						"operation": "CREATE"
@@ -330,7 +330,7 @@ func TestValidationWebhook(t *testing.T) {
 					}`),
 				validator:          KongFakeValidator{Result: false, Message: "consumer is not valid"},
 				wantRespCode:       http.StatusInternalServerError,
-				wantFailureMessage: "unknown resource type to validate: configuration.konghq.com/v1 kongunknown\n",
+				wantFailureMessage: "unknown resource type to validate: configuration.acceldata.io/v1 kongunknown\n",
 			},
 			{
 				name: "validate kong plugin",
@@ -341,12 +341,12 @@ func TestValidationWebhook(t *testing.T) {
 						"request": {
 							"uid": "b2df61dd-ab5b-4cb4-9be0-878533c83892",
 							"resource": {
-								"group": "configuration.konghq.com",
+								"group": "configuration.acceldata.io",
 								"version": "v1",
 								"resource": "kongplugins"
 							},
 							"object": {
-								"apiVersion": "configuration.konghq.com/v1",
+								"apiVersion": "configuration.acceldata.io/v1",
 								"kind": "KongPlugin"
 							}
 						}

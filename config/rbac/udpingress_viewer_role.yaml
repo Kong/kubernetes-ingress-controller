@@ -5,7 +5,7 @@ metadata:
   name: udpingress-viewer-role
 rules:
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - udpingresses
   verbs:
@@ -13,7 +13,7 @@ rules:
   - list
   - watch
 - apiGroups:
-  - configuration.konghq.com
+  - configuration.acceldata.io
   resources:
   - udpingresses/status
   verbs:

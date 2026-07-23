@@ -2157,7 +2157,7 @@ the test environment which expired during the 2.1.0 release process.
 are _not_ applied automatically by the upgrade. If you set one up previously,
 you should edit it (`kubectl edit validatingwebhookconfiguration
 kong-validations`) and add `kongclusterplugins` under the `resources` block for
-the `configuration.konghq.com` API group.
+the `configuration.acceldata.io` API group.
 
 #### Breaking changes
 
@@ -2244,7 +2244,7 @@ the `configuration.konghq.com` API group.
 **Note:** the admission webhook updates are _not_ applied automatically by the
 upgrade. If you set one up previously, you should edit it (`kubectl edit
 validatingwebhookconfiguration kong-validations`) and add `kongclusterplugins`
-under the `resources` block for the `configuration.konghq.com` API group.
+under the `resources` block for the `configuration.acceldata.io` API group.
 
 #### Fixed
 
@@ -2953,11 +2953,11 @@ provided by other means in such architectures.
 
 The following annotations are now deprecated and will be removed in a future
 release:
-- `configuration.konghq.com`
+- `configuration.acceldata.io`
 - `plugins.konghq.com`
-- `configuration.konghq.com/protocols`
-- `configuration.konghq.com/protocol`
-- `configuration.konghq.com/client-cert`
+- `configuration.acceldata.io/protocols`
+- `configuration.acceldata.io/protocol`
+- `configuration.acceldata.io/client-cert`
 
 Please read the annotations document for new annotations.
 
@@ -3072,7 +3072,7 @@ authentication, DB-less deployment by default and performance improvements.
   [#386](https://github.com/Kong/kubernetes-ingress-controller/issues/386)
 - **Mutual authentication using mTLS** Kong and the Kubernetes Service can
   mutually authenticate each other now. Use the new
-  `configuration.konghq.com/client-cert` annotation on a Kubernetes Service
+  `configuration.acceldata.io/client-cert` annotation on a Kubernetes Service
   to specify the cert-key pair Kong should use to authenticate itself.
   [#483](https://github.com/Kong/kubernetes-ingress-controller/pull/483)
 - **gRPC routing** Kong Ingress Controller can now expose and proxy gRPC
@@ -3303,10 +3303,10 @@ Please read the changelog and test in your environment.
 - :warning: `--default-backend-service` CLI flag is now removed. The default
   service will now be picked up from the default backend in the Ingress rules.
 - :warning: Service and Upstream entity overrides via KongIngress CRD are now
-  supported only with `configuration.konghq.com` annotation on Kubernetes
+  supported only with `configuration.acceldata.io` annotation on Kubernetes
   services.
   Route level overrides work same as before,
-  using the `configuration.konghq.com` annotation on Ingress resources.
+  using the `configuration.acceldata.io` annotation on Ingress resources.
 - :warning: `strip_path` property of Routes in Kong is set to `true` by default.
 - :warning: `preserve_host` property of Routes in Kong is set to
   `true` by default.

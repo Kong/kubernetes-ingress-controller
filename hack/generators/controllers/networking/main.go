@@ -93,7 +93,7 @@ var inputControllersNeeded = &typesNeeded{
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
-		Group:                             "configuration.konghq.com",
+		Group:                             "configuration.acceldata.io",
 		Version:                           "v1",
 		Kind:                              "KongIngress",
 		PackageImportAlias:                "kongv1",
@@ -107,7 +107,7 @@ var inputControllersNeeded = &typesNeeded{
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
-		Group:                            "configuration.konghq.com",
+		Group:                            "configuration.acceldata.io",
 		Version:                          "v1",
 		Kind:                             "KongPlugin",
 		PackageImportAlias:               "kongv1",
@@ -126,7 +126,7 @@ var inputControllersNeeded = &typesNeeded{
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
-		Group:                            "configuration.konghq.com",
+		Group:                            "configuration.acceldata.io",
 		Version:                          "v1",
 		Kind:                             "KongClusterPlugin",
 		PackageImportAlias:               "kongv1",
@@ -145,7 +145,7 @@ var inputControllersNeeded = &typesNeeded{
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
-		Group:                             "configuration.konghq.com",
+		Group:                             "configuration.acceldata.io",
 		Version:                           "v1",
 		Kind:                              "KongConsumer",
 		PackageImportAlias:                "kongv1",
@@ -164,7 +164,7 @@ var inputControllersNeeded = &typesNeeded{
 		},
 	},
 	typeNeeded{
-		Group:                            "configuration.konghq.com",
+		Group:                            "configuration.acceldata.io",
 		Version:                          "v1beta1",
 		Kind:                             "KongConsumerGroup",
 		PackageImportAlias:               "kongv1beta1",
@@ -183,7 +183,7 @@ var inputControllersNeeded = &typesNeeded{
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
-		Group:                             "configuration.konghq.com",
+		Group:                             "configuration.acceldata.io",
 		Version:                           "v1beta1",
 		Kind:                              "TCPIngress",
 		PackageImportAlias:                "kongv1beta1",
@@ -200,7 +200,7 @@ var inputControllersNeeded = &typesNeeded{
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
-		Group:                             "configuration.konghq.com",
+		Group:                             "configuration.acceldata.io",
 		Version:                           "v1beta1",
 		Kind:                              "UDPIngress",
 		PackageImportAlias:                "kongv1beta1",
@@ -216,7 +216,7 @@ var inputControllersNeeded = &typesNeeded{
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
-		Group:                             "configuration.konghq.com",
+		Group:                             "configuration.acceldata.io",
 		Version:                           "v1alpha1",
 		Kind:                              "IngressClassParameters",
 		PackageImportAlias:                "kongv1alpha1",
@@ -230,7 +230,7 @@ var inputControllersNeeded = &typesNeeded{
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
-		Group:                            "incubator.ingress-controller.konghq.com",
+		Group:                            "incubator.ingress-controller.acceldata.io",
 		Version:                          "v1alpha1",
 		Kind:                             "KongServiceFacade",
 		PackageImportAlias:               "incubatorv1alpha1",
@@ -248,7 +248,7 @@ var inputControllersNeeded = &typesNeeded{
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
-		Group:                            "configuration.konghq.com",
+		Group:                            "configuration.acceldata.io",
 		Version:                          "v1alpha1",
 		Kind:                             "KongVault",
 		PackageImportAlias:               "kongv1alpha1",
@@ -265,7 +265,7 @@ var inputControllersNeeded = &typesNeeded{
 		RBACVerbs:                         []string{"get", "list", "watch"},
 	},
 	typeNeeded{
-		Group:                            "configuration.konghq.com",
+		Group:                            "configuration.acceldata.io",
 		Version:                          "v1alpha1",
 		Kind:                             "KongCustomEntity",
 		PackageImportAlias:               "kongv1alpha1",

@@ -76,7 +76,7 @@ spec:
             port:
               number: 80
 ---
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongPlugin
 metadata:
   name: kong-id

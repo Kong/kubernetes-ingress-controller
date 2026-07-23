@@ -2,7 +2,7 @@
 # We expect empty config because of the broken plugins affecting all of its dependants.
 # `test.konghq.com/broken` annotations can be removed from the plugins to generate the actual config.
 ---
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongClusterPlugin
 metadata:
   name: plugin
@@ -13,7 +13,7 @@ config:
   header_name: kong-id
 plugin: correlation-id
 ---
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongClusterPlugin
 metadata:
   name: plugin-consumer-group
@@ -145,7 +145,7 @@ spec:
             service: "grpcbin.GRPCBin"
             method: "DummyUnary"
 ---
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongConsumer
 metadata:
   name: consumer
@@ -157,7 +157,7 @@ username: consumer
 consumerGroups:
   - consumer-group
 ---
-apiVersion: configuration.konghq.com/v1beta1
+apiVersion: configuration.acceldata.io/v1beta1
 kind: KongConsumerGroup
 metadata:
   name: consumer-group
@@ -166,7 +166,7 @@ metadata:
     kubernetes.io/ingress.class: kong
     konghq.com/plugins: plugin-consumer-group
 ---
-apiVersion: configuration.konghq.com/v1beta1
+apiVersion: configuration.acceldata.io/v1beta1
 kind: UDPIngress
 metadata:
   name: udpingress
@@ -181,7 +181,7 @@ spec:
         servicePort: 80
       port: 9999
 ---
-apiVersion: configuration.konghq.com/v1beta1
+apiVersion: configuration.acceldata.io/v1beta1
 kind: TCPIngress
 metadata:
   name: tcpingress

@@ -324,7 +324,7 @@ func (s Store) ListGateways() ([]*gatewayapi.Gateway, error) {
 }
 
 // ListTCPIngresses returns the list of TCP Ingresses from
-// configuration.konghq.com group.
+// configuration.acceldata.io group.
 func (s Store) ListTCPIngresses() ([]*kongv1beta1.TCPIngress, error) {
 	var ingresses []*kongv1beta1.TCPIngress
 	err := cache.ListAll(s.stores.TCPIngress, labels.NewSelector(),

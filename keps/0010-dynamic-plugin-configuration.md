@@ -121,7 +121,7 @@ or `Secret`
 **Literal Value**
 
 ```yaml
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongPlugin
 metadata:
   name: plugin-one
@@ -143,7 +143,7 @@ configFrom:
 **ConfigMap Key Reference**
 
 ```yaml
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongPlugin
 metadata:
   name: plugin-one
@@ -162,7 +162,7 @@ configFrom:
 **Secret Key References**
 
 ```yaml
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongPlugin
 metadata:
   name: plugin-one
@@ -184,7 +184,7 @@ This behavior is desirable
 **Value Interpolation**
 
 ```yaml
-apiVersion: configuration.konghq.com/v1
+apiVersion: configuration.acceldata.io/v1
 kind: KongPlugin
 metadata:
   name: plugin-one

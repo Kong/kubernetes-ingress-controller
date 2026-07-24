@@ -87,9 +87,17 @@ func KongTag() string {
 // IsKongGatewayVersionEnterpriseOnly indicates if the Kong Gateway
 // version is enterprise only (basically unusable without license).
 func IsKongGatewayVersionEnterpriseOnly() bool {
-	parsed := lo.Must(kongsemver.Parse(KongTag()))
-	v := semver.Version{Major: parsed.Major, Minor: parsed.Minor, Patch: parsed.Patch}
+	var (
+		vStr string
+	)
+	if KongEffectiveVersion() != "" {
+		vStr = KongEffectiveVersion()
+	} else {
+		vStr = KongTag()
+	}
 
+	parsed := lo.Must(kongsemver.Parse(vStr))
+	v := semver.Version{Major: parsed.Major, Minor: parsed.Minor, Patch: parsed.Patch}
 	return v.GTE(versions.KongEnterpriseCutoff)
 }
 

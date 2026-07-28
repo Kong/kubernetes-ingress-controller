@@ -42,8 +42,8 @@ func GenerateKongBuilder(_ context.Context) (*kong.Builder, []string, error) {
 	kongbuilder := kong.NewBuilder().WithNamespace(consts.ControllerNamespace)
 	extraControllerArgs := []string{}
 	if testenv.KongEnterpriseEnabled() || kongVersion.GTE(consts.ForceLicenseVersionCutoff) {
-		licenseJSON, err := kong.GetLicenseJSONFromEnv()
-		if err != nil {
+		licenseJSON := testenv.KongLicenseData()
+		if err := ValidateKongLicense(licenseJSON); err != nil {
 			return nil, nil, err
 		}
 		kongbuilder = kongbuilder.WithProxyEnterpriseEnabled(licenseJSON)
@@ -96,8 +96,8 @@ func GenerateKongBuilderWithController() (*kong.Builder, error) {
 	kongbuilder := kong.NewBuilder().WithNamespace(consts.ControllerNamespace)
 
 	if testenv.KongEnterpriseEnabled() {
-		licenseJSON, err := kong.GetLicenseJSONFromEnv()
-		if err != nil {
+		licenseJSON := testenv.KongLicenseData()
+		if err := ValidateKongLicense(licenseJSON); err != nil {
 			return nil, err
 		}
 		kongbuilder = kongbuilder.WithProxyEnterpriseEnabled(licenseJSON)

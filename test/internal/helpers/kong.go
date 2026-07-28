@@ -2,18 +2,25 @@ package helpers
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/url"
 	"os"
+	"regexp"
+	"time"
 
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
+	kftkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/kongconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
 // GetKongRootConfig gets version and root configurations of Kong from / endpoint of the provided Admin API URL.
@@ -102,4 +109,52 @@ func GetKongLicenses(ctx context.Context, proxyAdminURL *url.URL, kongTestPasswo
 		return nil, err
 	}
 	return kc.Licenses.ListAll(ctx)
+}
+
+// GetLicenseSecretFromEnv returns a secret object containing the license data from the environment variable KONG_LICENSE_DATA.
+// It validates the license data and returns an error if the license is invalid or missing.
+func GetLicenseSecretFromEnv() (*corev1.Secret, error) {
+	licenseData := testenv.KongLicenseData()
+	if err := ValidateKongLicense(licenseData); err != nil {
+		return nil, err
+	}
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "kong-enterprise-license",
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			"license": []byte(licenseData),
+		},
+	}, nil
+}
+
+// ValidateKongLicense validates the license data and returns an error if the license is invalid or expired.
+func ValidateKongLicense(licenseData string) error {
+	licenseObj := &kftkong.License{}
+	if err := json.Unmarshal([]byte(licenseData), licenseObj); err != nil {
+		return fmt.Errorf("invalid license JSON: %w", err)
+	}
+
+	// partialRFC3339Regex is a regex to match on timestamps that are only the date
+	// portion of an RFC3339 timestamp, this is commonly used in Kong license timestamps.
+	partialRFC3339Regex := regexp.MustCompile("^[0-9]+-[0-9]+-[0-9]+$")
+
+	// validate license expiration date
+	expirationDateStr := licenseObj.Data.Payload.ExpirationDate
+	if partialRFC3339Regex.MatchString(expirationDateStr) {
+		// allow for shorthand dates which don't match the full RFC3339 spec,
+		// but assume the very beginning of the day.
+		expirationDateStr = fmt.Sprintf("%sT00:00:01Z", expirationDateStr)
+	}
+	t, err := time.Parse(time.RFC3339, expirationDateStr)
+	if err != nil {
+		return fmt.Errorf("invalid license date (%s): %w", expirationDateStr, err)
+	}
+
+	// validate expiration
+	if time.Now().UTC().After(t) {
+		return fmt.Errorf("the provided license is expired")
+	}
+	return nil
 }

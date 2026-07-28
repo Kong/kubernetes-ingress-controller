@@ -43,7 +43,7 @@ func TestKongLicense(t *testing.T) {
 		"Expect Licenses available when KongLicense created",
 		func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 			licenseString := testenv.KongLicenseData()
-			require.NotEmpty(t, licenseString)
+			require.NoError(t, helpers.ValidateKongLicense(licenseString))
 
 			kongLicenseResource := &configurationv1alpha1.KongLicense{
 				ObjectMeta: metav1.ObjectMeta{

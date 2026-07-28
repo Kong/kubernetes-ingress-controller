@@ -324,7 +324,10 @@ func patchMigrationsCommandForDistroless(baseManifestReader io.Reader) (io.Reade
 // use getProxyDeploymentName to derive it from the manifest path.
 func WithLicensePatch(proxyDeploymentName string) ManifestPatch {
 	return func(r io.Reader) (io.Reader, error) {
-		licenseSecret := helpers.GetLicenseSecretFromEnv()
+		licenseSecret, err := helpers.GetLicenseSecretFromEnv()
+		if err != nil {
+			return nil, err
+		}
 		// GetLicenseSecretFromEnv returns a secret without TypeMeta/namespace; both are
 		// required for it to apply cleanly into the kong namespace via `kubectl apply -f -`.
 		licenseSecret.TypeMeta = metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"}

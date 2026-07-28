@@ -642,7 +642,6 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 
 	// Logging the license information is useful for debugging and for ensuring that the license is valid.
 	licenseInfo := adminOutput.License
-	t.Logf("Kong Admin API license information: %v", licenseInfo)
 	t.Log("License Support Plan: ", licenseInfo["support_plan"])
 	t.Log("License expiration date:", licenseInfo["license_expiration_date"])
 }

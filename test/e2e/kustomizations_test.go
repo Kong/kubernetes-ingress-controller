@@ -8,13 +8,14 @@ import (
 	"io"
 	"time"
 
-	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/kubectl"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/resid"
 	"sigs.k8s.io/yaml"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
 const (
@@ -323,10 +324,7 @@ func patchMigrationsCommandForDistroless(baseManifestReader io.Reader) (io.Reade
 // use getProxyDeploymentName to derive it from the manifest path.
 func WithLicensePatch(proxyDeploymentName string) ManifestPatch {
 	return func(r io.Reader) (io.Reader, error) {
-		licenseSecret, err := ktfkong.GetLicenseSecretFromEnv()
-		if err != nil {
-			return nil, err
-		}
+		licenseSecret := helpers.GetLicenseSecretFromEnv()
 		// GetLicenseSecretFromEnv returns a secret without TypeMeta/namespace; both are
 		// required for it to apply cleanly into the kong namespace via `kubectl apply -f -`.
 		licenseSecret.TypeMeta = metav1.TypeMeta{APIVersion: "v1", Kind: "Secret"}

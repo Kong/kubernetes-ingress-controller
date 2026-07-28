@@ -8,12 +8,15 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/kong/go-kong/kong"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/adminapi"
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/manager/kongconfig"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/versions"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
 // GetKongRootConfig gets version and root configurations of Kong from / endpoint of the provided Admin API URL.
@@ -102,4 +105,19 @@ func GetKongLicenses(ctx context.Context, proxyAdminURL *url.URL, kongTestPasswo
 		return nil, err
 	}
 	return kc.Licenses.ListAll(ctx)
+}
+
+// GetLicenseSecretFromEnv returns a secret object containing the license data from the environment variable KONG_LICENSE_DATA.
+// It does not validate the license.
+func GetLicenseSecretFromEnv() *corev1.Secret {
+	licenseData := testenv.KongLicenseData()
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "kong-enterprise-license",
+		},
+		Type: corev1.SecretTypeOpaque,
+		Data: map[string][]byte{
+			"license": []byte(licenseData),
+		},
+	}
 }

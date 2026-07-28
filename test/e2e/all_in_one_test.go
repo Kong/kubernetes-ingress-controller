@@ -54,8 +54,7 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("generating a license secret")
-	licenseSecret, err := kong.GetLicenseSecretFromEnv()
-	require.NoError(t, err)
+	licenseSecret := helpers.GetLicenseSecretFromEnv()
 
 	t.Log("deploying kong components")
 	deployments := ManifestDeploy{
@@ -247,7 +246,7 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("generating a license secret")
-	licenseSecret, err := kong.GetLicenseSecretFromEnv()
+	licenseSecret := helpers.GetLicenseSecretFromEnv()
 	require.NoError(t, err)
 
 	t.Log("deploying kong components")

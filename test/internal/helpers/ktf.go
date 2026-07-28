@@ -42,9 +42,9 @@ func GenerateKongBuilder(_ context.Context) (*kong.Builder, []string, error) {
 	kongbuilder := kong.NewBuilder().WithNamespace(consts.ControllerNamespace)
 	extraControllerArgs := []string{}
 	if testenv.KongEnterpriseEnabled() || kongVersion.GTE(consts.ForceLicenseVersionCutoff) {
-		licenseJSON, err := kong.GetLicenseJSONFromEnv()
-		if err != nil {
-			return nil, nil, err
+		licenseJSON := testenv.KongLicenseData()
+		if licenseJSON == "" {
+			return nil, nil, fmt.Errorf("Kong Enterprise is enabled but no license was provided via the KONG_LICENSE_DATA environment variable")
 		}
 		kongbuilder = kongbuilder.WithProxyEnterpriseEnabled(licenseJSON)
 		if testenv.DBMode() != testenv.DBModeOff {
@@ -96,10 +96,7 @@ func GenerateKongBuilderWithController() (*kong.Builder, error) {
 	kongbuilder := kong.NewBuilder().WithNamespace(consts.ControllerNamespace)
 
 	if testenv.KongEnterpriseEnabled() {
-		licenseJSON, err := kong.GetLicenseJSONFromEnv()
-		if err != nil {
-			return nil, err
-		}
+		licenseJSON := testenv.KongLicenseData()
 		kongbuilder = kongbuilder.WithProxyEnterpriseEnabled(licenseJSON)
 		if testenv.DBMode() != testenv.DBModeOff {
 			kongbuilder.WithProxyEnterpriseSuperAdminPassword(consts.KongTestPassword)

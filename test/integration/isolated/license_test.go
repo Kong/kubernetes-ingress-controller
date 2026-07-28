@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	ktfkong "github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,6 +18,7 @@ import (
 
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testlabels"
 )
 
@@ -42,8 +42,8 @@ func TestKongLicense(t *testing.T) {
 		).Assess(
 		"Expect Licenses available when KongLicense created",
 		func(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
-			licenseString, err := ktfkong.GetLicenseJSONFromEnv()
-			require.NoError(t, err)
+			licenseString := testenv.KongLicenseData()
+			require.NotEmpty(t, licenseString)
 
 			kongLicenseResource := &configurationv1alpha1.KongLicense{
 				ObjectMeta: metav1.ObjectMeta{

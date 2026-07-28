@@ -256,7 +256,8 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - uses: Kong/kong-license@ddccb487a0b319cef85f348b16a1ad2b6d9c1df7 # master @ 20260529
+      - name: fetch Kong license
+        uses: Kong/kong-license@ddccb487a0b319cef85f348b16a1ad2b6d9c1df7 # master @ 20260529
         continue-on-error: true
         id: license
         with:

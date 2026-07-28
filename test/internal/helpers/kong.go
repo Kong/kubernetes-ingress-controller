@@ -138,7 +138,7 @@ func ValidateKongLicense(licenseData string) error {
 
 	// partialRFC3339Regex is a regex to match on timestamps that are only the date
 	// portion of an RFC3339 timestamp, this is commonly used in Kong license timestamps.
-	var partialRFC3339Regex = regexp.MustCompile("^[0-9]+-[0-9]+-[0-9]+$")
+	partialRFC3339Regex := regexp.MustCompile("^[0-9]+-[0-9]+-[0-9]+$")
 
 	// validate license expiration date
 	expirationDateStr := licenseObj.Data.Payload.ExpirationDate

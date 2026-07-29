@@ -80,93 +80,107 @@ func KongRawStateToKongState(rawstate *utils.KongRawState) *kongstate.KongState 
 	kongState.CACertificates = rawCACertificatesToCACertificates(rawstate.CACertificates)
 	kongState.Certificates = rawCertificatesToCertificates(rawstate.Certificates)
 
+	// Build lookup maps from consumer ID to credential slices to avoid O(n²) nested loops
+	// when associating credentials with consumers (critical for large consumer counts).
+	keyAuthsByConsumerID := make(map[string][]*kong.KeyAuth, len(rawstate.KeyAuths))
+	for _, keyAuth := range rawstate.KeyAuths {
+		if keyAuth.Consumer != nil && keyAuth.Consumer.ID != nil {
+			consumerID := *keyAuth.Consumer.ID
+			sanitizeAuth(keyAuth)
+			keyAuthsByConsumerID[consumerID] = append(keyAuthsByConsumerID[consumerID], keyAuth)
+		}
+	}
+	hmacAuthsByConsumerID := make(map[string][]*kong.HMACAuth, len(rawstate.HMACAuths))
+	for _, hmacAuth := range rawstate.HMACAuths {
+		if hmacAuth.Consumer != nil && hmacAuth.Consumer.ID != nil {
+			consumerID := *hmacAuth.Consumer.ID
+			sanitizeAuth(hmacAuth)
+			hmacAuthsByConsumerID[consumerID] = append(hmacAuthsByConsumerID[consumerID], hmacAuth)
+		}
+	}
+	jwtAuthsByConsumerID := make(map[string][]*kong.JWTAuth, len(rawstate.JWTAuths))
+	for _, jwtAuth := range rawstate.JWTAuths {
+		if jwtAuth.Consumer != nil && jwtAuth.Consumer.ID != nil {
+			consumerID := *jwtAuth.Consumer.ID
+			sanitizeAuth(jwtAuth)
+			jwtAuthsByConsumerID[consumerID] = append(jwtAuthsByConsumerID[consumerID], jwtAuth)
+		}
+	}
+	basicAuthsByConsumerID := make(map[string][]*kong.BasicAuth, len(rawstate.BasicAuths))
+	for _, basicAuth := range rawstate.BasicAuths {
+		if basicAuth.Consumer != nil && basicAuth.Consumer.ID != nil {
+			consumerID := *basicAuth.Consumer.ID
+			sanitizeAuth(basicAuth)
+			basicAuthsByConsumerID[consumerID] = append(basicAuthsByConsumerID[consumerID], basicAuth)
+		}
+	}
+	aclGroupsByConsumerID := make(map[string][]*kong.ACLGroup, len(rawstate.ACLGroups))
+	for _, aclGroup := range rawstate.ACLGroups {
+		if aclGroup.Consumer != nil && aclGroup.Consumer.ID != nil {
+			consumerID := *aclGroup.Consumer.ID
+			sanitizeAuth(aclGroup)
+			aclGroupsByConsumerID[consumerID] = append(aclGroupsByConsumerID[consumerID], aclGroup)
+		}
+	}
+	oauth2CredsByConsumerID := make(map[string][]*kong.Oauth2Credential, len(rawstate.Oauth2Creds))
+	for _, oauth2Cred := range rawstate.Oauth2Creds {
+		if oauth2Cred.Consumer != nil && oauth2Cred.Consumer.ID != nil {
+			consumerID := *oauth2Cred.Consumer.ID
+			sanitizeAuth(oauth2Cred)
+			oauth2CredsByConsumerID[consumerID] = append(oauth2CredsByConsumerID[consumerID], oauth2Cred)
+		}
+	}
+	mTLSAuthsByConsumerID := make(map[string][]*kong.MTLSAuth, len(rawstate.MTLSAuths))
+	for _, mTLSAuth := range rawstate.MTLSAuths {
+		if mTLSAuth.Consumer != nil && mTLSAuth.Consumer.ID != nil {
+			consumerID := *mTLSAuth.Consumer.ID
+			sanitizeAuth(mTLSAuth)
+			mTLSAuthsByConsumerID[consumerID] = append(mTLSAuthsByConsumerID[consumerID], mTLSAuth)
+		}
+	}
+
 	for i, consumer := range rawstate.Consumers {
 		kongState.Consumers = append(kongState.Consumers, kongstate.Consumer{
 			Consumer: sanitizeConsumer(*consumer),
 		})
-		for _, keyAuth := range rawstate.KeyAuths {
-			if keyAuth.Consumer != nil {
-				if *keyAuth.Consumer.ID == *consumer.ID {
-					sanitizeAuth(keyAuth)
-					kongState.Consumers[i].KeyAuths = append(kongState.Consumers[i].KeyAuths,
-						&kongstate.KeyAuth{
-							KeyAuth: *keyAuth,
-						},
-					)
-				}
-			}
+		if consumer.ID == nil {
+			continue
 		}
-		for _, hmacAuth := range rawstate.HMACAuths {
-			if hmacAuth.Consumer != nil {
-				if *hmacAuth.Consumer.ID == *consumer.ID {
-					sanitizeAuth(hmacAuth)
-					kongState.Consumers[i].HMACAuths = append(kongState.Consumers[i].HMACAuths,
-						&kongstate.HMACAuth{
-							HMACAuth: *hmacAuth,
-						},
-					)
-				}
-			}
+		consumerID := *consumer.ID
+		for _, keyAuth := range keyAuthsByConsumerID[consumerID] {
+			kongState.Consumers[i].KeyAuths = append(kongState.Consumers[i].KeyAuths,
+				&kongstate.KeyAuth{KeyAuth: *keyAuth},
+			)
 		}
-		for _, jwtAuth := range rawstate.JWTAuths {
-			if jwtAuth.Consumer != nil {
-				if *jwtAuth.Consumer.ID == *consumer.ID {
-					sanitizeAuth(jwtAuth)
-					kongState.Consumers[i].JWTAuths = append(kongState.Consumers[i].JWTAuths,
-						&kongstate.JWTAuth{
-							JWTAuth: *jwtAuth,
-						},
-					)
-				}
-			}
+		for _, hmacAuth := range hmacAuthsByConsumerID[consumerID] {
+			kongState.Consumers[i].HMACAuths = append(kongState.Consumers[i].HMACAuths,
+				&kongstate.HMACAuth{HMACAuth: *hmacAuth},
+			)
 		}
-		for _, basicAuth := range rawstate.BasicAuths {
-			if basicAuth.Consumer != nil {
-				if *basicAuth.Consumer.ID == *consumer.ID {
-					sanitizeAuth(basicAuth)
-					kongState.Consumers[i].BasicAuths = append(kongState.Consumers[i].BasicAuths,
-						&kongstate.BasicAuth{
-							BasicAuth: *basicAuth,
-						},
-					)
-				}
-			}
+		for _, jwtAuth := range jwtAuthsByConsumerID[consumerID] {
+			kongState.Consumers[i].JWTAuths = append(kongState.Consumers[i].JWTAuths,
+				&kongstate.JWTAuth{JWTAuth: *jwtAuth},
+			)
 		}
-		for _, aclGroup := range rawstate.ACLGroups {
-			if aclGroup.Consumer != nil {
-				if *aclGroup.Consumer.ID == *consumer.ID {
-					sanitizeAuth(aclGroup)
-					kongState.Consumers[i].ACLGroups = append(kongState.Consumers[i].ACLGroups,
-						&kongstate.ACLGroup{
-							ACLGroup: *aclGroup,
-						},
-					)
-				}
-			}
+		for _, basicAuth := range basicAuthsByConsumerID[consumerID] {
+			kongState.Consumers[i].BasicAuths = append(kongState.Consumers[i].BasicAuths,
+				&kongstate.BasicAuth{BasicAuth: *basicAuth},
+			)
 		}
-		for _, oauth2Cred := range rawstate.Oauth2Creds {
-			if oauth2Cred.Consumer != nil {
-				if *oauth2Cred.Consumer.ID == *consumer.ID {
-					sanitizeAuth(oauth2Cred)
-					kongState.Consumers[i].Oauth2Creds = append(kongState.Consumers[i].Oauth2Creds,
-						&kongstate.Oauth2Credential{
-							Oauth2Credential: *oauth2Cred,
-						},
-					)
-				}
-			}
+		for _, aclGroup := range aclGroupsByConsumerID[consumerID] {
+			kongState.Consumers[i].ACLGroups = append(kongState.Consumers[i].ACLGroups,
+				&kongstate.ACLGroup{ACLGroup: *aclGroup},
+			)
 		}
-		for _, mTLSAuth := range rawstate.MTLSAuths {
-			if mTLSAuth.Consumer != nil {
-				if *mTLSAuth.Consumer.ID == *consumer.ID {
-					sanitizeAuth(mTLSAuth)
-					kongState.Consumers[i].MTLSAuths = append(kongState.Consumers[i].MTLSAuths,
-						&kongstate.MTLSAuth{
-							MTLSAuth: *mTLSAuth,
-						},
-					)
-				}
-			}
+		for _, oauth2Cred := range oauth2CredsByConsumerID[consumerID] {
+			kongState.Consumers[i].Oauth2Creds = append(kongState.Consumers[i].Oauth2Creds,
+				&kongstate.Oauth2Credential{Oauth2Credential: *oauth2Cred},
+			)
+		}
+		for _, mTLSAuth := range mTLSAuthsByConsumerID[consumerID] {
+			kongState.Consumers[i].MTLSAuths = append(kongState.Consumers[i].MTLSAuths,
+				&kongstate.MTLSAuth{MTLSAuth: *mTLSAuth},
+			)
 		}
 	}
 

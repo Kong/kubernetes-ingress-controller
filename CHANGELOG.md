@@ -130,6 +130,16 @@ Adding a new version? You'll need three changes:
 - [0.0.5](#005)
 - [0.0.4 and prior](#004-and-prior)
 
+## Unreleased
+
+### Fixed
+
+- Bump go-kong to `v0.67.1`, which fixes `FillPluginsDefaults` overwriting
+  user-provided values of plugin config fields of type `json` with `nil`.
+  JSON object values (such as the `ai-mcp-proxy` plugin's `tool.request_body`)
+  are now preserved as-is.
+  [#8034](https://github.com/Kong/kubernetes-ingress-controller/pull/8034)
+
 ## [3.5.10]
 
 > Release date: 2026-06-23

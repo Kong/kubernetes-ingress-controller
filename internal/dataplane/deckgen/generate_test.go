@@ -66,6 +66,90 @@ func TestFillPlugin(t *testing.T) {
 		expectedError error
 	}{
 		{
+			// NOTE: This would fail for go-kong v0.67.0 and older, where
+			// FillPluginsDefaults nulled a json-typed config field that holds a
+			// JSON object (e.g. the ai-mcp-proxy plugin's tool.request_body),
+			// while a json-typed field holding a JSON array (tool.parameters)
+			// was preserved. See https://github.com/Kong/go-kong/pull/625.
+			name: "json-typed config field holding an object is preserved",
+			plugin: &file.FPlugin{
+				Plugin: kong.Plugin{
+					Name: lo.ToPtr("ai-mcp-proxy"),
+					Config: kong.Configuration{
+						"tools": []any{
+							map[string]any{
+								"name": "create-issue",
+								"parameters": []any{
+									map[string]any{"name": "updateHistory", "in": "query"},
+								},
+								"request_body": map[string]any{
+									"content": map[string]any{
+										"application/json": map[string]any{
+											"schema": map[string]any{"type": "object"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			schemas: &mockPluginSchemaStore{
+				map[string]any{
+					"fields": []any{
+						map[string]any{
+							"config": map[string]any{
+								"type": "record",
+								"fields": []any{
+									map[string]any{
+										"tools": map[string]any{
+											"type":     "array",
+											"required": false,
+											"elements": map[string]any{
+												"type": "record",
+												"fields": []any{
+													map[string]any{"name": map[string]any{"type": "string", "required": false}},
+													map[string]any{"parameters": map[string]any{"type": "json"}},
+													map[string]any{"request_body": map[string]any{"type": "json"}},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &file.FPlugin{
+				Plugin: kong.Plugin{
+					Name: lo.ToPtr("ai-mcp-proxy"),
+					Protocols: []*string{
+						lo.ToPtr("http"),
+						lo.ToPtr("https"),
+					},
+					Enabled: lo.ToPtr(true),
+					Config: kong.Configuration{
+						"tools": []any{
+							kong.Configuration{
+								"name": "create-issue",
+								"parameters": []any{
+									map[string]any{"name": "updateHistory", "in": "query"},
+								},
+								"request_body": map[string]any{
+									"content": map[string]any{
+										"application/json": map[string]any{
+											"schema": map[string]any{"type": "object"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "Required field provided for plugin",
 			plugin: &file.FPlugin{
 				Plugin: kong.Plugin{

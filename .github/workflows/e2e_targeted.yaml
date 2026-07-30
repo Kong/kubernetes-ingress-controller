@@ -110,6 +110,7 @@ jobs:
       kic-image: ${{ needs.choose-image.outputs.image }}
       load-local-image: ${{ inputs.controller-image == '' }}
       kong-image: kong/kong-gateway-dev:nightly
+      kong-effective-version: "3.15.0"
       # these do not honor the inputs, as this job is intended to be a minimal
       # test against unreleased kong images, with the main run covering the
       # other test conditions

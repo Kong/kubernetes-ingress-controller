@@ -66,21 +66,19 @@ func TestKonnectLicenseActivation(t *testing.T) {
 	t.Parallel()
 	testkonnect.SkipIfMissingRequiredKonnectEnvVariables(t)
 
+	kongImageVersion, err := helpers.GetKongImageVersion()
+	require.NoError(t, err)
+	if kongImageVersion.GTE(consts.ForceLicenseVersionCutoff) {
+		t.Skip("KIC 3.4 does not support activating a Konnect license before Kong Gateway starts")
+	}
+
 	ctx, env := setupE2ETest(t)
 
 	rgID := testkonnect.CreateTestControlPlane(ctx, t)
 	cert, key := testkonnect.CreateClientCertificate(ctx, t, rgID)
 	createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, rgID)
 
-	kongImageVersion, err := helpers.GetKongImageVersion()
-	require.NoError(t, err)
-
-	if kongImageVersion.LT(consts.ForceLicenseVersionCutoff) {
-		testKonnectLicenseActivationWithoutForceLicense(ctx, t, env, rgID)
-	} else {
-		t.Logf("Kong version %s requires a license at the beginning", kongImageVersion)
-		testKonnectLicenseActivationWithForceLicense(ctx, t, env, rgID)
-	}
+	testKonnectLicenseActivationWithoutForceLicense(ctx, t, env, rgID)
 }
 
 func testKonnectLicenseActivationWithoutForceLicense(ctx context.Context, t *testing.T, env environment.Environment, rgID string) {

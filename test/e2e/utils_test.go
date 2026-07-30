@@ -5,7 +5,6 @@ package e2e
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -18,7 +17,6 @@ import (
 	"time"
 
 	"github.com/blang/semver/v4"
-	"github.com/kong/go-kong/kong"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/types/gke"
 	"github.com/kong/kubernetes-testing-framework/pkg/environments"
 	"github.com/sethvargo/go-password/password"
@@ -237,22 +235,6 @@ func patchControllerImageFromEnv(t *testing.T, manifestReader io.Reader) (io.Rea
 
 	t.Log("controller image override undefined, using defaults")
 	return manifestReader, nil
-}
-
-// getKongVersionFromOverrideTag parses Kong version from env effective version or override tag. The effective version
-// takes precedence.
-//
-//lint:ignore U1000 retained for future use
-func getKongVersionFromOverrideTag() (kong.Version, error) {
-	if kongEffectiveVersion := testenv.KongEffectiveVersion(); kongEffectiveVersion != "" {
-		return kong.ParseSemanticVersion(kongEffectiveVersion)
-	}
-
-	if testenv.KongImageTag() == "" {
-		return kong.Version{}, errors.New("No Kong tag provided")
-	}
-
-	return kong.ParseSemanticVersion(testenv.KongTag())
 }
 
 // getKongProxyIP takes a Service with Kong proxy ports and returns and its IP, or fails the test if it cannot.

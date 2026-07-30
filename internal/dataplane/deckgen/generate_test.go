@@ -66,6 +66,90 @@ func TestFillPlugin(t *testing.T) {
 		expectedError error
 	}{
 		{
+			// NOTE: This fails with go-kong v0.72.1, where FillPluginsDefaults
+			// nulls a json-typed config field that holds a JSON object (e.g. the
+			// ai-mcp-proxy plugin's tool.request_body), while a json-typed field
+			// holding a JSON array (tool.parameters) is preserved. See
+			// https://github.com/Kong/go-kong/pull/625.
+			name: "json-typed config field holding an object is preserved",
+			plugin: &file.FPlugin{
+				Plugin: kong.Plugin{
+					Name: lo.ToPtr("ai-mcp-proxy"),
+					Config: kong.Configuration{
+						"tools": []interface{}{
+							map[string]interface{}{
+								"name": "create-issue",
+								"parameters": []interface{}{
+									map[string]interface{}{"name": "updateHistory", "in": "query"},
+								},
+								"request_body": map[string]interface{}{
+									"content": map[string]interface{}{
+										"application/json": map[string]interface{}{
+											"schema": map[string]interface{}{"type": "object"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			schemas: &mockPluginSchemaStore{
+				map[string]interface{}{
+					"fields": []interface{}{
+						map[string]interface{}{
+							"config": map[string]interface{}{
+								"type": "record",
+								"fields": []interface{}{
+									map[string]interface{}{
+										"tools": map[string]interface{}{
+											"type":     "array",
+											"required": false,
+											"elements": map[string]interface{}{
+												"type": "record",
+												"fields": []interface{}{
+													map[string]interface{}{"name": map[string]interface{}{"type": "string", "required": false}},
+													map[string]interface{}{"parameters": map[string]interface{}{"type": "json"}},
+													map[string]interface{}{"request_body": map[string]interface{}{"type": "json"}},
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			expected: &file.FPlugin{
+				Plugin: kong.Plugin{
+					Name: lo.ToPtr("ai-mcp-proxy"),
+					Protocols: []*string{
+						lo.ToPtr("http"),
+						lo.ToPtr("https"),
+					},
+					Enabled: lo.ToPtr(true),
+					Config: kong.Configuration{
+						"tools": []interface{}{
+							kong.Configuration{
+								"name": "create-issue",
+								"parameters": []interface{}{
+									map[string]interface{}{"name": "updateHistory", "in": "query"},
+								},
+								"request_body": map[string]interface{}{
+									"content": map[string]interface{}{
+										"application/json": map[string]interface{}{
+											"schema": map[string]interface{}{"type": "object"},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		{
 			name: "Required field provided for plugin",
 			plugin: &file.FPlugin{
 				Plugin: kong.Plugin{

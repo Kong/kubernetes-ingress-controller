@@ -148,7 +148,7 @@ jobs:
             enterprise: true
 
     steps:
-      - uses: Kong/kong-license@c4decf08584f84ff8fe8e7cd3c463e0192f6111b # master @ 20250107
+      - uses: Kong/kong-license@ddccb487a0b319cef85f348b16a1ad2b6d9c1df7 # master @ 20260529
         id: license
         with:
           op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}

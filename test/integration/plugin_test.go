@@ -801,9 +801,11 @@ func TestPluginNullInConfig(t *testing.T) {
 	t.Logf("Checking the configuration of the plugin %s in Kong", kongplugin.Name)
 	kc, err := adminapi.NewKongAPIClient(proxyAdminURL.String(), managercfg.AdminAPIClientConfig{}, consts.KongTestPassword)
 	require.NoError(t, err, "failed to create Kong client")
+
 	// For integration tests in enterprise edition and postgres DB backed Kong gateway,
 	// the tests are run in "notdefault" workspace of Kong.
-	if testenv.DBMode() != testenv.DBModeOff && testenv.KongEnterpriseEnabled() {
+	// Kong gateway 3.15 and later forces presence of a license, so the tests are run in "notdefault" workspace of Kong.
+	if testenv.DBMode() != testenv.DBModeOff && (testenv.KongEnterpriseEnabled() || kongGatewayVersionRequiresLicense()) {
 		kc.SetWorkspace(consts.KongTestWorkspace)
 	}
 	require.Eventually(t, func() bool {

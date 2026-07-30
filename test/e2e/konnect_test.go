@@ -25,6 +25,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/nodes"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 	testkonnect "github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers/konnect"
 )
 
@@ -70,6 +72,18 @@ func TestKonnectLicenseActivation(t *testing.T) {
 	cert, key := testkonnect.CreateClientCertificate(ctx, t, rgID)
 	createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, rgID)
 
+	kongImageVersion, err := helpers.GetKongImageVersion()
+	require.NoError(t, err)
+
+	if kongImageVersion.LT(consts.ForceLicenseVersionCutoff) {
+		testKonnectLicenseActivationWithoutForceLicense(ctx, t, env, rgID)
+	} else {
+		t.Logf("Kong version %s requires a license at the beginning", kongImageVersion)
+		testKonnectLicenseActivationWithForceLicense(ctx, t, env, rgID)
+	}
+}
+
+func testKonnectLicenseActivationWithoutForceLicense(ctx context.Context, t *testing.T, env environment.Environment, rgID string) {
 	const manifestFile = "manifests/all-in-one-dbless-konnect-enterprise.yaml"
 	ManifestDeploy{Path: manifestFile}.Run(ctx, t, env)
 
@@ -135,6 +149,37 @@ func TestKonnectLicenseActivation(t *testing.T) {
 	t.Log("done")
 }
 
+func testKonnectLicenseActivationWithForceLicense(ctx context.Context, t *testing.T, env environment.Environment, rgID string) {
+	const manifestFile = "manifests/all-in-one-dbless-konnect-enterprise.yaml"
+	ManifestDeploy{
+		Path: manifestFile,
+		Patches: []ManifestPatch{
+			WithKonnectLicensingPatch(),
+		},
+	}.Run(ctx, t, env)
+	exposeAdminAPI(ctx, t, env, k8stypes.NamespacedName{Namespace: "kong", Name: "proxy-kong"})
+
+	t.Log("confirming that the license is set")
+	assert.Eventually(t, func() bool {
+		license, err := getLicenseFromAdminAPI(ctx, env, "")
+		if err != nil {
+			t.Logf("failed to get license: %v", err)
+			return false
+		}
+		return license.License.Expiration != ""
+	}, adminAPIWait, time.Second)
+
+	skipTestIfControllerVersionBelow(t, semver.MustParse("3.5.1"))
+	t.Log("checking if the license is stored in the local secret")
+	secret, err := env.Cluster().Client().CoreV1().Secrets(namespace).Get(
+		ctx, "konnect-license-"+rgID, metav1.GetOptions{})
+	require.NoError(t, err)
+	require.NotNil(t, secret.Data, "secret to store Konnect license should not be empty")
+	require.NotEmpty(t, secret.Data["id"], "stored license should have a non-empty ID")
+
+	t.Log("done")
+}
+
 func TestKonnectWhenMisconfiguredBasicIngressNotAffected(t *testing.T) {
 	t.Parallel()
 	testkonnect.SkipIfMissingRequiredKonnectEnvVariables(t)
@@ -160,7 +205,14 @@ func deployAllInOneKonnectManifest(ctx context.Context, t *testing.T, env enviro
 	const manifestFile = "manifests/all-in-one-dbless-konnect.yaml"
 	t.Logf("deploying %s manifest file", manifestFile)
 
-	return ManifestDeploy{Path: manifestFile}.Run(ctx, t, env)
+	manifestDeploy := ManifestDeploy{Path: manifestFile}
+	kongImageVersion, err := helpers.GetKongImageVersion()
+	require.NoError(t, err)
+	if kongImageVersion.GTE(consts.ForceLicenseVersionCutoff) {
+		t.Logf("Kong version %s requires a license, patching the manifest", kongImageVersion)
+		manifestDeploy.Patches = append(manifestDeploy.Patches, WithLicensePatch(getProxyDeploymentName(manifestDeploy.Path)))
+	}
+	return manifestDeploy.Run(ctx, t, env)
 }
 
 // createKonnectClientSecretAndConfigMap creates a Secret with client TLS certificate that is used by KIC to communicate

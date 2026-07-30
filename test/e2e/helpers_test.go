@@ -594,7 +594,8 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 
 	t.Log("pulling the admin api information")
 	adminOutput := struct {
-		Version string `json:"version"`
+		License map[string]any `json:"license"`
+		Version string         `json:"version"`
 	}{}
 
 	require.Eventually(t, func() bool {
@@ -621,6 +622,7 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 		}
 		return adminOutput.Version != ""
 	}, adminAPIWait, time.Second)
+	t.Log("Kong Version:", adminOutput.Version)
 	if string(adminOutput.Version[0]) == "3" {
 		// 3.x removed the "-enterprise-edition" string but provided no other indication that something is enterprise
 		require.Len(t, strings.Split(adminOutput.Version, "."), 4,
@@ -629,6 +631,11 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 		require.Contains(t, adminOutput.Version, "enterprise-edition",
 			fmt.Sprintf("actual kong version: %s", adminOutput.Version))
 	}
+
+	// Logging the license information is useful for debugging and for ensuring that the license is valid.
+	licenseInfo := adminOutput.License
+	t.Log("License Support Plan: ", licenseInfo["support_plan"])
+	t.Log("License expiration date:", licenseInfo["license_expiration_date"])
 }
 
 func verifyEnterpriseWithPostgres(ctx context.Context, t *testing.T, env environments.Environment, adminPassword string) {

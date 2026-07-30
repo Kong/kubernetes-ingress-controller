@@ -15,6 +15,13 @@ import (
 
 // GetKongImageVersion returns the Kong version to be used for the KTF addon based on environment variables.
 func GetKongImageVersion() (semver.Version, error) {
+	if testenv.KongEffectiveVersion() == "" && testenv.KongTag() == "" {
+		// No image override is configured. The test will use the version from the
+		// checked-in manifest or the default Helm chart, both of which predate the
+		// version that requires a license.
+		return semver.Version{}, nil
+	}
+
 	kongVersion, err := semver.Parse(testenv.KongEffectiveVersion())
 	if err == nil {
 		return kongVersion, nil

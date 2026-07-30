@@ -439,6 +439,7 @@ func deployIngressWithEchoBackends(ctx context.Context, t *testing.T, env enviro
 	ingress := generators.NewIngressForService(echoPath, map[string]string{
 		annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 		annotations.AnnotationPrefix + annotations.MethodsKey:   http.MethodGet,
+		annotations.AnnotationPrefix + annotations.ProtocolsKey: "http",
 	}, service)
 	ingress.Spec.IngressClassName = kong.String(ingressClass)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), corev1.NamespaceDefault, ingress))

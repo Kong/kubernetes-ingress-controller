@@ -119,7 +119,14 @@ func TestWebhookUpdate(t *testing.T) {
 	}()
 
 	t.Log("deploying kong components")
-	ManifestDeploy{Path: dblessPath}.Run(ctx, t, env)
+	manifestDeploy := ManifestDeploy{Path: dblessPath}
+	kongImageVersion, err := helpers.GetKongImageVersion()
+	require.NoError(t, err)
+	if kongImageVersion.GTE(consts.ForceLicenseVersionCutoff) {
+		t.Logf("Kong version %s requires a license, patching the manifest", kongImageVersion)
+		manifestDeploy.Patches = append(manifestDeploy.Patches, WithLicensePatch(getProxyDeploymentName(manifestDeploy.Path)))
+	}
+	manifestDeploy.Run(ctx, t, env)
 
 	certPool := x509.NewCertPool()
 	const firstCertificateHostName = "first.example"
@@ -239,7 +246,14 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	deployments := ManifestDeploy{Path: dblessPath}.Run(ctx, t, env)
+	manifestDeploy := ManifestDeploy{Path: dblessPath}
+	kongImageVersion, err := helpers.GetKongImageVersion()
+	require.NoError(t, err)
+	if kongImageVersion.GTE(consts.ForceLicenseVersionCutoff) {
+		t.Logf("Kong version %s requires a license, patching the manifest", kongImageVersion)
+		manifestDeploy.Patches = append(manifestDeploy.Patches, WithLicensePatch(getProxyDeploymentName(manifestDeploy.Path)))
+	}
+	deployments := manifestDeploy.Run(ctx, t, env)
 	controllerDeploymentNN := deployments.ControllerNN
 	controllerDeploymentListOptions := metav1.ListOptions{
 		LabelSelector: "app=" + controllerDeploymentNN.Name,
@@ -259,7 +273,7 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 		}
 	}
 
-	_, err := env.Cluster().Client().AppsV1().Deployments(namespace).Update(ctx, controllerDeployment, metav1.UpdateOptions{})
+	_, err = env.Cluster().Client().AppsV1().Deployments(namespace).Update(ctx, controllerDeployment, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	t.Log("verifying that KIC waits for Gateway API CRDs and prints proper log")
@@ -395,7 +409,14 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	ManifestDeploy{Path: dblessPath}.Run(ctx, t, env)
+	manifestDeploy := ManifestDeploy{Path: dblessPath}
+	kongImageVersion, err := helpers.GetKongImageVersion()
+	require.NoError(t, err)
+	if kongImageVersion.GTE(consts.ForceLicenseVersionCutoff) {
+		t.Logf("Kong version %s requires a license, patching the manifest", kongImageVersion)
+		manifestDeploy.Patches = append(manifestDeploy.Patches, WithLicensePatch(getProxyDeploymentName(manifestDeploy.Path)))
+	}
+	manifestDeploy.Run(ctx, t, env)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
@@ -413,7 +434,7 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: consts.DefaultFeatureGates})
 		}
 	}
-	_, err := env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx,
+	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx,
 		deployment, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
@@ -441,13 +462,20 @@ func TestDefaultIngressClass(t *testing.T) {
 	ctx, env := setupE2ETest(t)
 
 	t.Log("deploying kong components")
-	deployments := ManifestDeploy{Path: dblessPath}.Run(ctx, t, env)
+	manifestDeploy := ManifestDeploy{Path: dblessPath}
+	kongImageVersion, err := helpers.GetKongImageVersion()
+	require.NoError(t, err)
+	if kongImageVersion.GTE(consts.ForceLicenseVersionCutoff) {
+		t.Logf("Kong version %s requires a license, patching the manifest", kongImageVersion)
+		manifestDeploy.Patches = append(manifestDeploy.Patches, WithLicensePatch(getProxyDeploymentName(manifestDeploy.Path)))
+	}
+	deployments := manifestDeploy.Run(ctx, t, env)
 	kongDeployment := deployments.ControllerNN
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
 	deployment := generators.NewDeploymentForContainer(container)
-	deployment, err := env.Cluster().Client().AppsV1().Deployments(kongDeployment.Namespace).Create(ctx, deployment, metav1.CreateOptions{})
+	deployment, err = env.Cluster().Client().AppsV1().Deployments(kongDeployment.Namespace).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
 
 	t.Logf("exposing deployment %s via service", deployment.Name)
@@ -458,6 +486,7 @@ func TestDefaultIngressClass(t *testing.T) {
 	t.Logf("creating a classless ingress for service %s", service.Name)
 	ingress := generators.NewIngressForService("/abbosiysaltanati", map[string]string{
 		annotations.AnnotationPrefix + annotations.StripPathKey: "true",
+		annotations.AnnotationPrefix + annotations.ProtocolsKey: "http",
 	}, service)
 	require.NoError(t, clusters.DeployIngress(ctx, env.Cluster(), kongDeployment.Namespace, ingress))
 

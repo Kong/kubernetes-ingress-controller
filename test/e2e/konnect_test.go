@@ -24,6 +24,8 @@ import (
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect"
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/konnect/nodes"
 	managercfg "github.com/kong/kubernetes-ingress-controller/v3/pkg/manager/config"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 	testkonnect "github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers/konnect"
 )
 
@@ -63,12 +65,22 @@ func TestKonnectLicenseActivation(t *testing.T) {
 	t.Parallel()
 	testkonnect.SkipIfMissingRequiredKonnectEnvVariables(t)
 
+	kongImageVersion, err := helpers.GetKongImageVersion()
+	require.NoError(t, err)
+	if kongImageVersion.GTE(consts.ForceLicenseVersionCutoff) {
+		t.Skip("KIC 3.4 does not support activating a Konnect license before Kong Gateway starts")
+	}
+
 	ctx, env := setupE2ETest(t)
 
 	rgID := testkonnect.CreateTestControlPlane(ctx, t)
 	cert, key := testkonnect.CreateClientCertificate(ctx, t, rgID)
 	createKonnectClientSecretAndConfigMap(ctx, t, env, cert, key, rgID)
 
+	testKonnectLicenseActivationWithoutForceLicense(ctx, t, env)
+}
+
+func testKonnectLicenseActivationWithoutForceLicense(ctx context.Context, t *testing.T, env environment.Environment) {
 	const manifestFile = "manifests/all-in-one-dbless-konnect-enterprise.yaml"
 	ManifestDeploy{Path: manifestFile}.Run(ctx, t, env)
 
@@ -150,7 +162,14 @@ func deployAllInOneKonnectManifest(ctx context.Context, t *testing.T, env enviro
 	const manifestFile = "manifests/all-in-one-dbless-konnect.yaml"
 	t.Logf("deploying %s manifest file", manifestFile)
 
-	return ManifestDeploy{Path: manifestFile}.Run(ctx, t, env)
+	manifestDeploy := ManifestDeploy{Path: manifestFile}
+	kongImageVersion, err := helpers.GetKongImageVersion()
+	require.NoError(t, err)
+	if kongImageVersion.GTE(consts.ForceLicenseVersionCutoff) {
+		t.Logf("Kong version %s requires a license, patching the manifest", kongImageVersion)
+		manifestDeploy.Patches = append(manifestDeploy.Patches, WithLicensePatch(getProxyDeploymentName(manifestDeploy.Path)))
+	}
+	return manifestDeploy.Run(ctx, t, env)
 }
 
 // createKonnectClientSecretAndConfigMap creates a Secret with client TLS certificate that is used by KIC to communicate

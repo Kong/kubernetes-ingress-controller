@@ -13,6 +13,9 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+
+	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 )
 
 // TestKongRouterCompatibility verifies that KIC behaves consistently with all
@@ -34,6 +37,12 @@ func TestKongRouterFlavorCompatibility(t *testing.T) {
 				Patches: []ManifestPatch{
 					patchKongRouterFlavorFn(rf),
 				},
+			}
+			kongImageVersion, err := helpers.GetKongImageVersion()
+			require.NoError(t, err)
+			if kongImageVersion.GTE(consts.ForceLicenseVersionCutoff) {
+				t.Logf("Kong version %s requires a license, patching the manifest", kongImageVersion)
+				deploy.Patches = append(deploy.Patches, WithLicensePatch(getProxyDeploymentName(deploy.Path)))
 			}
 			deployments := deploy.Run(ctx, t, env)
 			t.Cleanup(func() { deploy.Delete(ctx, t, env) })

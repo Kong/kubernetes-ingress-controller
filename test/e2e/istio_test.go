@@ -77,6 +77,14 @@ func TestIstioWithKongIngressGateway(t *testing.T) {
 		WithControllerDisabled().
 		WithProxyAdminServiceTypeLoadBalancer().
 		WithNamespace(consts.ControllerNamespace)
+	kongImageVersion, err := helpers.GetKongImageVersion()
+	require.NoError(t, err)
+	if kongImageVersion.GTE(consts.ForceLicenseVersionCutoff) {
+		t.Logf("Kong version %s requires a license, patching the manifest", kongImageVersion)
+		licenseJSON, err := kongaddon.GetLicenseJSONFromEnv()
+		require.NoError(t, err, "failed to get Kong license from environment variable")
+		kongBuilder = kongBuilder.WithProxyEnterpriseEnabled(licenseJSON)
+	}
 	kongAddon := kongBuilder.Build()
 
 	t.Log("configuring istio cluster addon for the testing environment")

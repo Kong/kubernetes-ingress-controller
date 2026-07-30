@@ -8,6 +8,8 @@ Adding a new version? You'll need three changes:
   This is all the way at the bottom. It's the thing we always forget.
 --->
 
+- [3.5.12](#3512)
+- [3.5.11](#3511)
 - [3.5.10](#3510)
 - [3.5.9](#359)
 - [3.5.8](#358)
@@ -139,6 +141,28 @@ Adding a new version? You'll need three changes:
   JSON object values (such as the `ai-mcp-proxy` plugin's `tool.request_body`)
   are now preserved as-is.
   [#8034](https://github.com/Kong/kubernetes-ingress-controller/pull/8034)
+
+## [3.5.12]
+
+> Release date: 2026-07-30
+
+### Fixed
+
+- Bump go-kong to `v0.72.2`, which fixes `FillPluginsDefaults` overwriting
+  user-provided values of plugin config fields of type `json` with `nil`.
+  JSON object values (such as the `ai-mcp-proxy` plugin's `tool.request_body`)
+  are now preserved as-is.
+  [#8038](https://github.com/Kong/kubernetes-ingress-controller/pull/8038)
+
+## [3.5.11]
+
+> Release date: 2026-07-16
+
+### Fixed
+
+- Preserve only one CA certificate from secrets if there are multiple ones with
+  the duplicte IDs.
+  [#8025](https://github.com/Kong/kubernetes-ingress-controller/pull/8025)
 
 ## [3.5.10]
 
@@ -4503,6 +4527,8 @@ Please read the changelog and test in your environment.
 - The initial versions were rapildy iterated to deliver
   a working ingress controller.
 
+[3.5.12]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.11...v3.5.12
+[3.5.11]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.10...v3.5.11
 [3.5.10]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.9...v3.5.10
 [3.5.9]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.8...v3.5.9
 [3.5.8]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.7...v3.5.8

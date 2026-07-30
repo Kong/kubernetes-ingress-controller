@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.4.19](#3419)
  - [3.4.18](#3418)
  - [3.4.17](#3417)
  - [3.4.16](#3416)
@@ -118,7 +119,9 @@ Adding a new version? You'll need three changes:
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
 
-## Unreleased
+## [3.4.19]
+
+> Release date: 2026-07-30
 
 ### Fixed
 
@@ -135,7 +138,7 @@ Adding a new version? You'll need three changes:
 ### Fixed
 
 - Preserve only one CA certificate from secrets if there are multiple ones with
-  the duplicte IDs.
+  the duplicate IDs.
   [#8024](https://github.com/Kong/kubernetes-ingress-controller/pull/8024)
 
 ## [3.4.17]
@@ -4278,6 +4281,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.4.19]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.18...v3.4.19
 [3.4.18]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.17...v3.4.18
 [3.4.17]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.16...v3.4.17
 [3.4.16]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.15...v3.4.16

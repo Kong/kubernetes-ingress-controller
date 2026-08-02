@@ -7,7 +7,6 @@ import (
 
 	"github.com/blang/semver/v4"
 	kongsemver "github.com/kong/semver/v4"
-	"github.com/samber/lo"
 	"github.com/tidwall/gjson"
 	"sigs.k8s.io/yaml"
 
@@ -84,13 +83,38 @@ func KongTag() string {
 	return os.Getenv("TEST_KONG_TAG")
 }
 
+// KongImageVersion returns the effective Kong Gateway version configured for tests.
+// The effective version takes precedence because image tags such as "nightly" are not
+// valid semantic versions. If no image override is configured, it returns the zero
+// version: those tests use the version from their checked-in manifest or default chart.
+func KongImageVersion() (semver.Version, error) {
+	version, source := KongEffectiveVersion(), "TEST_KONG_EFFECTIVE_VERSION"
+	if version == "" {
+		version, source = KongTag(), "TEST_KONG_TAG"
+	}
+	if version == "" {
+		return semver.Version{}, nil
+	}
+
+	parsed, err := kongsemver.Parse(version)
+	if err != nil {
+		return semver.Version{}, fmt.Errorf("could not parse Kong version %q from %s: %w", version, source, err)
+	}
+	return semver.Version{
+		Major: parsed.Major,
+		Minor: parsed.Minor,
+		Patch: parsed.Patch,
+	}, nil
+}
+
 // IsKongGatewayVersionEnterpriseOnly indicates if the Kong Gateway
 // version is enterprise only (basically unusable without license).
-func IsKongGatewayVersionEnterpriseOnly() bool {
-	parsed := lo.Must(kongsemver.Parse(KongTag()))
-	v := semver.Version{Major: parsed.Major, Minor: parsed.Minor, Patch: parsed.Patch}
-
-	return v.GTE(versions.KongEnterpriseCutoff)
+func IsKongGatewayVersionEnterpriseOnly() (bool, error) {
+	v, err := KongImageVersion()
+	if err != nil {
+		return false, err
+	}
+	return v.GTE(versions.KongEnterpriseCutoff), nil
 }
 
 // KongImageTag is the combined Kong image and tag if both are set, or empty string if not.

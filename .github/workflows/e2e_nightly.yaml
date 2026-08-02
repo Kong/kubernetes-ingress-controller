@@ -43,7 +43,7 @@ jobs:
       # it reports the next release to be released as semver in the version field.
       # ref: https://github.com/Kong/kubernetes-ingress-controller/issues/4014
       kong-image: kong/kong-gateway-dev:nightly
-      kong-effective-version: "3.4.1"
+      kong-effective-version: "3.15.0"
       all-supported-k8s-versions: false
       run-gke: false
       run-istio: false
@@ -54,10 +54,10 @@ jobs:
     with:
       kong-container-repo: kong/kong-dev
       kong-container-tag: nightly
-      kong-oss-effective-version: "3.4.1"
+      kong-oss-effective-version: "3.15.0"
       kong-enterprise-container-repo: kong/kong-gateway-dev
       kong-enterprise-container-tag: nightly
-      kong-enterprise-effective-version: "3.4.1"
+      kong-enterprise-effective-version: "3.15.0"
       log-output-file:  /tmp/integration-tests-kic-logs
 
   test-reports:

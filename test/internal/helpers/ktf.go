@@ -6,7 +6,6 @@ import (
 
 	"github.com/blang/semver/v4"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters/addons/kong"
-	kongsemver "github.com/kong/semver/v4"
 
 	dpconf "github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/config"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/consts"
@@ -15,20 +14,7 @@ import (
 
 // GetKongImageVersion returns the Kong version to be used for the KTF addon based on environment variables.
 func GetKongImageVersion() (semver.Version, error) {
-	kongVersion, err := semver.Parse(testenv.KongEffectiveVersion())
-	if err == nil {
-		return kongVersion, nil
-	}
-	// Use kong/semver to parse the version string in the TEST_KONG_TAG in case it is a four-digit version like "3.15.0.0".
-	kongsemverVersion, err := kongsemver.Parse(testenv.KongTag())
-	if err != nil {
-		return semver.Version{}, fmt.Errorf("could not parse Kong version from TEST_KONG_EFFECTIVE_VERSION or TEST_KONG_TAG: %w", err)
-	}
-	return semver.Version{
-		Major: kongsemverVersion.Major,
-		Minor: kongsemverVersion.Minor,
-		Patch: kongsemverVersion.Patch,
-	}, nil
+	return testenv.KongImageVersion()
 }
 
 // GenerateKongBuilder returns a Kong KTF addon builder, a string slice

@@ -38,7 +38,12 @@ import (
 var kongGatewayVersion kongversion.Version
 
 func TestMain(m *testing.M) {
-	if testenv.IsKongGatewayVersionEnterpriseOnly() && testenv.KongLicenseData() == "" {
+	enterpriseOnly, err := testenv.IsKongGatewayVersionEnterpriseOnly()
+	if err != nil {
+		fmt.Printf("ERROR: failed to determine Kong Gateway version: %v\n", err)
+		os.Exit(1)
+	}
+	if enterpriseOnly && testenv.KongLicenseData() == "" {
 		fmt.Println("ERROR: Kong 3.15+ used and no license provided")
 		os.Exit(1)
 	}

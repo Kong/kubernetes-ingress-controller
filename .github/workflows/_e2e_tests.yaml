@@ -71,18 +71,24 @@ jobs:
         run: echo "result=$(go list -tags e2e_tests -f '{{ range .TestGoFiles }} {{- . }} {{ end }}' .)" >> $GITHUB_OUTPUT
 
       - name: Print test file names
-        run: echo "Test file names ${{ steps.test_files.outputs.result }}"
+        env:
+          TEST_FILE_NAMES: ${{ steps.test_files.outputs.result }}
+        run: echo "Test file names $TEST_FILE_NAMES"
 
       - id: set_test_names
         name: Set test names
         working-directory: test/e2e/
+        env:
+          TEST_FILES: ${{ steps.test_files.outputs.result }}
         # grep magic described in https://unix.stackexchange.com/a/13472
         # sed to add the extra $ is because some of our test names overlap. we need it so the -run regex only matches one test
         run: |
-          echo "test_names=$(grep -shoP "(?<=^func )(Test[a-zA-z_0-9]+)(?=\(t \*testing.T\) {)" ${{ steps.test_files.outputs.result }} | sed -e "s/$/\$/"| jq -R . | jq -cs .)" >> $GITHUB_OUTPUT
+          echo "test_names=$(grep -shoP "(?<=^func )(Test[a-zA-z_0-9]+)(?=\(t \*testing.T\) {)" $TEST_FILES | sed -e "s/$/\$/"| jq -R . | jq -cs .)" >> $GITHUB_OUTPUT
 
       - name: Print test names
-        run: echo "Test names ${{ steps.set_test_names.outputs.test_names }}"
+        env:
+          TEST_NAMES: ${{ steps.set_test_names.outputs.test_names }}
+        run: echo "Test names $TEST_NAMES"
 
   dependencies-versions:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT || 15) }}
@@ -100,8 +106,10 @@ jobs:
 
       - id: set-versions
         name: Set versions
+        env:
+          ALL_SUPPORTED_K8S_VERSIONS: ${{ inputs.all-supported-k8s-versions }}
         run: |
-          if [ "${{ inputs.all-supported-k8s-versions }}" == "true" ]; then
+          if [ "$ALL_SUPPORTED_K8S_VERSIONS" == "true" ]; then
             echo "kind=$(yq -r -ojson '.e2e.kind' < .github/test_dependencies.yaml | jq -c)" >> $GITHUB_OUTPUT
           else
             # We assume the first version in the list is the latest one.
@@ -156,17 +164,18 @@ jobs:
       - name: split image and tag
         id: split
         env:
-          KONG: ${{ inputs.kong-image }}
+          KONG_IMAGE: ${{ inputs.kong-image }}
+          KIC_IMAGE: ${{ inputs.kic-image }}
         run: |
-          if [ "${{ inputs.kong-image }}" != "" ]; then
-            export kong_image=$(echo ${{ inputs.kong-image }} | awk '{split($0,a,":"); print a[1]}')
-            export kong_tag=$(echo ${{ inputs.kong-image }} | awk '{split($0,a,":"); print a[2]}')
+          if [ "$KONG_IMAGE" != "" ]; then
+            export kong_image=$(echo "$KONG_IMAGE" | awk '{split($0,a,":"); print a[1]}')
+            export kong_tag=$(echo "$KONG_IMAGE" | awk '{split($0,a,":"); print a[2]}')
             echo "kong-image=$kong_image" >> $GITHUB_OUTPUT
             echo "kong-tag=$kong_tag" >> $GITHUB_OUTPUT
           fi
-          if [ "${{ inputs.kic-image }}" != "" ]; then
-            export kic_image=$(echo ${{ inputs.kic-image }} | awk '{split($0,a,":"); print a[1]}')
-            export kic_tag=$(echo ${{ inputs.kic-image }} | awk '{split($0,a,":"); print a[2]}')
+          if [ "$KIC_IMAGE" != "" ]; then
+            export kic_image=$(echo "$KIC_IMAGE" | awk '{split($0,a,":"); print a[1]}')
+            export kic_tag=$(echo "$KIC_IMAGE" | awk '{split($0,a,":"); print a[2]}')
             echo "kic-image=$kic_image" >> $GITHUB_OUTPUT
             echo "kic-tag=$kic_tag" >> $GITHUB_OUTPUT
           fi
@@ -179,13 +188,18 @@ jobs:
       # locally and that fails.
       - name: Pull Gateway image for tests
         if: ${{ inputs.kong-image != '' && inputs.load-local-image }}
-        run: docker pull ${{ inputs.kong-image }}
+        env:
+          KONG_IMAGE: ${{ inputs.kong-image }}
+        run: docker pull "$KONG_IMAGE"
 
       - uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566 # v3.2.0
         with:
           install: false
 
-      - run: echo "GOTESTSUM_JUNITFILE=e2e-kind-${{ matrix.test }}-${{ matrix.kubernetes-version }}-tests.xml" >> $GITHUB_ENV
+      - env:
+          MATRIX_TEST: ${{ matrix.test }}
+          MATRIX_KUBERNETES_VERSION: ${{ matrix.kubernetes-version }}
+        run: echo "GOTESTSUM_JUNITFILE=e2e-kind-$MATRIX_TEST-$MATRIX_KUBERNETES_VERSION-tests.xml" >> $GITHUB_ENV
 
       - name: run ${{ matrix.test }}
         run: make test.e2e
@@ -207,12 +221,17 @@ jobs:
 
       - name: Set KONG_IMAGE_ARTIFACT
         if: ${{ always() }}
+        env:
+          SPLIT_KONG_IMAGE: ${{ steps.split.outputs.kong-image }}
+          SPLIT_KONG_TAG: ${{ steps.split.outputs.kong-tag }}
+          SPLIT_KIC_IMAGE: ${{ steps.split.outputs.kic-image }}
+          SPLIT_KIC_TAG: ${{ steps.split.outputs.kic-tag }}
         run: |
-          if [ "${{ steps.split.outputs.kong-image }}" != "" ]; then
-            export kong_image=$( echo ${{ steps.split.outputs.kong-image }} | awk '{gsub(/[:.\/]/, "-")};$1' )-${{ steps.split.outputs.kong-tag }}
+          if [ "$SPLIT_KONG_IMAGE" != "" ]; then
+            export kong_image=$( echo "$SPLIT_KONG_IMAGE" | awk '{gsub(/[:.\/]/, "-")};$1' )-$SPLIT_KONG_TAG
           fi
-          if [ "${{ steps.split.outputs.kic-image }}" != "" ]; then
-            export kic_image=$( echo ${{ steps.split.outputs.kic-image }} | awk '{gsub(/[:.\/]/, "-")};$1' )-${{ steps.split.outputs.kic-tag }}
+          if [ "$SPLIT_KIC_IMAGE" != "" ]; then
+            export kic_image=$( echo "$SPLIT_KIC_IMAGE" | awk '{gsub(/[:.\/]/, "-")};$1' )-$SPLIT_KIC_TAG
           fi
           echo "KONG_IMAGE_ARTIFACT=kong_image-${kong_image}-kic_image-${kic_image}" >> $GITHUB_ENV
 
@@ -265,24 +284,27 @@ jobs:
       - name: check availability of KIC image
         id: check_kic_image
         if: ${{ inputs.kic-image != '' }}
+        env:
+          KIC_IMAGE: ${{ inputs.kic-image }}
         # We have to check whether the image passed in inputs is available in the docker hub.
         # If it's not, we'll fall back to a nightly image later.
-        run: (docker manifest inspect ${{ inputs.kic-image }} && echo "kic_image=${{ inputs.kic-image }}" >> $GITHUB_OUTPUT) || true
+        run: (docker manifest inspect "$KIC_IMAGE" && echo "kic_image=$KIC_IMAGE" >> $GITHUB_OUTPUT) || true
 
       - name: split image and tag
         id: split
         env:
-          KONG: ${{ inputs.kong-image }}
+          KONG_IMAGE: ${{ inputs.kong-image }}
+          KIC_IMAGE: ${{ steps.check_kic_image.outputs.kic_image }}
         run: |
-          if [ "${{ inputs.kong-image }}" != "" ]; then
-            export kong_image=$(echo ${{ inputs.kong-image }} | awk '{split($0,a,":"); print a[1]}')
-            export kong_tag=$(echo ${{ inputs.kong-image }} | awk '{split($0,a,":"); print a[2]}')
+          if [ "$KONG_IMAGE" != "" ]; then
+            export kong_image=$(echo "$KONG_IMAGE" | awk '{split($0,a,":"); print a[1]}')
+            export kong_tag=$(echo "$KONG_IMAGE" | awk '{split($0,a,":"); print a[2]}')
             echo "kong-image=$kong_image" >> $GITHUB_OUTPUT
             echo "kong-tag=$kong_tag" >> $GITHUB_OUTPUT
           fi
-          if [ "${{ steps.check_kic_image.outputs.kic_image }}" != "" ]; then
-            export kic_image_repo=$(echo ${{ steps.check_kic_image.outputs.kic_image }} | awk '{split($0,a,":"); print a[1]}')
-            export kic_image_tag=$(echo ${{ steps.check_kic_image.outputs.kic_image }} | awk '{split($0,a,":"); print a[2]}')
+          if [ "$KIC_IMAGE" != "" ]; then
+            export kic_image_repo=$(echo "$KIC_IMAGE" | awk '{split($0,a,":"); print a[1]}')
+            export kic_image_tag=$(echo "$KIC_IMAGE" | awk '{split($0,a,":"); print a[2]}')
             echo "kic-image=$kic_image_repo" >> $GITHUB_OUTPUT
             echo "kic-tag=$kic_image_tag" >> $GITHUB_OUTPUT
           else
@@ -296,7 +318,10 @@ jobs:
         with:
           install: false
 
-      - run: echo "GOTESTSUM_JUNITFILE=e2e-gke-${{ matrix.test }}-${{ matrix.kubernetes-version }}-tests.xml" >> $GITHUB_ENV
+      - env:
+          MATRIX_TEST: ${{ matrix.test }}
+          MATRIX_KUBERNETES_VERSION: ${{ matrix.kubernetes-version }}
+        run: echo "GOTESTSUM_JUNITFILE=e2e-gke-$MATRIX_TEST-$MATRIX_KUBERNETES_VERSION-tests.xml" >> $GITHUB_ENV
 
       - name: run ${{ matrix.test }}
         run: make test.e2e
@@ -326,12 +351,17 @@ jobs:
 
       - name: Set KONG_IMAGE_ARTIFACT
         if: ${{ always() }}
+        env:
+          SPLIT_KONG_IMAGE: ${{ steps.split.outputs.kong-image }}
+          SPLIT_KONG_TAG: ${{ steps.split.outputs.kong-tag }}
+          SPLIT_KIC_IMAGE: ${{ steps.split.outputs.kic-image }}
+          SPLIT_KIC_TAG: ${{ steps.split.outputs.kic-tag }}
         run: |
-          if [ "${{ steps.split.outputs.kong-image }}" != "" ]; then
-            export kong_image=$( echo ${{ steps.split.outputs.kong-image }} | awk '{gsub(/[:.\/]/, "-")};$1' )-${{ steps.split.outputs.kong-tag }}
+          if [ "$SPLIT_KONG_IMAGE" != "" ]; then
+            export kong_image=$( echo "$SPLIT_KONG_IMAGE" | awk '{gsub(/[:.\/]/, "-")};$1' )-$SPLIT_KONG_TAG
           fi
-          if [ "${{ steps.split.outputs.kic-image }}" != "" ]; then
-            export kic_image=$( echo ${{ steps.split.outputs.kic-image }} | awk '{gsub(/[:.\/]/, "-")};$1' )-${{ steps.split.outputs.kic-tag }}
+          if [ "$SPLIT_KIC_IMAGE" != "" ]; then
+            export kic_image=$( echo "$SPLIT_KIC_IMAGE" | awk '{gsub(/[:.\/]/, "-")};$1' )-$SPLIT_KIC_TAG
           fi
           echo "KONG_IMAGE_ARTIFACT=kong_image-${kong_image}-kic_image-${kic_image}" >> $GITHUB_ENV
 
@@ -398,17 +428,18 @@ jobs:
       - name: split image and tag
         id: split
         env:
-          KONG: ${{ inputs.kong-image }}
+          KONG_IMAGE: ${{ inputs.kong-image }}
+          KIC_IMAGE: ${{ inputs.kic-image }}
         run: |
-          if [ "${{ inputs.kong-image }}" != "" ]; then
-            export kong_image=$(echo ${{ inputs.kong-image }} | awk '{split($0,a,":"); print a[1]}')
-            export kong_tag=$(echo ${{ inputs.kong-image }} | awk '{split($0,a,":"); print a[2]}')
+          if [ "$KONG_IMAGE" != "" ]; then
+            export kong_image=$(echo "$KONG_IMAGE" | awk '{split($0,a,":"); print a[1]}')
+            export kong_tag=$(echo "$KONG_IMAGE" | awk '{split($0,a,":"); print a[2]}')
             echo "kong-image=$kong_image" >> $GITHUB_OUTPUT
             echo "kong-tag=$kong_tag" >> $GITHUB_OUTPUT
           fi
-          if [ "${{ inputs.kic-image }}" != "" ]; then
-            export kic_image=$(echo ${{ inputs.kic-image }} | awk '{split($0,a,":"); print a[1]}')
-            export kic_tag=$(echo ${{ inputs.kic-image }} | awk '{split($0,a,":"); print a[2]}')
+          if [ "$KIC_IMAGE" != "" ]; then
+            export kic_image=$(echo "$KIC_IMAGE" | awk '{split($0,a,":"); print a[1]}')
+            export kic_tag=$(echo "$KIC_IMAGE" | awk '{split($0,a,":"); print a[2]}')
             echo "kic-image=$kic_image" >> $GITHUB_OUTPUT
             echo "kic-tag=$kic_tag" >> $GITHUB_OUTPUT
           fi
@@ -417,7 +448,10 @@ jobs:
         with:
           install: false
 
-      - run: echo "GOTESTSUM_JUNITFILE=e2e-istio-${{ matrix.kind }}-${{ matrix.istio }}-tests.xml" >> $GITHUB_ENV
+      - env:
+          MATRIX_KIND: ${{ matrix.kind }}
+          MATRIX_ISTIO: ${{ matrix.istio }}
+        run: echo "GOTESTSUM_JUNITFILE=e2e-istio-$MATRIX_KIND-$MATRIX_ISTIO-tests.xml" >> $GITHUB_ENV
 
       - name: run Istio tests
         run: make test.istio
@@ -438,12 +472,17 @@ jobs:
 
       - name: Set KONG_IMAGE_ARTIFACT
         if: ${{ always() }}
+        env:
+          SPLIT_KONG_IMAGE: ${{ steps.split.outputs.kong-image }}
+          SPLIT_KONG_TAG: ${{ steps.split.outputs.kong-tag }}
+          SPLIT_KIC_IMAGE: ${{ steps.split.outputs.kic-image }}
+          SPLIT_KIC_TAG: ${{ steps.split.outputs.kic-tag }}
         run: |
-          if [ "${{ steps.split.outputs.kong-image }}" != "" ]; then
-            export kong_image=$( echo ${{ steps.split.outputs.kong-image }} | awk '{gsub(/[:.\/]/, "-")};$1' )-${{ steps.split.outputs.kong-tag }}
+          if [ "$SPLIT_KONG_IMAGE" != "" ]; then
+            export kong_image=$( echo "$SPLIT_KONG_IMAGE" | awk '{gsub(/[:.\/]/, "-")};$1' )-$SPLIT_KONG_TAG
           fi
-          if [ "${{ steps.split.outputs.kic-image }}" != "" ]; then
-            export kic_image=$( echo ${{ steps.split.outputs.kic-image }} | awk '{gsub(/[:.\/]/, "-")};$1' )-${{ steps.split.outputs.kic-tag }}
+          if [ "$SPLIT_KIC_IMAGE" != "" ]; then
+            export kic_image=$( echo "$SPLIT_KIC_IMAGE" | awk '{gsub(/[:.\/]/, "-")};$1' )-$SPLIT_KIC_TAG
           fi
           echo "KONG_IMAGE_ARTIFACT=kong_image-${kong_image}-kic_image-${kic_image}" >> $GITHUB_ENV
 

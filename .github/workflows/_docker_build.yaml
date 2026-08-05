@@ -50,32 +50,44 @@ jobs:
 
       - name: Add standard tag
         id: add-standard-tag
+        env:
+          TAG: ${{ inputs.tag }}
+          SHORT_SHA: ${{ steps.short-sha.outputs.sha }}
+          FULL_VERSION: ${{ steps.parse-semver-tag.outputs.fullversion }}
         run: |
-          if [ -z "${{ inputs.tag }}" ]; then
-            echo "tag=type=raw,value=sha-${{ steps.short-sha.outputs.sha }}" >> $GITHUB_OUTPUT
+          if [ -z "$TAG" ]; then
+            echo "tag=type=raw,value=sha-$SHORT_SHA" >> $GITHUB_OUTPUT
           else
-            echo "tag=type=raw,value=${{ steps.parse-semver-tag.outputs.fullversion }}" >> $GITHUB_OUTPUT
+            echo "tag=type=raw,value=$FULL_VERSION" >> $GITHUB_OUTPUT
           fi
 
       - name: Add major.minor tag
         id: add-major-minor-tag
         if: ${{ steps.parse-semver-tag.outputs.prerelease == '' && inputs.tag != '' }}
+        env:
+          MAJOR: ${{ steps.parse-semver-tag.outputs.major }}
+          MINOR: ${{ steps.parse-semver-tag.outputs.minor }}
         run: |
-          echo "tag=type=raw,value=${{ steps.parse-semver-tag.outputs.major }}.${{ steps.parse-semver-tag.outputs.minor }}" >> $GITHUB_OUTPUT
+          echo "tag=type=raw,value=$MAJOR.$MINOR" >> $GITHUB_OUTPUT
 
       - name: Merge tags
         id: merge-tags
+        env:
+          MAJOR_MINOR_TAG: ${{ steps.add-major-minor-tag.outputs.tag }}
+          STANDARD_TAG: ${{ steps.add-standard-tag.outputs.tag }}
         run: |
           echo "tags<<EOF" >> $GITHUB_OUTPUT
-          if [ -n "${{ steps.add-major-minor-tag.outputs.tag }}" ]; then
-            echo "${{ steps.add-major-minor-tag.outputs.tag }}" >> $GITHUB_OUTPUT
+          if [ -n "$MAJOR_MINOR_TAG" ]; then
+            echo "$MAJOR_MINOR_TAG" >> $GITHUB_OUTPUT
           fi
-          echo "${{ steps.add-standard-tag.outputs.tag }}" >> $GITHUB_OUTPUT
+          echo "$STANDARD_TAG" >> $GITHUB_OUTPUT
           echo "EOF" >> $GITHUB_OUTPUT
 
       - name: Print tags
+        env:
+          TAGS: ${{ steps.merge-tags.outputs.tags }}
         run: |
-          echo "tags: ${{ steps.merge-tags.outputs.tags }}"
+          echo "tags: $TAGS"
 
   build:
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}

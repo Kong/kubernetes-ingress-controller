@@ -81,19 +81,24 @@ jobs:
           input_string: ${{ github.event.inputs.tag }}
           version_extractor_regex: 'v(.*)$'
       - name: Add standard tags
+        env:
+          FULL_VERSION: ${{ steps.semver_parser.outputs.fullversion }}
         run: |
           (
             echo 'TAGS_STANDARD<<EOF'
-            echo 'type=raw,value=${{ steps.semver_parser.outputs.fullversion }}'
+            echo "type=raw,value=$FULL_VERSION"
             echo 'EOF'
           ) >> $GITHUB_ENV
       - name: Add major.minor tag
         if: ${{ steps.semver_parser.outputs.prerelease == '' }}
+        env:
+          MAJOR: ${{ steps.semver_parser.outputs.major }}
+          MINOR: ${{ steps.semver_parser.outputs.minor }}
         run: |
           (
             echo 'TAGS_SUPPLEMENTAL<<EOF'
             echo ""
-            echo 'type=raw,value=${{ steps.semver_parser.outputs.major }}.${{ steps.semver_parser.outputs.minor }}'
+            echo "type=raw,value=$MAJOR.$MINOR"
             echo 'EOF'
           ) >> $GITHUB_ENV
       # Setup Golang to use go pkg cache which is utilized in Dockerfile's cache mount.
@@ -227,7 +232,11 @@ jobs:
         input_string: ${{ github.event.inputs.tag }}
         version_extractor_regex: 'v(.*)$'
     - name: update 'latest' branch
+      env:
+        MAJOR: ${{ steps.semver_parser.outputs.major }}
+        MINOR: ${{ steps.semver_parser.outputs.minor }}
+        PATCH: ${{ steps.semver_parser.outputs.patch }}
       run: |
         git checkout latest
-        git reset --hard v${{ steps.semver_parser.outputs.major }}.${{ steps.semver_parser.outputs.minor }}.${{ steps.semver_parser.outputs.patch }}
+        git reset --hard "v$MAJOR.$MINOR.$PATCH"
         git push -f origin latest

@@ -52,7 +52,9 @@ jobs:
         with:
           install: false
 
-      - run: echo "GOTESTSUM_JUNITFILE=kongintegration-${{ matrix.name }}-tests.xml" >> $GITHUB_ENV
+      - env:
+          MATRIX_NAME: ${{ matrix.name }}
+        run: echo "GOTESTSUM_JUNITFILE=kongintegration-$MATRIX_NAME-tests.xml" >> $GITHUB_ENV
 
       - name: run kong integration tests
         run: make test.kongintegration

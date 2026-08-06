@@ -61,11 +61,13 @@ jobs:
         with:
           egress-policy: audit
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - run: |
-          gh issue comment ${ISSUE_NUMBER} --body \
-            'Kong Gateway validation tests were started at ${{ env.URL }} with the following parameters:
+      - env:
+          EVENT_INPUTS_JSON: ${{ toJSON(github.event.inputs) }}
+        run: |
+          gh issue comment "$ISSUE_NUMBER" --body \
+            'Kong Gateway validation tests were started at '"$URL"' with the following parameters:
             ```json
-            ${{ toJSON(github.event.inputs) }}
+            '"$EVENT_INPUTS_JSON"'
             ```
             '
 
@@ -121,18 +123,22 @@ jobs:
           egress-policy: audit
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - if: ${{ !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
+        env:
+          EVENT_INPUTS_JSON: ${{ toJSON(github.event.inputs) }}
         run: |
-          gh issue close ${ISSUE_NUMBER} --comment \
-            'Kong Gateway validation tests **PASSED** ✅ at ${{ env.URL }} with the following parameters:
+          gh issue close "$ISSUE_NUMBER" --comment \
+            'Kong Gateway validation tests **PASSED** ✅ at '"$URL"' with the following parameters:
             ```json
-            ${{ toJSON(github.event.inputs) }}
+            '"$EVENT_INPUTS_JSON"'
             ```
             '
       - if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        env:
+          EVENT_INPUTS_JSON: ${{ toJSON(github.event.inputs) }}
         run: |
-          gh issue comment ${ISSUE_NUMBER} --body \
-            'Kong Gateway validation tests **FAILED** ❌ at ${{ env.URL }} with the following parameters:
+          gh issue comment "$ISSUE_NUMBER" --body \
+            'Kong Gateway validation tests **FAILED** ❌ at '"$URL"' with the following parameters:
             ```json
-            ${{ toJSON(github.event.inputs) }}
+            '"$EVENT_INPUTS_JSON"'
             ```
             '

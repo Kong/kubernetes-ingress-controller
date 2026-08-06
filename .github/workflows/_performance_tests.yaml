@@ -69,19 +69,20 @@ jobs:
       - name: split image and tag
         id: split
         env:
-          KONG: ${{ inputs.kong-image }}
+          KONG_IMAGE: ${{ inputs.kong-image }}
+          KIC_IMAGE: ${{ inputs.kic-image }}
         run: |
-          if [ "${{ inputs.kong-image }}" != "" ]; then
-            export kong_image=$(echo ${{ inputs.kong-image }} | awk '{split($0,a,":"); print a[1]}')
-            export kong_tag=$(echo ${{ inputs.kong-image }} | awk '{split($0,a,":"); print a[2]}')
-            echo "kong-image=$kong_image" >> $GITHUB_OUTPUT
-            echo "kong-tag=$kong_tag" >> $GITHUB_OUTPUT
+          if [ "$KONG_IMAGE" != "" ]; then
+            export kong_image_repo=$(echo "$KONG_IMAGE" | awk '{split($0,a,":"); print a[1]}')
+            export kong_image_tag=$(echo "$KONG_IMAGE" | awk '{split($0,a,":"); print a[2]}')
+            echo "kong-image=$kong_image_repo" >> $GITHUB_OUTPUT
+            echo "kong-tag=$kong_image_tag" >> $GITHUB_OUTPUT
           fi
-          if [ "${{ inputs.kic-image }}" != "" ]; then
-            export kic_image=$(echo ${{ inputs.kic-image }} | awk '{split($0,a,":"); print a[1]}')
-            export kic_tag=$(echo ${{ inputs.kic-image }} | awk '{split($0,a,":"); print a[2]}')
-            echo "kic-image=$kic_image" >> $GITHUB_OUTPUT
-            echo "kic-tag=$kic_tag" >> $GITHUB_OUTPUT
+          if [ "$KIC_IMAGE" != "" ]; then
+            export kic_image_repo=$(echo "$KIC_IMAGE" | awk '{split($0,a,":"); print a[1]}')
+            export kic_image_tag=$(echo "$KIC_IMAGE" | awk '{split($0,a,":"); print a[2]}')
+            echo "kic-image=$kic_image_repo" >> $GITHUB_OUTPUT
+            echo "kic-tag=$kic_image_tag" >> $GITHUB_OUTPUT
           fi
 
       - uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566 # v3.2.0
@@ -166,19 +167,20 @@ jobs:
       - name: split image and tag
         id: split
         env:
-          KONG: ${{ inputs.kong-image }}
+          KONG_IMAGE: ${{ inputs.kong-image }}
+          KIC_IMAGE: ${{ inputs.kic-image }}
         run: |
-          if [ "${{ inputs.kong-image }}" != "" ]; then
-            export kong_image=$(echo ${{ inputs.kong-image }} | awk '{split($0,a,":"); print a[1]}')
-            export kong_tag=$(echo ${{ inputs.kong-image }} | awk '{split($0,a,":"); print a[2]}')
-            echo "kong-image=$kong_image" >> $GITHUB_OUTPUT
-            echo "kong-tag=$kong_tag" >> $GITHUB_OUTPUT
+          if [ "$KONG_IMAGE" != "" ]; then
+            export kong_image_repo=$(echo "$KONG_IMAGE" | awk '{split($0,a,":"); print a[1]}')
+            export kong_image_tag=$(echo "$KONG_IMAGE" | awk '{split($0,a,":"); print a[2]}')
+            echo "kong-image=$kong_image_repo" >> $GITHUB_OUTPUT
+            echo "kong-tag=$kong_image_tag" >> $GITHUB_OUTPUT
           fi
-          if [ "${{ inputs.kic-image }}" != "" ]; then
-            export kic_image=$(echo ${{ inputs.kic-image }} | awk '{split($0,a,":"); print a[1]}')
-            export kic_tag=$(echo ${{ inputs.kic-image }} | awk '{split($0,a,":"); print a[2]}')
-            echo "kic-image=$kic_image" >> $GITHUB_OUTPUT
-            echo "kic-tag=$kic_tag" >> $GITHUB_OUTPUT
+          if [ "$KIC_IMAGE" != "" ]; then
+            export kic_image_repo=$(echo "$KIC_IMAGE" | awk '{split($0,a,":"); print a[1]}')
+            export kic_image_tag=$(echo "$KIC_IMAGE" | awk '{split($0,a,":"); print a[2]}')
+            echo "kic-image=$kic_image_repo" >> $GITHUB_OUTPUT
+            echo "kic-tag=$kic_image_tag" >> $GITHUB_OUTPUT
           fi
 
       - name: run performance tests

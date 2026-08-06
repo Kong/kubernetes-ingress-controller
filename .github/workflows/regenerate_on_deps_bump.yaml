@@ -53,4 +53,4 @@ jobs:
           git status
           git diff-index --quiet HEAD || \
           git commit -m "chore: regenerate" && \
-          git push origin ${{ env.REF }}
+          git push origin "$REF"

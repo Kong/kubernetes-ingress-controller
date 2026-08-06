@@ -75,15 +75,20 @@ jobs:
           egress-policy: audit
       - name: Choose image
         id: choose
+        env:
+          CONTROLLER_IMAGE: ${{ inputs.controller-image }}
+          BUILT_IMAGE: ${{ needs.build-image.outputs.image }}
         run: |
-          if [ "${{ inputs.controller-image }}" == "" ]; then
-            echo "image=${{ needs.build-image.outputs.image }}" >> $GITHUB_OUTPUT
+          if [ "$CONTROLLER_IMAGE" == "" ]; then
+            echo "image=$BUILT_IMAGE" >> $GITHUB_OUTPUT
           else
-            echo "image=${{ inputs.controller-image }}" >> $GITHUB_OUTPUT
+            echo "image=$CONTROLLER_IMAGE" >> $GITHUB_OUTPUT
           fi
 
       - name: Print image
-        run: echo "Using ${{ steps.choose.outputs.image }}"
+        env:
+          CHOSEN_IMAGE: ${{ steps.choose.outputs.image }}
+        run: echo "Using $CHOSEN_IMAGE"
 
   run:
     needs: choose-image

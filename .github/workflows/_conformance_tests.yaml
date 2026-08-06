@@ -99,28 +99,38 @@ jobs:
 
       - name: Set image of Kong
         id: set_kong_image
+        env:
+          KONG_ENTERPRISE_CONTAINER_TAG: ${{ inputs.kong-enterprise-container-tag }}
+          KONG_EE_TAG_FALLBACK: ${{ needs.dependencies-versions.outputs.kong-ee }}
+          KONG_CONTAINER_TAG: ${{ inputs.kong-container-tag }}
+          KONG_OSS_TAG_FALLBACK: ${{ needs.dependencies-versions.outputs.kong-oss }}
+          MATRIX_ENTERPRISE: ${{ matrix.enterprise }}
+          KONG_ENTERPRISE_CONTAINER_REPO: ${{ inputs.kong-enterprise-container-repo }}
+          KONG_ENTERPRISE_EFFECTIVE_VERSION: ${{ inputs.kong-enterprise-effective-version }}
+          KONG_CONTAINER_REPO: ${{ inputs.kong-container-repo }}
+          KONG_OSS_EFFECTIVE_VERSION: ${{ inputs.kong-oss-effective-version }}
         run: |
-          kong_ee_tag="${{ inputs.kong-enterprise-container-tag }}"
-          if [ "${{ inputs.kong-enterprise-container-tag }}" == "<from_test_dependencies.yaml>" ]; then
-            kong_ee_tag=${{ needs.dependencies-versions.outputs.kong-ee }}
+          kong_ee_tag="$KONG_ENTERPRISE_CONTAINER_TAG"
+          if [ "$KONG_ENTERPRISE_CONTAINER_TAG" == "<from_test_dependencies.yaml>" ]; then
+            kong_ee_tag="$KONG_EE_TAG_FALLBACK"
           fi
-          kong_oss_tag="${{ inputs.kong-container-tag }}"
-          if [ "${{ inputs.kong-container-tag }}" == "<from_test_dependencies.yaml>" ]; then
-            kong_oss_tag=${{ needs.dependencies-versions.outputs.kong-oss }}
+          kong_oss_tag="$KONG_CONTAINER_TAG"
+          if [ "$KONG_CONTAINER_TAG" == "<from_test_dependencies.yaml>" ]; then
+            kong_oss_tag="$KONG_OSS_TAG_FALLBACK"
           fi
 
-          if [ "${{ matrix.enterprise }}" == "true" ]; then
+          if [ "$MATRIX_ENTERPRISE" == "true" ]; then
             (
-              echo "TEST_KONG_IMAGE=${{ inputs.kong-enterprise-container-repo }}"
+              echo "TEST_KONG_IMAGE=$KONG_ENTERPRISE_CONTAINER_REPO"
               echo "TEST_KONG_TAG=${kong_ee_tag}"
-              echo "TEST_KONG_EFFECTIVE_VERSION=${{ inputs.kong-enterprise-effective-version }}"
+              echo "TEST_KONG_EFFECTIVE_VERSION=$KONG_ENTERPRISE_EFFECTIVE_VERSION"
               echo "TEST_KONG_ENTERPRISE=true"
             ) >> $GITHUB_ENV
           else
             (
-              echo "TEST_KONG_IMAGE=${{ inputs.kong-container-repo }}"
+              echo "TEST_KONG_IMAGE=$KONG_CONTAINER_REPO"
               echo "TEST_KONG_TAG=${kong_oss_tag}"
-              echo "TEST_KONG_EFFECTIVE_VERSION=${{ inputs.kong-oss-effective-version }}"
+              echo "TEST_KONG_EFFECTIVE_VERSION=$KONG_OSS_EFFECTIVE_VERSION"
             ) >> $GITHUB_ENV
           fi
 
@@ -136,7 +146,9 @@ jobs:
         with:
           install: false
 
-      - run: echo "JUNIT_REPORT=conformance-tests-${{ matrix.name }}.xml" >> $GITHUB_ENV
+      - env:
+          MATRIX_NAME: ${{ matrix.name }}
+        run: echo "JUNIT_REPORT=conformance-tests-$MATRIX_NAME.xml" >> $GITHUB_ENV
 
       - name: run conformance tests
         run: make test.conformance

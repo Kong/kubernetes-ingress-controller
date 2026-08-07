@@ -141,13 +141,15 @@ func TestKongRawStateToKongState(t *testing.T) {
 						Key: kong.String("key"),
 					},
 				},
-				BasicAuths: []*kong.BasicAuth{
+				BasicAuths: []*kong.BasicAuthOptions{
 					{
-						ID: kong.String("basicAuth"),
-						Consumer: &kong.Consumer{
-							ID: kong.String("consumer"),
+						BasicAuth: kong.BasicAuth{
+							ID: kong.String("basicAuth"),
+							Consumer: &kong.Consumer{
+								ID: kong.String("consumer"),
+							},
+							Username: kong.String("username"),
 						},
-						Username: kong.String("username"),
 					},
 				},
 				ACLGroups: []*kong.ACLGroup{

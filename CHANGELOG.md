@@ -7,6 +7,7 @@ Adding a new version? You'll need three changes:
 * Add the diff link, like "[2.7.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v1.2.2...v1.2.3".
   This is all the way at the bottom. It's the thing we always forget.
 --->
+ - [3.4.20](#3420)
  - [3.4.19](#3419)
  - [3.4.18](#3418)
  - [3.4.17](#3417)
@@ -118,6 +119,19 @@ Adding a new version? You'll need three changes:
  - [0.1.0](#010)
  - [0.0.5](#005)
  - [0.0.4 and prior](#004-and-prior)
+
+## [3.4.20]
+
+> Release date: 2026-08-07
+
+### Fixed
+
+- Bump go-kong to `v0.78.0`, which fixes problem with syncing to Konnect that
+  manifested with log entries like the below
+
+  ```log
+  error konnect-config-synchronizer Failed to send request to Konnect {<REDACTED> failed: HTTP status 405 (message: "<failed to parse response body: unexpected end of JSON input>")"}
+  ```
 
 ## [3.4.19]
 
@@ -4281,6 +4295,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.4.20]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.19...v3.4.20
 [3.4.19]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.18...v3.4.19
 [3.4.18]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.17...v3.4.18
 [3.4.17]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.16...v3.4.17

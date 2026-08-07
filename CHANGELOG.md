@@ -8,6 +8,7 @@ Adding a new version? You'll need three changes:
   This is all the way at the bottom. It's the thing we always forget.
 --->
 
+- [3.5.13](#3513)
 - [3.5.12](#3512)
 - [3.5.11](#3511)
 - [3.5.10](#3510)
@@ -21,6 +22,7 @@ Adding a new version? You'll need three changes:
 - [3.5.2](#352)
 - [3.5.1](#351)
 - [3.5.0](#350)
+- [3.4.20](#3420)
 - [3.4.19](#3419)
 - [3.4.18](#3418)
 - [3.4.17](#3417)
@@ -134,15 +136,19 @@ Adding a new version? You'll need three changes:
 - [0.0.5](#005)
 - [0.0.4 and prior](#004-and-prior)
 
-## Unreleased
+## [3.5.13]
+
+> Release date: 2026-08-07
 
 ### Fixed
 
-- Bump go-kong to `v0.67.1`, which fixes `FillPluginsDefaults` overwriting
-  user-provided values of plugin config fields of type `json` with `nil`.
-  JSON object values (such as the `ai-mcp-proxy` plugin's `tool.request_body`)
-  are now preserved as-is.
-  [#8034](https://github.com/Kong/kubernetes-ingress-controller/pull/8034)
+- Bump go-kong to `v0.78.0`, which fixes problem with syncing to Konnect that
+  manifested with log entries like the below
+
+  ```log
+  error konnect-config-synchronizer Failed to send request to Konnect {<REDACTED> failed: HTTP status 405 (message: "<failed to parse response body: unexpected end of JSON input>")"}
+  ```
+  [#8056](https://github.com/Kong/kubernetes-ingress-controller/pull/8056)
 
 ## [3.5.12]
 
@@ -378,6 +384,20 @@ Adding a new version? You'll need three changes:
   can be used for both hash_on (always) and hash_fallack (when primary hashing
   source is different than cookie).
   [#7582](https://github.com/Kong/kubernetes-ingress-controller/pull/7582)
+
+## [3.4.20]
+
+> Release date: 2026-08-07
+
+### Fixed
+
+- Bump go-kong to `v0.78.0`, which fixes problem with syncing to Konnect that
+  manifested with log entries like the below
+
+  ```log
+  error konnect-config-synchronizer Failed to send request to Konnect {<REDACTED> failed: HTTP status 405 (message: "<failed to parse response body: unexpected end of JSON input>")"}
+  ```
+  [#8059](https://github.com/Kong/kubernetes-ingress-controller/pull/8059)
 
 ## [3.4.19]
 
@@ -4551,6 +4571,7 @@ Please read the changelog and test in your environment.
 - The initial versions were rapildy iterated to deliver
   a working ingress controller.
 
+[3.5.13]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.12...v3.5.13
 [3.5.12]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.11...v3.5.12
 [3.5.11]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.10...v3.5.11
 [3.5.10]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.9...v3.5.10
@@ -4564,6 +4585,7 @@ Please read the changelog and test in your environment.
 [3.5.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.1...v3.5.2
 [3.5.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.0...v3.5.1
 [3.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.7...v3.5.0
+[3.4.20]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.19...v3.4.20
 [3.4.19]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.18...v3.4.19
 [3.4.18]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.17...v3.4.18
 [3.4.17]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.16...v3.4.17

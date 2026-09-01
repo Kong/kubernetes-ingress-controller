@@ -64,6 +64,14 @@ func (g supportedGatewayWithCondition) GetSectionName() mo.Option[string] {
 
 // parentRefsForRoute provides a list of the parentRefs given a Gateway APIs route object
 // (e.g. HTTPRoute, TCPRoute, e.t.c.) which refer to the Gateway resource(s) which manage it.
+//
+// parentRefs pointing at a kind this controller cannot resolve (e.g. a ListenerSet, or any
+// Gateway API kind introduced after the version this controller is built against) are filtered
+// out rather than rejected: such a reference means the route is managed by some other
+// controller. Routes left with no supported parentRef are handled by getSupportedGatewayForRoute
+// returning ErrNoSupportedGateway, which callers already treat as "not ours". Returning an error
+// here instead makes reconciliation of a route this controller does not own fail permanently,
+// retrying forever without ever converging.
 func parentRefsForRoute[T gatewayapi.RouteT](route T) ([]gatewayapi.ParentReference, error) {
 	// Note: Ideally we wouldn't have to do this but it's hard to juggle around types
 	// and support ParentReference and gatewayapi.ParentReference
@@ -90,36 +98,36 @@ func parentRefsForRoute[T gatewayapi.RouteT](route T) ([]gatewayapi.ParentRefere
 	case *gatewayapi.HTTPRoute:
 		refs = r.Spec.ParentRefs
 	case *gatewayapi.UDPRoute:
-		refs = r.Spec.ParentRefs
+		refs = convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs)
 	case *gatewayapi.TCPRoute:
-		refs = r.Spec.ParentRefs
+		refs = convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs)
 	case *gatewayapi.TLSRoute:
-		refs = r.Spec.ParentRefs
+		refs = convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs)
 	case *gatewayapi.GRPCRoute:
-		refs = r.Spec.ParentRefs
+		refs = convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs)
 	default:
 		return nil, fmt.Errorf("can't determine parent Gateway for unsupported route type %s", reflect.TypeOf(route))
-	}
-	for _, ref := range refs {
-		if string(*ref.Group) != gatewayv1.GroupName || string(*ref.Kind) != "Gateway" {
-			return nil, fmt.Errorf("unsupported parent kind %s/%s", string(*ref.Group), string(*ref.Kind))
-		}
 	}
 
-	switch r := (any)(route).(type) {
-	case *gatewayapi.HTTPRoute:
-		return r.Spec.ParentRefs, nil
-	case *gatewayapi.UDPRoute:
-		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
-	case *gatewayapi.TCPRoute:
-		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
-	case *gatewayapi.TLSRoute:
-		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
-	case *gatewayapi.GRPCRoute:
-		return convertV1Alpha2ToV1Beta1ParentReference(r.Spec.ParentRefs), nil
-	default:
-		return nil, fmt.Errorf("can't determine parent Gateway for unsupported route type %s", reflect.TypeOf(route))
+	return lo.Filter(refs, func(ref gatewayapi.ParentReference, _ int) bool {
+		return isSupportedParentRefKind(ref)
+	}), nil
+}
+
+// isSupportedParentRefKind reports whether a parentRef points at a core Gateway API Gateway,
+// the only parent kind this controller is able to resolve. Group and Kind are optional in the
+// Gateway API and default to gateway.networking.k8s.io and Gateway respectively, so a nil value
+// is treated as the default rather than dereferenced.
+func isSupportedParentRefKind(ref gatewayapi.ParentReference) bool {
+	group := gatewayv1.GroupName
+	if ref.Group != nil {
+		group = string(*ref.Group)
 	}
+	kind := "Gateway"
+	if ref.Kind != nil {
+		kind = string(*ref.Kind)
+	}
+	return group == gatewayv1.GroupName && kind == "Gateway"
 }
 
 // getSupportedGatewayForRoute will retrieve the Gateway and GatewayClass object for any

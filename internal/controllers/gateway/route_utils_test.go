@@ -1330,14 +1330,17 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 			Group: &badGroup,
 		},
 	}
-	t.Run("invalid parentRef kind rejected", func(t *testing.T) {
+	t.Run("unsupported parentRef kind is skipped, not rejected", func(t *testing.T) {
 		fakeClient := fakeclient.
 			NewClientBuilder().
 			WithScheme(scheme.Scheme).
 			Build()
 
+		// A route whose only parent is of a kind this controller cannot resolve belongs to some
+		// other controller. It must resolve to "no supported gateway", which callers handle by
+		// dropping the route, rather than to a hard error that retries forever.
 		_, err := getSupportedGatewayForRoute(t.Context(), logr.Discard(), fakeClient, bustedParentHTTPRoute, controllers.OptionalNamespacedName{})
-		require.Equal(t, fmt.Errorf("unsupported parent kind %s/%s", string(badGroup), string(badKind)), err)
+		require.ErrorIs(t, err, ErrNoSupportedGateway)
 	})
 
 	t.Run("single Gateway", func(t *testing.T) {
@@ -2554,6 +2557,70 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 			ok, err := isRouteAcceptedByListener(ctx, fakeClient, tc.httpRoute, tc.gateway, 0, tc.httpRoute.Spec.ParentRefs[0])
 			assert.NoError(t, err)
 			assert.Equal(t, tc.expectedValue, ok)
+		})
+	}
+}
+
+func TestParentRefsForRoute(t *testing.T) {
+	gatewayGroup := gatewayapi.Group(gatewayv1.GroupName)
+	gatewayKind := gatewayapi.Kind("Gateway")
+	listenerSetKind := gatewayapi.Kind("ListenerSet")
+	otherGroup := gatewayapi.Group("example.com")
+	otherKind := gatewayapi.Kind("Frobnicator")
+
+	routeWithParents := func(refs ...gatewayapi.ParentReference) *gatewayapi.HTTPRoute {
+		return &gatewayapi.HTTPRoute{
+			TypeMeta: gatewayapi.V1GatewayTypeMeta,
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "httproute",
+				Namespace: "test-namespace",
+			},
+			Spec: gatewayapi.HTTPRouteSpec{
+				CommonRouteSpec: gatewayapi.CommonRouteSpec{ParentRefs: refs},
+			},
+		}
+	}
+
+	testCases := []struct {
+		name     string
+		route    *gatewayapi.HTTPRoute
+		expected []gatewayapi.ParentReference
+	}{
+		{
+			name:     "a Gateway parentRef is kept",
+			route:    routeWithParents(gatewayapi.ParentReference{Group: &gatewayGroup, Kind: &gatewayKind, Name: "gw"}),
+			expected: []gatewayapi.ParentReference{{Group: &gatewayGroup, Kind: &gatewayKind, Name: "gw"}},
+		},
+		{
+			name:     "an omitted Group and Kind default to a Gateway and are kept",
+			route:    routeWithParents(gatewayapi.ParentReference{Name: "gw"}),
+			expected: []gatewayapi.ParentReference{{Name: "gw"}},
+		},
+		{
+			name:     "a ListenerSet parentRef is dropped",
+			route:    routeWithParents(gatewayapi.ParentReference{Group: &gatewayGroup, Kind: &listenerSetKind, Name: "ls"}),
+			expected: []gatewayapi.ParentReference{},
+		},
+		{
+			name:     "a parentRef from an unrelated group is dropped",
+			route:    routeWithParents(gatewayapi.ParentReference{Group: &otherGroup, Kind: &otherKind, Name: "other"}),
+			expected: []gatewayapi.ParentReference{},
+		},
+		{
+			name: "an unsupported parentRef does not discard the supported ones alongside it",
+			route: routeWithParents(
+				gatewayapi.ParentReference{Group: &gatewayGroup, Kind: &listenerSetKind, Name: "ls"},
+				gatewayapi.ParentReference{Group: &gatewayGroup, Kind: &gatewayKind, Name: "gw"},
+			),
+			expected: []gatewayapi.ParentReference{{Group: &gatewayGroup, Kind: &gatewayKind, Name: "gw"}},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			refs, err := parentRefsForRoute(tc.route)
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, refs)
 		})
 	}
 }

@@ -318,6 +318,19 @@ func getHTTPRouteHostnamesAsSliceOfStringPointers(httproute *gatewayapi.HTTPRout
 	})
 }
 
+// filtersContainURLRewriteReplacePrefixMatch reports whether filters contains a URLRewrite filter
+// with a ReplacePrefixMatch path modifier. The rewritten path for such a filter depends on which
+// prefix matched, so matches sharing this filter must never be consolidated into a single Kong
+// route/plugin.
+func filtersContainURLRewriteReplacePrefixMatch(filters []gatewayapi.HTTPRouteFilter) bool {
+	return lo.ContainsBy(filters, func(filter gatewayapi.HTTPRouteFilter) bool {
+		return filter.Type == gatewayapi.HTTPRouteFilterURLRewrite &&
+			filter.URLRewrite.Path != nil &&
+			filter.URLRewrite.Path.Type == gatewayapi.PrefixMatchHTTPPathModifier &&
+			filter.URLRewrite.Path.ReplacePrefixMatch != nil
+	})
+}
+
 // translateHTTPRouteRulesMetaToKongstateRoutes translate the matches and filters under the rules sharing the same backends
 // to list of kongstate.Route.
 func translateHTTPRouteRulesMetaToKongstateRoutes(
@@ -334,9 +347,16 @@ func translateHTTPRouteRulesMetaToKongstateRoutes(
 		filters := rulesWithSameFilter[0].Rule.Filters
 		// Group the matches for each rule. Then aggregate the matches eligible for the consolidation
 		// into a single match group.
+		//
+		// ReplacePrefixMatch's rewritten path depends on which prefix matched, so when it's present
+		// we must never fold matches from different rules together - keep every match in its own group.
+		keyFn := httpRouteMatchMeta.getKey
+		if filtersContainURLRewriteReplacePrefixMatch(filters) {
+			keyFn = httpRouteMatchMeta.getUniqueKey
+		}
 		matchGroups := make(map[string]httpRouteMatchMetaList)
 		for _, ruleMeta := range rulesWithSameFilter {
-			ruleMatchGroups := groupSliceByKeyFn(ruleMeta.matches(), httpRouteMatchMeta.getKey)
+			ruleMatchGroups := groupSliceByKeyFn(ruleMeta.matches(), keyFn)
 			for matchGroupKey, matchGroup := range ruleMatchGroups {
 				matchGroups[matchGroupKey] = append(matchGroups[matchGroupKey], matchGroup...)
 			}
@@ -631,6 +651,13 @@ func (m httpRouteMatchMeta) getKey() string {
 	return mustMarshalJSON(keySource)
 }
 
+// getUniqueKey computes a key that is unique to this particular HTTPRouteMatch, i.e. it never
+// collides with the key of any other httpRouteMatchMeta. It is used in place of getKey() when
+// matches must not be consolidated with any other match, regardless of how similar they are.
+func (m httpRouteMatchMeta) getUniqueKey() string {
+	return fmt.Sprintf("%s/%s.%d.%d", m.parentRoute.Namespace, m.parentRoute.Name, m.RuleNumber, m.MatchNumber)
+}
+
 type httpRouteMatchMetaList []httpRouteMatchMeta
 
 func (l httpRouteMatchMetaList) httpRouteMatches() (
@@ -754,16 +781,14 @@ func GenerateKongRoutesFromHTTPRouteMatches(
 	}
 
 	var path string
-	if hasURLRewriteWithReplacePrefixMatchFilter := lo.ContainsBy(filters, func(filter gatewayapi.HTTPRouteFilter) bool {
-		return filter.Type == gatewayapi.HTTPRouteFilterURLRewrite &&
-			filter.URLRewrite.Path != nil &&
-			filter.URLRewrite.Path.Type == gatewayapi.PrefixMatchHTTPPathModifier &&
-			filter.URLRewrite.Path.ReplacePrefixMatch != nil
-	}); hasURLRewriteWithReplacePrefixMatchFilter {
-		// In the case of URLRewrite with non-nil ReplacePrefixMatch, we rely on a CEL validation rule that disallows
-		// rules with multiple matches if the URLRewrite filter is present. We can be certain that if the filter is
-		// present, there is at most only one match. Based on that, we can determine the path from the first match.
-		// See: https://github.com/kubernetes-sigs/gateway-api/blob/29e68bffffb9af568e35545305d78d0001a1a0f7/apis/v1/httproute_types.go#L131
+	if filtersContainURLRewriteReplacePrefixMatch(filters) {
+		// In the case of URLRewrite with non-nil ReplacePrefixMatch, a CEL validation rule disallows
+		// rules with multiple matches if the URLRewrite filter is present (see:
+		// https://github.com/kubernetes-sigs/gateway-api/blob/29e68bffffb9af568e35545305d78d0001a1a0f7/apis/v1/httproute_types.go#L131),
+		// and translateHTTPRouteRulesMetaToKongstateRoutes additionally never consolidates matches from
+		// different rules when this filter is present (see filtersContainURLRewriteReplacePrefixMatch's
+		// usage there). So we can be certain that if the filter is present, there is at most only one
+		// match here, and can determine the path from it.
 		if len(matches) > 0 && matches[0].Path != nil && matches[0].Path.Value != nil {
 			path = *matches[0].Path.Value
 		}

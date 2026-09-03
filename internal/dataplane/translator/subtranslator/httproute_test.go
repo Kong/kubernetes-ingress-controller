@@ -1782,6 +1782,138 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
 				},
 			},
 		},
+		{
+			// Reproduces a bug where two rules sharing backendRefs and the exact same
+			// URLRewrite/ReplacePrefixMatch filter, but with different match path prefixes, were
+			// consolidated into a single Kong route/plugin - so only the first rule's path prefix
+			// worked and the second 404'd. ReplacePrefixMatch's rewrite depends on which prefix
+			// matched, so Kong cannot express both prefixes as a single route + single plugin.
+			name: "rules sharing backendRefs and an identical URLRewrite ReplacePrefixMatch filter but different paths are kept separate",
+			rulesMeta: []httpRouteRuleMeta{
+				{
+					Rule: gatewayapi.HTTPRouteRule{
+						BackendRefs: backendRefList,
+						Filters: []gatewayapi.HTTPRouteFilter{
+							{
+								Type: gatewayapi.HTTPRouteFilterURLRewrite,
+								URLRewrite: &gatewayapi.HTTPURLRewriteFilter{
+									Path: &gatewayapi.HTTPPathModifier{
+										Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+										ReplacePrefixMatch: lo.ToPtr("/anything"),
+									},
+								},
+							},
+						},
+						Matches: []gatewayapi.HTTPRouteMatch{
+							{
+								Path: &gatewayapi.HTTPPathMatch{
+									Type:  lo.ToPtr(gatewayapi.PathMatchPathPrefix),
+									Value: lo.ToPtr("/path-1"),
+								},
+							},
+						},
+					},
+					RuleNumber:  0,
+					parentRoute: httpRouteWithoutHost,
+				},
+				{
+					Rule: gatewayapi.HTTPRouteRule{
+						BackendRefs: backendRefList,
+						Filters: []gatewayapi.HTTPRouteFilter{
+							{
+								Type: gatewayapi.HTTPRouteFilterURLRewrite,
+								URLRewrite: &gatewayapi.HTTPURLRewriteFilter{
+									Path: &gatewayapi.HTTPPathModifier{
+										Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+										ReplacePrefixMatch: lo.ToPtr("/anything"),
+									},
+								},
+							},
+						},
+						Matches: []gatewayapi.HTTPRouteMatch{
+							{
+								Path: &gatewayapi.HTTPPathMatch{
+									Type:  lo.ToPtr(gatewayapi.PathMatchPathPrefix),
+									Value: lo.ToPtr("/path-2"),
+								},
+							},
+						},
+					},
+					RuleNumber:  1,
+					parentRoute: httpRouteWithoutHost,
+				},
+			},
+			expectedRoutes: []kongstate.Route{
+				{
+					Route: kong.Route{
+						Name:         kong.String("httproute.default.httproute-1.0.0"),
+						Paths:        kong.StringSlice("~/path-1$", "~/path-1(/.*)"),
+						PreserveHost: kong.Bool(true),
+						StripPath:    kong.Bool(false),
+						Protocols:    nil,
+						Tags: []*string{
+							kong.String("k8s-name:httproute-1"),
+							kong.String("k8s-namespace:default"),
+							kong.String("k8s-kind:HTTPRoute"),
+							kong.String("k8s-group:gateway.networking.k8s.io"),
+							kong.String("k8s-version:v1"),
+						},
+					},
+					Plugins: []kong.Plugin{
+						{
+							Name: kong.String("request-transformer"),
+							Config: kong.Configuration{
+								"replace": TransformerPluginReplaceConfig{
+									URI: "/anything$(uri_captures[1])",
+								},
+							},
+							Tags: []*string{
+								kong.String("k8s-name:httproute-1"),
+								kong.String("k8s-namespace:default"),
+								kong.String("k8s-kind:HTTPRoute"),
+								kong.String("k8s-group:gateway.networking.k8s.io"),
+								kong.String("k8s-version:v1"),
+							},
+						},
+					},
+					Ingress: util.FromK8sObject(httpRouteWithoutHost),
+				},
+				{
+					Route: kong.Route{
+						Name:         kong.String("httproute.default.httproute-1.1.0"),
+						Paths:        kong.StringSlice("~/path-2$", "~/path-2(/.*)"),
+						PreserveHost: kong.Bool(true),
+						StripPath:    kong.Bool(false),
+						Protocols:    nil,
+						Tags: []*string{
+							kong.String("k8s-name:httproute-1"),
+							kong.String("k8s-namespace:default"),
+							kong.String("k8s-kind:HTTPRoute"),
+							kong.String("k8s-group:gateway.networking.k8s.io"),
+							kong.String("k8s-version:v1"),
+						},
+					},
+					Plugins: []kong.Plugin{
+						{
+							Name: kong.String("request-transformer"),
+							Config: kong.Configuration{
+								"replace": TransformerPluginReplaceConfig{
+									URI: "/anything$(uri_captures[1])",
+								},
+							},
+							Tags: []*string{
+								kong.String("k8s-name:httproute-1"),
+								kong.String("k8s-namespace:default"),
+								kong.String("k8s-kind:HTTPRoute"),
+								kong.String("k8s-group:gateway.networking.k8s.io"),
+								kong.String("k8s-version:v1"),
+							},
+						},
+					},
+					Ingress: util.FromK8sObject(httpRouteWithoutHost),
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {

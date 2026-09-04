@@ -136,6 +136,14 @@ Adding a new version? You'll need three changes:
 - [0.0.5](#005)
 - [0.0.4 and prior](#004-and-prior)
 
+## Unreleased
+
+### Fixed
+
+- Generate a distinct Kong route for each match when its parent `HTTPRoute` rule
+  contains `ReplacePrefixMatch` typed `URLRewrite` filter or `requestRedirect` filter.
+  [#8081](https://github.com/Kong/kubernetes-ingress-controller/pull/8081)
+
 ## [3.5.13]
 
 > Release date: 2026-08-07

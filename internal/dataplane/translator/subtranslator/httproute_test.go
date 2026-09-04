@@ -1914,6 +1914,164 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
 				},
 			},
 		},
+		{
+			// Reproduces a bug where two rules sharing backendRefs and the exact same
+			// RequestRedirect filter, but with different match path prefixes, were consolidated
+			// into a single Kong route/plugin - a RequestRedirect's Location header (when no path
+			// override is set) depends on which path matched, so Kong cannot express both paths'
+			// redirects as a single route + single plugin.
+			name: "rules sharing backendRefs and an identical RequestRedirect filter but different paths are kept separate",
+			rulesMeta: []httpRouteRuleMeta{
+				{
+					Rule: gatewayapi.HTTPRouteRule{
+						BackendRefs: backendRefList,
+						Filters: []gatewayapi.HTTPRouteFilter{
+							{
+								Type: gatewayapi.HTTPRouteFilterRequestRedirect,
+								RequestRedirect: &gatewayapi.HTTPRequestRedirectFilter{
+									Hostname:   lo.ToPtr(gatewayapi.PreciseHostname("example.org")),
+									StatusCode: lo.ToPtr(302),
+								},
+							},
+						},
+						Matches: []gatewayapi.HTTPRouteMatch{
+							{
+								Path: &gatewayapi.HTTPPathMatch{
+									Type:  lo.ToPtr(gatewayapi.PathMatchPathPrefix),
+									Value: lo.ToPtr("/path-1"),
+								},
+							},
+						},
+					},
+					RuleNumber:  0,
+					parentRoute: httpRouteWithoutHost,
+				},
+				{
+					Rule: gatewayapi.HTTPRouteRule{
+						BackendRefs: backendRefList,
+						Filters: []gatewayapi.HTTPRouteFilter{
+							{
+								Type: gatewayapi.HTTPRouteFilterRequestRedirect,
+								RequestRedirect: &gatewayapi.HTTPRequestRedirectFilter{
+									Hostname:   lo.ToPtr(gatewayapi.PreciseHostname("example.org")),
+									StatusCode: lo.ToPtr(302),
+								},
+							},
+						},
+						Matches: []gatewayapi.HTTPRouteMatch{
+							{
+								Path: &gatewayapi.HTTPPathMatch{
+									Type:  lo.ToPtr(gatewayapi.PathMatchPathPrefix),
+									Value: lo.ToPtr("/path-2"),
+								},
+							},
+						},
+					},
+					RuleNumber:  1,
+					parentRoute: httpRouteWithoutHost,
+				},
+			},
+			expectedRoutes: []kongstate.Route{
+				{
+					Route: kong.Route{
+						Name:         kong.String("httproute.default.httproute-1.0.0"),
+						Paths:        kong.StringSlice("~/path-1$", "/path-1/"),
+						PreserveHost: kong.Bool(true),
+						StripPath:    kong.Bool(false),
+						Protocols:    nil,
+						Tags: []*string{
+							kong.String("k8s-name:httproute-1"),
+							kong.String("k8s-namespace:default"),
+							kong.String("k8s-kind:HTTPRoute"),
+							kong.String("k8s-group:gateway.networking.k8s.io"),
+							kong.String("k8s-version:v1"),
+						},
+					},
+					Plugins: []kong.Plugin{
+						{
+							Name: kong.String("request-termination"),
+							Config: kong.Configuration{
+								"status_code": lo.ToPtr(302),
+							},
+							Tags: []*string{
+								kong.String("k8s-name:httproute-1"),
+								kong.String("k8s-namespace:default"),
+								kong.String("k8s-kind:HTTPRoute"),
+								kong.String("k8s-group:gateway.networking.k8s.io"),
+								kong.String("k8s-version:v1"),
+							},
+						},
+						{
+							Name: kong.String("response-transformer"),
+							Config: kong.Configuration{
+								"add": TransformerPluginConfig{
+									Headers: []Header{
+										NewHeader("Location", "http://example.org/path-1"),
+									},
+								},
+							},
+							Tags: []*string{
+								kong.String("k8s-name:httproute-1"),
+								kong.String("k8s-namespace:default"),
+								kong.String("k8s-kind:HTTPRoute"),
+								kong.String("k8s-group:gateway.networking.k8s.io"),
+								kong.String("k8s-version:v1"),
+							},
+						},
+					},
+					Ingress: util.FromK8sObject(httpRouteWithoutHost),
+				},
+				{
+					Route: kong.Route{
+						Name:         kong.String("httproute.default.httproute-1.1.0"),
+						Paths:        kong.StringSlice("~/path-2$", "/path-2/"),
+						PreserveHost: kong.Bool(true),
+						StripPath:    kong.Bool(false),
+						Protocols:    nil,
+						Tags: []*string{
+							kong.String("k8s-name:httproute-1"),
+							kong.String("k8s-namespace:default"),
+							kong.String("k8s-kind:HTTPRoute"),
+							kong.String("k8s-group:gateway.networking.k8s.io"),
+							kong.String("k8s-version:v1"),
+						},
+					},
+					Plugins: []kong.Plugin{
+						{
+							Name: kong.String("request-termination"),
+							Config: kong.Configuration{
+								"status_code": lo.ToPtr(302),
+							},
+							Tags: []*string{
+								kong.String("k8s-name:httproute-1"),
+								kong.String("k8s-namespace:default"),
+								kong.String("k8s-kind:HTTPRoute"),
+								kong.String("k8s-group:gateway.networking.k8s.io"),
+								kong.String("k8s-version:v1"),
+							},
+						},
+						{
+							Name: kong.String("response-transformer"),
+							Config: kong.Configuration{
+								"add": TransformerPluginConfig{
+									Headers: []Header{
+										NewHeader("Location", "http://example.org/path-2"),
+									},
+								},
+							},
+							Tags: []*string{
+								kong.String("k8s-name:httproute-1"),
+								kong.String("k8s-namespace:default"),
+								kong.String("k8s-kind:HTTPRoute"),
+								kong.String("k8s-group:gateway.networking.k8s.io"),
+								kong.String("k8s-version:v1"),
+							},
+						},
+					},
+					Ingress: util.FromK8sObject(httpRouteWithoutHost),
+				},
+			},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -1935,6 +2093,83 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestGenerateKongRoutesFromHTTPRouteMatchesBuildsIndependentRoutesPerMatchForRequestRedirect calls
+// GenerateKongRoutesFromHTTPRouteMatches directly with 2 matches sharing a RequestRedirect filter,
+// bypassing translateHTTPRouteRulesMetaToKongstateRoutes' match-grouping entirely. This proves
+// getRoutesFromMatches builds independent per-match routes on its own (root-cause fix), rather than
+// relying solely on the grouping phase never handing it more than one match at a time.
+//
+// Before the fix, getRoutesFromMatches mutated a single shared *kongstate.Route across matches
+// (`matchRoute := route` only copied the pointer), so each successively-appended route accumulated
+// the Paths and Plugins of every match processed before it, and all shared the same Name (and thus
+// the same Kong route ID, since Route IDs are derived from Name).
+func TestGenerateKongRoutesFromHTTPRouteMatchesBuildsIndependentRoutesPerMatchForRequestRedirect(t *testing.T) {
+	matches := []gatewayapi.HTTPRouteMatch{
+		{
+			Path: &gatewayapi.HTTPPathMatch{
+				Type:  lo.ToPtr(gatewayapi.PathMatchPathPrefix),
+				Value: lo.ToPtr("/path-1"),
+			},
+		},
+		{
+			Path: &gatewayapi.HTTPPathMatch{
+				Type:  lo.ToPtr(gatewayapi.PathMatchPathPrefix),
+				Value: lo.ToPtr("/path-2"),
+			},
+		},
+	}
+	filters := []gatewayapi.HTTPRouteFilter{
+		{
+			Type: gatewayapi.HTTPRouteFilterRequestRedirect,
+			RequestRedirect: &gatewayapi.HTTPRequestRedirectFilter{
+				Hostname:   lo.ToPtr(gatewayapi.PreciseHostname("example.org")),
+				StatusCode: lo.ToPtr(302),
+			},
+		},
+	}
+
+	routes, err := GenerateKongRoutesFromHTTPRouteMatches(
+		"httproute.default.httproute-1.0.0",
+		matches,
+		filters,
+		util.K8sObjectInfo{},
+		nil,
+		nil,
+		TranslateHTTPRouteRulesToKongRouteOptions{},
+	)
+	require.NoError(t, err)
+	require.Len(t, routes, 2)
+
+	pluginsForPath := func(path string) []kong.Plugin {
+		return []kong.Plugin{
+			{
+				Name: kong.String("request-termination"),
+				Config: kong.Configuration{
+					"status_code": lo.ToPtr(302),
+				},
+			},
+			{
+				Name: kong.String("response-transformer"),
+				Config: kong.Configuration{
+					"add": TransformerPluginConfig{
+						Headers: []Header{
+							NewHeader("Location", "http://example.org"+path),
+						},
+					},
+				},
+			},
+		}
+	}
+
+	require.Equal(t, "httproute.default.httproute-1.0.0.0", *routes[0].Name)
+	require.Equal(t, kong.StringSlice("~/path-1$", "/path-1/"), routes[0].Paths)
+	require.Equal(t, pluginsForPath("/path-1"), routes[0].Plugins)
+
+	require.Equal(t, "httproute.default.httproute-1.0.0.1", *routes[1].Name)
+	require.Equal(t, kong.StringSlice("~/path-2$", "/path-2/"), routes[1].Paths)
+	require.Equal(t, pluginsForPath("/path-2"), routes[1].Plugins)
 }
 
 func TestSchemeHostPortFromHTTPPathModifier(t *testing.T) {

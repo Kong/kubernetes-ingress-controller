@@ -331,6 +331,17 @@ func filtersContainURLRewriteReplacePrefixMatch(filters []gatewayapi.HTTPRouteFi
 	})
 }
 
+// filtersContainRequestRedirect reports whether filters contains a RequestRedirect filter. A
+// RequestRedirect's generated plugin (e.g. its Location header, when no path override is set)
+// generally depends on which match fired, so matches sharing this filter must never be
+// consolidated into a single Kong route/plugin either - see getRoutesFromMatches, which already
+// builds one independent route per match for this reason.
+func filtersContainRequestRedirect(filters []gatewayapi.HTTPRouteFilter) bool {
+	return lo.ContainsBy(filters, func(filter gatewayapi.HTTPRouteFilter) bool {
+		return filter.Type == gatewayapi.HTTPRouteFilterRequestRedirect
+	})
+}
+
 // translateHTTPRouteRulesMetaToKongstateRoutes translate the matches and filters under the rules sharing the same backends
 // to list of kongstate.Route.
 func translateHTTPRouteRulesMetaToKongstateRoutes(
@@ -348,10 +359,11 @@ func translateHTTPRouteRulesMetaToKongstateRoutes(
 		// Group the matches for each rule. Then aggregate the matches eligible for the consolidation
 		// into a single match group.
 		//
-		// ReplacePrefixMatch's rewritten path depends on which prefix matched, so when it's present
-		// we must never fold matches from different rules together - keep every match in its own group.
+		// ReplacePrefixMatch's rewritten path, and RequestRedirect's generated plugin, both depend on
+		// which match fired, so when either is present we must never fold matches from different
+		// rules together - keep every match in its own group.
 		keyFn := httpRouteMatchMeta.getKey
-		if filtersContainURLRewriteReplacePrefixMatch(filters) {
+		if filtersContainURLRewriteReplacePrefixMatch(filters) || filtersContainRequestRedirect(filters) {
 			keyFn = httpRouteMatchMeta.getUniqueKey
 		}
 		matchGroups := make(map[string]httpRouteMatchMetaList)
@@ -771,9 +783,7 @@ func GenerateKongRoutesFromHTTPRouteMatches(
 
 	// Check if the route has a RequestRedirect or URLRewrite with non-nil ReplacePrefixMatch - if it does, we need to
 	// generate a route for each match as the path is used to modify routes and generate plugins.
-	hasRedirectFilter := lo.ContainsBy(filters, func(filter gatewayapi.HTTPRouteFilter) bool {
-		return filter.Type == gatewayapi.HTTPRouteFilterRequestRedirect
-	})
+	hasRedirectFilter := filtersContainRequestRedirect(filters)
 
 	routes, err := getRoutesFromMatches(matches, &r, filters, tags, hasRedirectFilter, options.SupportRedirectPlugin)
 	if err != nil {
@@ -900,12 +910,26 @@ func getRoutesFromMatches(
 ) ([]kongstate.Route, error) {
 	seenMethods := make(map[string]struct{})
 	routes := make([]kongstate.Route, 0)
+	// baseRoute is a clean snapshot of route's state as passed in, before any match-specific
+	// mutation below. It's used to build an independent kongstate.Route per match when
+	// hasRedirectFilter (see below), instead of mutating the single shared *route across matches.
+	baseRoute := *route
+	baseRouteName := lo.FromPtr(baseRoute.Name)
 
-	for _, match := range matches {
+	for i, match := range matches {
 		// if the rule specifies the redirectFilter, we cannot put all the paths under the same route,
-		// as the kong plugin needs to know the exact path to use to perform redirection.
+		// as the kong plugin needs to know the exact path to use to perform redirection. Each match
+		// therefore gets its own independent kongstate.Route, built from a fresh copy of baseRoute,
+		// rather than sharing (and accumulating onto) the single *route passed in.
 		if hasRedirectFilter {
-			matchRoute := route
+			matchRoute := baseRoute
+			if len(matches) > 1 {
+				// Kong route names (and the IDs generated from them) must be unique. Only disambiguate
+				// when there's more than one independent route to build from this call, so the common
+				// single-match case keeps its existing name (and thus Kong route ID) unchanged.
+				matchRoute.Name = kong.String(fmt.Sprintf("%s.%d", baseRouteName, i))
+			}
+
 			// configure path matching information about the route if paths matching was defined
 			// Kong automatically infers whether or not a path is a regular expression and uses a prefix match by
 			// default if it is not. For those types, we use the path value as-is and let Kong determine the type.
@@ -917,14 +941,11 @@ func getRoutesFromMatches(
 				}
 			}
 
-			// configure method matching information about the route if method
-			// matching was defined.
+			// configure method matching information about the route if method matching was defined.
+			// Since matchRoute is independent per match, there's no need to deduplicate methods
+			// across matches here (unlike the non-redirect branch below).
 			if match.Method != nil {
-				method := string(*match.Method)
-				if _, ok := seenMethods[method]; !ok {
-					matchRoute.Methods = append(matchRoute.Methods, kong.String(string(*match.Method)))
-					seenMethods[method] = struct{}{}
-				}
+				matchRoute.Methods = append(matchRoute.Methods, kong.String(string(*match.Method)))
 			}
 			path := ""
 			if match.Path.Value != nil {
@@ -936,11 +957,11 @@ func getRoutesFromMatches(
 				expressionsRouterEnabled:  false,
 				redirectKongPluginEnabled: supportRedirectPlugin,
 			}
-			if err := setRoutePlugins(matchRoute, filters, path, tags, setPluginsOptions); err != nil {
+			if err := setRoutePlugins(&matchRoute, filters, path, tags, setPluginsOptions); err != nil {
 				return nil, err
 			}
 
-			routes = append(routes, *route)
+			routes = append(routes, matchRoute)
 		} else {
 			// Configure path matching information about the route if paths matching was defined
 			// Kong automatically infers whether or not a path is a regular expression and uses a prefix match by

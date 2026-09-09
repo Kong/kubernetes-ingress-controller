@@ -136,6 +136,15 @@ Adding a new version? You'll need three changes:
 - [0.0.5](#005)
 - [0.0.4 and prior](#004-and-prior)
 
+## Unreleased
+
+### Fixed
+
+- Inherit the tags of the translated Kong certificate from the one with earliest
+  creation timestamp, then lowest ID to keep the tags stable in merging certificates
+  from multiple `Secret`s with the same certificate content.
+  [#8085](https://github.com/Kong/kubernetes-ingress-controller/pull/8085)
+
 ## [3.5.13]
 
 > Release date: 2026-08-07

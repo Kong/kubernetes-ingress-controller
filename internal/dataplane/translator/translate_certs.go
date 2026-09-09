@@ -250,9 +250,11 @@ func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) ([]kongstate.Cer
 				// pointless configuration updates
 				if current.CreationTimestamp.After(cw.CreationTimestamp.Time) {
 					current.cert.ID = cw.cert.ID
+					current.cert.Tags = cw.cert.Tags
 					current.CreationTimestamp = cw.CreationTimestamp
 				} else if current.CreationTimestamp.Time.Equal(cw.CreationTimestamp.Time) && (current.cert.ID == nil || *current.cert.ID > *cw.cert.ID) {
 					current.cert.ID = cw.cert.ID
+					current.cert.Tags = cw.cert.Tags
 					current.CreationTimestamp = cw.CreationTimestamp
 				}
 			}

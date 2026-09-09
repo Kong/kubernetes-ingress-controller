@@ -335,6 +335,7 @@ func TestMergeCerts(t *testing.T) {
 		certs        []certWrapper
 		mergedCerts  []kongstate.Certificate
 		idToMergedID certIDToMergedCertID
+		tags         []string
 	}{
 		{
 			name: "single certificate",
@@ -407,23 +408,35 @@ func TestMergeCerts(t *testing.T) {
 			},
 		},
 		{
-			name: "multiple certs with same content should be merged",
+			name: "multiple certs with same content should be merged, and tags should inherit from the cert with the lowest ID",
 			certs: []certWrapper{
-				{
-					identifier: string(crt1) + string(key1),
-					cert: kong.Certificate{
-						ID:   kong.String("certificate-1"),
-						Cert: kong.String(string(crt1)),
-						Key:  kong.String(string(key1)),
-					},
-					snis: []string{"foo.com"},
-				},
 				{
 					identifier: string(crt1) + string(key1),
 					cert: kong.Certificate{
 						ID:   kong.String("certificate-1-1"),
 						Cert: kong.String(string(crt1)),
 						Key:  kong.String(string(key1)),
+						Tags: kong.StringSlice("tag3", "tag4"),
+					},
+					snis: []string{"baz.com"},
+				},
+				{
+					identifier: string(crt1) + string(key1),
+					cert: kong.Certificate{
+						ID:   kong.String("certificate-1"),
+						Cert: kong.String(string(crt1)),
+						Key:  kong.String(string(key1)),
+						Tags: kong.StringSlice("tag1", "tag2"),
+					},
+					snis: []string{"foo.com"},
+				},
+				{
+					identifier: string(crt1) + string(key1),
+					cert: kong.Certificate{
+						ID:   kong.String("certificate-1-2"),
+						Cert: kong.String(string(crt1)),
+						Key:  kong.String(string(key1)),
+						Tags: kong.StringSlice("tag5", "tag6"),
 					},
 					snis: []string{"baz.com"},
 				},
@@ -436,12 +449,15 @@ func TestMergeCerts(t *testing.T) {
 						Key:  kong.String(string(key1)),
 						// SNIs should be sorted
 						SNIs: kong.StringSlice("baz.com", "foo.com"),
+						// tags should inherit from the first cert
+						Tags: kong.StringSlice("tag1", "tag2"),
 					},
 				},
 			},
 			idToMergedID: certIDToMergedCertID{
 				"certificate-1":   "certificate-1",
 				"certificate-1-1": "certificate-1",
+				"certificate-1-2": "certificate-1",
 			},
 		},
 	}

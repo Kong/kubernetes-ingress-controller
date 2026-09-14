@@ -7,7 +7,7 @@ golangci-lint: "2.9.0"
 # TODO: Renovate comment is missing. This needs to be added at some point.
 modernize: "v0.19.1"
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
-skaffold: "2.16.1"
+skaffold: "2.24.0"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
 setup-envtest: "0.21.0"
 # renovate: datasource=github-releases depName=elastic/crd-ref-docs

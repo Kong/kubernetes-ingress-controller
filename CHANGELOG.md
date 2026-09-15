@@ -135,7 +135,6 @@ Adding a new version? You'll need three changes:
   are changed.
   [#8081](https://github.com/Kong/kubernetes-ingress-controller/pull/8081)
 
-
 ## [3.4.20]
 
 > Release date: 2026-08-07

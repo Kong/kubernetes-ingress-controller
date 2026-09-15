@@ -495,7 +495,7 @@ func TestMergeCerts(t *testing.T) {
 						Key:  kong.String(string(key1)),
 						// SNIs should be sorted
 						SNIs: kong.StringSlice("baz.com", "foo.com"),
-						// tags should inherit from the the cert with the lowest ID.
+						// tags should inherit from the cert with the lowest ID.
 						Tags: kong.StringSlice("tag1", "tag2"),
 					},
 				},

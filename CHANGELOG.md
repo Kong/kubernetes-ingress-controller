@@ -144,6 +144,12 @@ Adding a new version? You'll need three changes:
   creation timestamp, then lowest ID to keep the tags stable in merging certificates
   from multiple `Secret`s with the same certificate content.
   [#8085](https://github.com/Kong/kubernetes-ingress-controller/pull/8085)
+- Generate a distinct Kong route for each match when its parent `HTTPRoute` rule
+  contains `ReplacePrefixMatch` typed `URLRewrite` filter or `requestRedirect` filter.
+  NOTE: This would make the generate routes from the affected `HTTPRoute` rules
+  containing the filters to be deleted and re-created, and the names of the routes
+  are changed.
+  [#8081](https://github.com/Kong/kubernetes-ingress-controller/pull/8081)
 
 ## [3.5.13]
 

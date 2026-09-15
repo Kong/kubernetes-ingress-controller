@@ -464,6 +464,7 @@ jobs:
           TEST_KONG_LOAD_IMAGES: ${{ inputs.load-local-image }}
           TEST_KONG_IMAGE: ${{ steps.split.outputs.kong-image }}
           TEST_KONG_TAG: ${{ steps.split.outputs.kong-tag }}
+          TEST_KONG_EFFECTIVE_VERSION: ${{ inputs.kong-effective-version }}
           KONG_LICENSE_DATA: ${{ steps.license.outputs.license }}
           KONG_CLUSTER_VERSION: ${{ matrix.kind }}
           ISTIO_VERSION: ${{ matrix.istio }}

@@ -146,6 +146,8 @@ Adding a new version? You'll need three changes:
   [#8085](https://github.com/Kong/kubernetes-ingress-controller/pull/8085)
 - Generate a distinct Kong route for each match when its parent `HTTPRoute` rule
   contains `ReplacePrefixMatch` typed `URLRewrite` filter or `requestRedirect` filter.
+  NOTE: This would change the name of the name of generate routes from the affected
+  `HTTPRoute` rules containing the filters.
   [#8081](https://github.com/Kong/kubernetes-ingress-controller/pull/8081)
 
 ## [3.5.13]

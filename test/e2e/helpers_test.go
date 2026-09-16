@@ -228,6 +228,7 @@ func createGKEBuilder(t *testing.T) (*environments.Builder, error) {
 		WithName(name).
 		WithWaitForTeardown(testenv.WaitForClusterDelete()).
 		WithCreateSubnet(true).
+		WithNodeMachineType("e2-standard-4").
 		WithLabels(gkeTestClusterLabels())
 
 	if v := testenv.ClusterVersion(); v != "" {

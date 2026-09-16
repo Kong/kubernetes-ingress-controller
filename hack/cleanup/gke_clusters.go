@@ -23,7 +23,7 @@ func cleanupGKEClusters(ctx context.Context, log logr.Logger) error {
 		return fmt.Errorf("invalid credentials: %w", err)
 	}
 
-	credsOpt := option.WithCredentialsJSON([]byte(gkeCreds))
+	credsOpt := option.WithAuthCredentialsJSON(option.ServiceAccount, []byte(gkeCreds))
 	mgrc, err := container.NewClusterManagerClient(ctx, credsOpt)
 	if err != nil {
 		return fmt.Errorf("failed to create cluster manager client: %w", err)

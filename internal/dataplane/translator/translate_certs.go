@@ -245,14 +245,16 @@ func mergeCerts(logger logr.Logger, certLists ...[]certWrapper) ([]kongstate.Cer
 				current = cw
 			} else {
 				// multiple Secrets that contain identical certificates are collapsed, because we only create one
-				// Kong resource for a given cert+key pair. however, because we reuse the Secret ID and creation time
+				// Kong resource for a given cert+key pair. however, because we reuse the Secret ID, tags and creation time
 				// for the Kong resource equivalents, the selection of those needs to be deterministic to avoid
 				// pointless configuration updates
 				if current.CreationTimestamp.After(cw.CreationTimestamp.Time) {
 					current.cert.ID = cw.cert.ID
+					current.cert.Tags = cw.cert.Tags
 					current.CreationTimestamp = cw.CreationTimestamp
 				} else if current.CreationTimestamp.Time.Equal(cw.CreationTimestamp.Time) && (current.cert.ID == nil || *current.cert.ID > *cw.cert.ID) {
 					current.cert.ID = cw.cert.ID
+					current.cert.Tags = cw.cert.Tags
 					current.CreationTimestamp = cw.CreationTimestamp
 				}
 			}

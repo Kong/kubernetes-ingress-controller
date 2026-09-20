@@ -228,6 +228,7 @@ func createGKEBuilder(t *testing.T) (*environments.Builder, error) {
 		WithName(name).
 		WithWaitForTeardown(testenv.WaitForClusterDelete()).
 		WithCreateSubnet(true).
+		WithNodeMachineType("e2-standard-4").
 		WithLabels(gkeTestClusterLabels())
 
 	if v := testenv.ClusterVersion(); v != "" {
@@ -868,7 +869,17 @@ func listPodsByLabels(
 	if err != nil {
 		return nil, err
 	}
-	return podList.Items, nil
+
+	// Exclude pods that are already being terminated: they still match the label
+	// selector until fully removed from the API, but callers only ever want live pods.
+	livePods := make([]corev1.Pod, 0, len(podList.Items))
+	for _, pod := range podList.Items {
+		if pod.DeletionTimestamp != nil {
+			continue
+		}
+		livePods = append(livePods, pod)
+	}
+	return livePods, nil
 }
 
 // scaleDeployment scales the deployment to the given number of replicas and waits for the replicas to be ready.
@@ -893,7 +904,10 @@ func scaleDeployment(ctx context.Context, t *testing.T, env environments.Environ
 		if err != nil {
 			return false
 		}
-		return deployment.Status.ReadyReplicas == replicas
+		// Status.Replicas counts all non-terminated pods matched by the selector, including
+		// ones still Terminating from a previous scale-down. Requiring it to match too ensures
+		// stragglers are fully gone before callers proceed, not just that new pods are ready.
+		return deployment.Status.Replicas == replicas && deployment.Status.ReadyReplicas == replicas
 	}, time.Minute*3, time.Second, "deployment %s did not scale to %d replicas", deployment.Name, replicas)
 }
 

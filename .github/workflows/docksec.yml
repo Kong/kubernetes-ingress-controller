@@ -5,12 +5,10 @@ on:
     branches: [main]
     paths:
       - 'Dockerfile'
-      - 'Containerfile'
       - '.github/workflows/docksec.yml'
   pull_request:
     paths:
       - 'Dockerfile'
-      - 'Containerfile'
       - '.github/workflows/docksec.yml'
   schedule:
     - cron: '0 6 * * 1'

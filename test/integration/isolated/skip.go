@@ -15,7 +15,7 @@ import (
 func SkipIfRouterNotExpressions(ctx context.Context, t *testing.T, _ *envconf.Config) context.Context {
 	flavor := testenv.KongRouterFlavor()
 	if flavor != dpconf.RouterFlavorExpressions {
-		t.Skipf("skiping, %q router flavor specified via TEST_KONG_ROUTER_FLAVOR env but %q is required", flavor, "expressions")
+		t.Skipf("skipping, %q router flavor specified via TEST_KONG_ROUTER_FLAVOR env but %q is required", flavor, "expressions")
 	}
 	return ctx
 }

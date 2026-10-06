@@ -30,10 +30,18 @@ jobs:
         with:
           persist-credentials: false
 
+      - name: Stage Dockerfile
+        # DockSec's Trivy pass scans the target's whole directory and matches by file name,
+        # so a same-named file elsewhere in the tree would be reported as this one. Scan an
+        # isolated copy instead.
+        run: |
+          mkdir docksec-target
+          cp Dockerfile docksec-target/
+
       - name: Run DockSec
         uses: OWASP/DockSec@d52c8e928552dc39003abda21ac6bc4662b06c39 # v2026.9.21
         with:
-          dockerfile: Dockerfile
+          dockerfile: docksec-target/Dockerfile
           scan_only: 'true'
           sarif: 'true'
           output_dir: ${{ github.workspace }}/docksec-results

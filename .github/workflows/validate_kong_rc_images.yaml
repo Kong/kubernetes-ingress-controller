@@ -1,0 +1,110 @@
+name: validate Kong RC images (scheduled)
+
+# Polls kong/kong-gateway-dev for release candidate images (x.x.x.x-rc.x) pushed since
+# the previous poll and triggers validate_kong_image.yaml for each of them.
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      lookback-hours:
+        description: Trigger validation for RC images pushed within this many hours. Should match the schedule period.
+        type: number
+        required: false
+        default: 24
+
+permissions:
+  contents: read
+
+env:
+  KONG_IMAGE_REPO: kong/kong-gateway-dev
+  # Interval between triggering subsequent validation workflows.
+  DISPATCH_INTERVAL_SECONDS: 600
+
+jobs:
+  trigger-validation:
+    # Allow enough time to space out multiple dispatches by DISPATCH_INTERVAL_SECONDS.
+    timeout-minutes: 360
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        with:
+          egress-policy: audit
+
+      - name: Find new RC images
+        id: find
+        env:
+          LOOKBACK_HOURS: ${{ github.event.inputs.lookback-hours || 24 }}
+        run: |
+          set -euo pipefail
+          cutoff=$(date -u -d "-${LOOKBACK_HOURS} hours" +%Y-%m-%dT%H:%M:%SZ)
+          echo "Looking for RC images in ${KONG_IMAGE_REPO} pushed since ${cutoff}"
+
+          # Docker Hub only supports substring filtering on tag names, so narrow the results
+          # down with "-rc." and apply the exact pattern below. Tags are sorted newest first,
+          # so stop paginating once we reach tags older than the cutoff.
+          url="https://hub.docker.com/v2/repositories/${KONG_IMAGE_REPO}/tags?page_size=100&ordering=last_updated&name=-rc."
+          tags=""
+          while [[ -n "${url}" ]]; do
+            page=$(curl -fsSL --retry 3 "${url}")
+            tags+=$(jq -r --arg cutoff "${cutoff}" '
+              .results[]
+              | select((.tag_last_pushed // .last_updated) >= $cutoff)
+              | .name
+              | select(test("^3\\.[0-9]+\\.[0-9]+\\.[0-9]+-rc\\.[0-9]+$"))
+            ' <<< "${page}")$'\n'
+            oldest=$(jq -r '.results[-1] | (.tag_last_pushed // .last_updated) // ""' <<< "${page}")
+            if [[ -z "${oldest}" || "${oldest}" < "${cutoff}" ]]; then
+              break
+            fi
+            url=$(jq -r '.next // ""' <<< "${page}")
+          done
+
+          tags=$(echo "${tags}" | sed '/^$/d' | sort -uV | tr '\n' ' ' | sed 's/ *$//')
+          if [[ -z "${tags}" ]]; then
+            echo "No new RC images found." | tee -a "${GITHUB_STEP_SUMMARY}"
+          else
+            echo "New RC images found: ${tags}" | tee -a "${GITHUB_STEP_SUMMARY}"
+          fi
+          echo "tags=${tags}" >> "${GITHUB_OUTPUT}"
+
+      # Short-lived App token, minted in the job that uses it.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        if: ${{ steps.find.outputs.tags != '' }}
+        id: app-token
+        with:
+          client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
+          private-key: ${{ secrets.GH_APP__KONG_K8S__PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            kubernetes-ingress-controller
+
+      - name: checkout repository
+        if: ${{ steps.find.outputs.tags != '' }}
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Trigger validation workflows
+        if: ${{ steps.find.outputs.tags != '' }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          TAGS: ${{ steps.find.outputs.tags }}
+          REF: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          first=true
+          for tag in ${TAGS}; do
+            if [[ "${first}" != "true" ]]; then
+              echo "Waiting ${DISPATCH_INTERVAL_SECONDS}s before triggering the next validation..."
+              sleep "${DISPATCH_INTERVAL_SECONDS}"
+            fi
+            first=false
+            # The effective version is the first 3 parts of the tag, e.g. 3.16.0.1-rc.3 -> 3.16.0.
+            effective_version=$(echo "${tag}" | cut -d. -f1-3)
+            echo "Triggering validation for ${KONG_IMAGE_REPO}:${tag} (effective version ${effective_version})"
+            gh workflow run validate_kong_image.yaml --ref "${REF}" \
+              -f kong-image-repo="${KONG_IMAGE_REPO}" \
+              -f kong-image-tag="${tag}" \
+              -f kong-effective-version="${effective_version}"
+          done

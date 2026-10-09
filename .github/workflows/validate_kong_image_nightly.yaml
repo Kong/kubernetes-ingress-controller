@@ -1,0 +1,51 @@
+name: validate Kong image
+
+on:
+  schedule:
+    - cron: '30 5 * * *'
+  workflow_dispatch: {}
+
+jobs:
+  run-validate-kong-image-tests:
+    runs-on: ubuntu-latest
+    name: validate-kong-image-${{ matrix.kong-version }}
+    strategy:
+      matrix:
+        kong-version:
+        - "2.8"
+        - "3.4"
+        kic-version:
+        - "2.12"
+    steps:
+      - id: checkout_release_branch
+        name: "Checkout to release branch release/${{ matrix.kic-version }}.x"
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          with:
+            ref: "release/${{ matrix.kic-version }}.x"
+
+      - id: run_e2e_tests
+        name: "Run e2e tests against KIC ${{ matrix.kic-version }} and Kong gateway ${{ matrix.kong-version }}"
+        uses:  ./.github/workflows/_e2e_tests.yaml
+        secrets: inherit
+        with:
+          kic-image: kong/kubernetes-ingress-controller:${{ matrix.kic-version }}
+          kong-image: kong/kong-gateway:${{ matrix.kong-version }}
+          load-local-image: false
+          run-gke: false
+          run-istio: true
+          all-supported-k8s-versions: false
+
+      - id: run_integration_tests
+        name: "Run integration tests against KIC codebase on release/${{ matrix.kic-version }}.x and Kong gateway ${{ matrix.kong-version }}"
+        uses: ./.github/workflows/_integration_tests.yaml
+        secrets: inherit
+        with:
+          kong-container-repo: "kong"
+          kong-container-tag:  "${{ matrix.kong-version }}"
+          kong-oss-effective-version: "${{ matrix.kong-version }}"
+          kong-enterprise-container-repo: "kong/kong-gateway"
+          kong-enterprise-container-tag: "${{ matrix.kong-version }}"
+          kong-enterprise-effective-version: "${{ matrix.kong-version }}"
+          log-output-file:  /tmp/integration-tests-kic-logs

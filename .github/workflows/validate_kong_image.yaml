@@ -42,14 +42,24 @@ jobs:
     if: ${{ github.event.inputs.issue-number != '' }}
     runs-on: ubuntu-latest
     env:
-      GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
       # URL is the current workflow's run URL.
       # Sadly this is not readily available in github's context.
       URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       ISSUE_NUMBER: ${{ github.event.inputs.issue-number }}
     steps:
+      # Short-lived App token, minted in the job that uses it.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
+          private-key: ${{ secrets.GH_APP__KONG_K8S__PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            kubernetes-ingress-controller
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-      - run: |
+      - env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
           gh issue comment ${ISSUE_NUMBER} --body \
             'Kong Gateway validation tests were started at ${{ env.URL }} with the following parameters:
             ```json
@@ -93,16 +103,23 @@ jobs:
     - run-integration-tests
     if: ${{ always() && github.event.inputs.issue-number != '' }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      issues: write
     env:
-      GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
       URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
       ISSUE_NUMBER: ${{ github.event.inputs.issue-number }}
     steps:
+      # Short-lived App token, minted in the job that uses it.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
+          private-key: ${{ secrets.GH_APP__KONG_K8S__PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            kubernetes-ingress-controller
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - if: ${{ !contains(needs.*.result, 'failure') && !contains(needs.*.result, 'cancelled') }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           gh issue close ${ISSUE_NUMBER} --comment \
             'Kong Gateway validation tests **PASSED** ✅ at ${{ env.URL }} with the following parameters:
@@ -111,6 +128,8 @@ jobs:
             ```
             '
       - if: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           gh issue comment ${ISSUE_NUMBER} --body \
             'Kong Gateway validation tests **FAILED** ❌ at ${{ env.URL }} with the following parameters:

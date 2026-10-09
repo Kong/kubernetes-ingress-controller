@@ -14,10 +14,17 @@ jobs:
   create_docs_pr:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      pull-requests: write
     steps:
+      # Short-lived App token, minted in the job that uses it.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
+          private-key: ${{ secrets.GH_APP__KONG_K8S__PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            kubernetes-ingress-controller
+            developer.konghq.com
       - name: Parse semver string
         id: semver_parser
         uses: booxmedialtd/ws-action-parse-semver@7784200024d6b3fc01253e617ec0168daf603de3 # v1.4.7
@@ -68,7 +75,7 @@ jobs:
         uses: peter-evans/create-pull-request@271a8d0340265f705b14b6d32b9829c1cb33d45e
         if: steps.detect-changes.outputs.HAS_CHANGES
         with:
-          token: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
+          token: ${{ steps.app-token.outputs.token }}
           title: Update docs for KIC ${{ steps.semver_parser.outputs.fullversion }}
           commit-message: Synchronize auto-generated KIC API reference
           committer: Kong's Team k8s bot <team-k8s+github-bot@konghq.com>

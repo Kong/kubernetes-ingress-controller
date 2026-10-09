@@ -13,9 +13,6 @@ jobs:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     name: Backport
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
     # Only react to merged PRs for security reasons.
     # See https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target.
     if: >
@@ -28,6 +25,15 @@ jobs:
         )
       )
     steps:
+      # Short-lived App token, minted in the job that uses it.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
+          private-key: ${{ secrets.GH_APP__KONG_K8S__PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            kubernetes-ingress-controller
       - uses: tibdex/backport@9565281eda0731b1d20c4025c43339fb0a23812e # v2.0.4
         with:
-          github_token: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
+          github_token: ${{ steps.app-token.outputs.token }}

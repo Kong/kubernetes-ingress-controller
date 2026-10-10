@@ -40,6 +40,11 @@ on:
         type: boolean
         required: false
         default: false
+      send-slack-notification:
+        description: Whether to send the result of the validation tests to Slack.
+        type: boolean
+        required: false
+        default: false
 
 permissions:
   contents: read
@@ -159,3 +164,30 @@ jobs:
             '"$EVENT_INPUTS_JSON"'
             ```
             '
+
+  notify-on-slack:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    needs:
+    - run-e2e-tests
+    - run-integration-tests
+    if: ${{ !cancelled() && github.event.inputs.send-slack-notification == 'true' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        with:
+          egress-policy: audit
+      - name: Notify on Slack with the result of the validation tests
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          KONG_IMAGE: ${{ format('{0}:{1}', github.event.inputs.kong-image-repo, github.event.inputs.kong-image-tag) }}
+          FAILED: ${{ contains(needs.*.result, 'failure') || contains(needs.*.result, 'cancelled') }}
+        run: |
+          if [[ "${FAILED}" == "true" ]]; then
+            text=":red_circle: Image validation tests for Kong gateway image \`${KONG_IMAGE}\` failed: <${RUN_URL}|workflow run>"
+          else
+            text=":white_check_mark: Image validation tests for Kong gateway image \`${KONG_IMAGE}\` passed: <${RUN_URL}|workflow run>"
+          fi
+          payload=$(jq -n --arg text "${text}" '{text: $text}')
+          curl -fsS -X POST -H 'Content-type: application/json' --data "${payload}" "${SLACK_WEBHOOK_URL}"

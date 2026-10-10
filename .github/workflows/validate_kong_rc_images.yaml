@@ -106,5 +106,6 @@ jobs:
             gh workflow run validate_kong_image.yaml --ref "${REF}" \
               -f kong-image-repo="${KONG_IMAGE_REPO}" \
               -f kong-image-tag="${tag}" \
-              -f kong-effective-version="${effective_version}"
+              -f kong-effective-version="${effective_version}" \
+              -f send-slack-notification=true
           done

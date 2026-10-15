@@ -163,8 +163,8 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForReferenceGrant(ctx context.Contex
 	for _, httproute := range httproutes.Items {
 		for _, from := range grant.Spec.From {
 			if string(from.Namespace) == httproute.Namespace &&
-				from.Kind == ("HTTPRoute") &&
-				from.Group == ("gateway.networking.k8s.io") {
+				from.Kind == "HTTPRoute" &&
+				from.Group == "gateway.networking.k8s.io" {
 				recs = append(recs, reconcile.Request{
 					NamespacedName: k8stypes.NamespacedName{
 						Namespace: httproute.Namespace,

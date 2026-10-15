@@ -492,12 +492,12 @@ func printHTTPRoutesConditions(ctx context.Context, client ctrlclient.Client, nn
 	}
 
 	var sb strings.Builder
-	sb.WriteString(fmt.Sprintf("HTTPRoute %s/%s has the following Parents in Status:", nn.Namespace, nn.Name))
+	fmt.Fprintf(&sb, "HTTPRoute %s/%s has the following Parents in Status:", nn.Namespace, nn.Name)
 	for _, p := range route.Status.Parents {
 		if p.ParentRef.Namespace != nil {
-			_, _ = sb.WriteString(fmt.Sprintf("\nParent %s/%s: ", *p.ParentRef.Namespace, string(p.ParentRef.Name)))
+			_, _ = fmt.Fprintf(&sb, "\nParent %s/%s: ", *p.ParentRef.Namespace, string(p.ParentRef.Name))
 		} else {
-			_, _ = sb.WriteString(fmt.Sprintf("\nParent %s: ", string(p.ParentRef.Name)))
+			_, _ = fmt.Fprintf(&sb, "\nParent %s: ", string(p.ParentRef.Name))
 		}
 		for _, c := range p.Conditions {
 			s := fmt.Sprintf(

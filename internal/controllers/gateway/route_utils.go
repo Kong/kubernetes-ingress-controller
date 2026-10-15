@@ -360,7 +360,7 @@ func getSupportedGatewayForRoute[T gatewayapi.RouteT](
 }
 
 func routeHostnamesIntersectsWithListenerHostname[T gatewayapi.RouteT](route T, listener gatewayapi.Listener) bool {
-	switch r := (any)(route).(type) {
+	switch r := any(route).(type) {
 	case *gatewayapi.HTTPRoute:
 		return listenerHostnameIntersectWithRouteHostnames(listener, r.Spec.Hostnames)
 	case *gatewayapi.TCPRoute:
@@ -377,7 +377,7 @@ func routeHostnamesIntersectsWithListenerHostname[T gatewayapi.RouteT](route T, 
 }
 
 func routeTypeMatchesListenerType[T gatewayapi.RouteT](route T, listener gatewayapi.Listener) bool {
-	switch (any)(route).(type) {
+	switch any(route).(type) {
 	case *gatewayapi.HTTPRoute:
 		// HTTPRoutes support Terminate only
 		// Note: this is a guess we are doing as the upstream documentation is unclear at the moment.
@@ -671,8 +671,8 @@ func getMinimumHostnameIntersection(gateways []supportedGatewayWithCondition, ho
 	for _, gateway := range gateways {
 		for _, listener := range gateway.gateway.Spec.Listeners {
 			// if the listenerName is specified and matches the name of the gateway listener proceed
-			if (gatewayapi.SectionName)(gateway.listenerName) == "" ||
-				(gatewayapi.SectionName)(gateway.listenerName) == (listener.Name) {
+			if gatewayapi.SectionName(gateway.listenerName) == "" ||
+				gatewayapi.SectionName(gateway.listenerName) == listener.Name {
 				if listener.Hostname == nil || *listener.Hostname == "" {
 					return hostname
 				}

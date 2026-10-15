@@ -750,8 +750,7 @@ func (c *GlobalCtrlRuntimeMetricsRecorder) recordFallbackPushBrokenResources(bro
 // pushFailureReason extracts config push failure reason from an error returned
 // from sendconfig's onUpdateInMemoryMode or onUpdateDBMode.
 func pushFailureReason(err error) string {
-	var netErr net.Error
-	if errors.As(err, &netErr) {
+	if _, ok := errors.AsType[net.Error](err); ok {
 		return FailureReasonNetwork
 	}
 

@@ -218,7 +218,7 @@ func resourceErrorFromEntityAction(event diff.EntityAction) (ResourceError, erro
 		return ResourceError{}, fmt.Errorf("entity %s/%s of type %s lacks 'Tags' field",
 			event.Entity.Kind, event.Entity.Name, reflect.TypeOf(subj))
 	}
-	tags, ok := tagsValue.Interface().([]*string)
+	tags, ok := reflect.TypeAssert[[]*string](tagsValue)
 	if !ok {
 		return ResourceError{}, fmt.Errorf("entity %s/%s Tags field is not []*string",
 			event.Entity.Kind, event.Entity.Name)

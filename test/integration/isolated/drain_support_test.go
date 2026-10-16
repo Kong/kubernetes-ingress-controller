@@ -6,7 +6,6 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	discoveryv1 "k8s.io/api/discovery/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/util"
 )
@@ -15,14 +14,6 @@ func TestDrainSupportEndpointProcessing(t *testing.T) {
 	t.Run("terminating endpoints should be included with weight 0", func(t *testing.T) {
 		// Simulate endpoint processing logic for terminating pods
 		endpointSlice := &discoveryv1.EndpointSlice{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-endpoints",
-				Namespace: "default",
-				Labels: map[string]string{
-					"kubernetes.io/service-name": "test-service",
-				},
-			},
-
 			Endpoints: []discoveryv1.Endpoint{
 				{
 					Addresses: []string{"10.0.0.1"},

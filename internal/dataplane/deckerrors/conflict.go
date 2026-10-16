@@ -35,8 +35,7 @@ func IsConflictErr(err error) bool {
 		return true
 	}
 
-	var deckErrArray deckutils.ErrArray
-	if errors.As(err, &deckErrArray) {
+	if deckErrArray, ok := errors.AsType[deckutils.ErrArray](err); ok {
 		if slices.ContainsFunc(deckErrArray.Errors, IsConflictErr) {
 			return true
 		}

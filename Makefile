@@ -159,7 +159,7 @@ MODERNIZE = $(PROJECT_DIR)/bin/modernize
 .PHONY: modernize
 modernize: yq
 	GOBIN=$(PROJECT_DIR)/bin go install -v \
-		golang.org/x/tools/gopls/internal/analysis/modernize/cmd/modernize@$(MODERNIZE_VERSION)
+		golang.org/x/tools/go/analysis/passes/modernize/cmd/modernize@$(MODERNIZE_VERSION)
 
 # ------------------------------------------------------------------------------
 # Build
@@ -211,9 +211,10 @@ fmt:
 	go fmt ./...
 
 
+# TODO: enable embedlit and newexpr; they are disabled for now because they would rewrite thousands of lines.
 .PHONY: lint.modernize
 lint.modernize: modernize
-	$(MODERNIZE) ./...
+	$(MODERNIZE) -embedlit=false -newexpr=false ./...
 
 .PHONY: lint
 lint: verify.tidy golangci-lint lint.modernize staticcheck

@@ -3,9 +3,9 @@ controller-tools: "0.18.0"
 # renovate: datasource=github-releases depName=kubernetes-sigs/kustomize
 kustomize: "5.7.1"
 # renovate: datasource=github-releases depName=golangci/golangci-lint
-golangci-lint: "2.9.0"
+golangci-lint: "2.14.0"
 # TODO: Renovate comment is missing. This needs to be added at some point.
-modernize: "v0.19.1"
+modernize: "v0.52.0"
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
 skaffold: "2.16.1"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
@@ -19,7 +19,7 @@ gojunit-report: "2.1.0"
 # renovate: datasource=github-releases depName=gotestyourself/gotestsum
 gotestsum: "1.12.3"
 # renovate: datasource=github-releases depName=dominikh/go-tools
-staticcheck: "2025.1.1"
+staticcheck: "2026.2.2"
 # renovate: datasource=github-releases depName=go-delve/delve
 delve: "1.27.2"
 # renovate: datasource=github-releases depName=rhysd/actionlint

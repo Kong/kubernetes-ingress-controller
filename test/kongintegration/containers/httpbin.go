@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/docker/go-connections/nat"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
@@ -21,12 +20,12 @@ type HTTPBin struct {
 
 // NewHTTPBin spawns a docker container running the `kong/httpbin` which can be used for proxy routing testing.
 func NewHTTPBin(ctx context.Context, t *testing.T) HTTPBin {
-	port, err := nat.NewPort("", strconv.Itoa(test.HTTPBinPort))
-	require.NoError(t, err)
+	port := strconv.Itoa(test.HTTPBinPort)
 	req := testcontainers.ContainerRequest{
-		Image:        test.HTTPBinImage,
-		ExposedPorts: []string{MappedLocalPort(t, port)},
-		WaitingFor:   wait.ForListeningPort(port),
+		Image:              test.HTTPBinImage,
+		ExposedPorts:       []string{port},
+		HostConfigModifier: FreeHostPortBindings(t, port),
+		WaitingFor:         wait.ForListeningPort(port),
 	}
 	httpBinC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
 		ContainerRequest: req,

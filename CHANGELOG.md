@@ -8,6 +8,7 @@ Adding a new version? You'll need three changes:
   This is all the way at the bottom. It's the thing we always forget.
 --->
 
+- [3.5.14](#3514)
 - [3.5.13](#3513)
 - [3.5.12](#3512)
 - [3.5.11](#3511)
@@ -136,7 +137,9 @@ Adding a new version? You'll need three changes:
 - [0.0.5](#005)
 - [0.0.4 and prior](#004-and-prior)
 
-## Unreleased
+## [3.5.14]
+
+> Release date: 2026-10-22
 
 ### Fixed
 
@@ -153,8 +156,9 @@ Adding a new version? You'll need three changes:
 
 ### Changed
 
-- Bump Go to 1.27.2.
+- Bump Go to 1.27.3.
   [#8108](https://github.com/Kong/kubernetes-ingress-controller/pull/8108)
+  [#8126](https://github.com/Kong/kubernetes-ingress-controller/pull/8126)
 
 ## [3.5.13]
 
@@ -4378,6 +4382,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.5.14]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.13...v3.5.14
 [3.5.13]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.12...v3.5.13
 [3.5.12]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.11...v3.5.12
 [3.5.11]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.10...v3.5.11

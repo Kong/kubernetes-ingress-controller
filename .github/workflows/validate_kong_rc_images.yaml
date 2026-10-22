@@ -1,78 +1,97 @@
 name: validate Kong RC images (scheduled)
 
-# Polls kong/kong-gateway-dev for release candidate images (x.x.x.x-rc.x) pushed since
-# the previous poll and triggers validate_kong_image.yaml for each of them.
+# Polls kong/kong-gateway-dev for release candidate images (x.x.x.x-rc.x) and triggers
+# validate_kong_image.yaml for each of them.
+# Scheduled runs cover the fixed window [previous POLL_ANCHOR_TIME, latest POLL_ANCHOR_TIME)
+# so that consecutive runs neither miss nor re-validate images, even if a run is delayed.
 
 on:
   schedule:
+    # Must match POLL_ANCHOR_TIME below.
     - cron: '0 6 * * *'
   workflow_dispatch:
     inputs:
       lookback-hours:
-        description: Trigger validation for RC images pushed within this many hours. Should match the schedule period.
+        description: Override the fixed daily window and validate RC images pushed within
+          this many hours before now. Leave empty to use the fixed daily window.
         type: number
         required: false
-        default: 24
 
 permissions:
   contents: read
 
 env:
   KONG_IMAGE_REPO: kong/kong-gateway-dev
-  # Interval between triggering subsequent validation workflows.
+  # Pattern of RC image tags to validate, e.g. 3.16.0.1-rc.3.
+  KONG_RC_TAG_REGEX: '^3\.[0-9]+\.[0-9]+\.[0-9]+-rc\.[0-9]+$'
+  # Time of day (UTC) at which the daily poll window starts and ends. Must match the cron schedule.
+  POLL_ANCHOR_TIME: "06:00"
+  # Interval between triggering subsequent validation workflows. Each matrix leg of
+  # trigger-validation sleeps this long after its dispatch, except the last one.
   DISPATCH_INTERVAL_SECONDS: 600
 
 jobs:
-  trigger-validation:
-    # Allow enough time to space out multiple dispatches by DISPATCH_INTERVAL_SECONDS.
-    timeout-minutes: 360
+  find-images:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     runs-on: ubuntu-latest
+    outputs:
+      tags: ${{ steps.find.outputs.tags }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
         with:
           egress-policy: audit
 
+      - name: checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
       - name: Find new RC images
         id: find
         env:
-          LOOKBACK_HOURS: ${{ github.event.inputs.lookback-hours || 24 }}
+          LOOKBACK_HOURS: ${{ github.event.inputs.lookback-hours }}
         run: |
           set -euo pipefail
-          cutoff=$(date -u -d "-${LOOKBACK_HOURS} hours" +%Y-%m-%dT%H:%M:%SZ)
-          echo "Looking for RC images in ${KONG_IMAGE_REPO} pushed since ${cutoff}"
+          # Manual runs may override the fixed daily window with a lookback from now.
+          if [[ -n "${LOOKBACK_HOURS}" ]]; then
+            window=(--lookback-hours "${LOOKBACK_HOURS}")
+          else
+            window=(--daily-window "${POLL_ANCHOR_TIME}")
+          fi
 
           # Docker Hub only supports substring filtering on tag names, so narrow the results
-          # down with "-rc." and apply the exact pattern below. Tags are sorted newest first,
-          # so stop paginating once we reach tags older than the cutoff.
-          url="https://hub.docker.com/v2/repositories/${KONG_IMAGE_REPO}/tags?page_size=100&ordering=last_updated&name=-rc."
-          tags=""
-          while [[ -n "${url}" ]]; do
-            page=$(curl -fsSL --retry 3 "${url}")
-            tags+=$(jq -r --arg cutoff "${cutoff}" '
-              .results[]
-              | select((.tag_last_pushed // .last_updated) >= $cutoff)
-              | .name
-              | select(test("^3\\.[0-9]+\\.[0-9]+\\.[0-9]+-rc\\.[0-9]+$"))
-            ' <<< "${page}")$'\n'
-            oldest=$(jq -r '.results[-1] | (.tag_last_pushed // .last_updated) // ""' <<< "${page}")
-            if [[ -z "${oldest}" || "${oldest}" < "${cutoff}" ]]; then
-              break
-            fi
-            url=$(jq -r '.next // ""' <<< "${page}")
-          done
-
-          tags=$(echo "${tags}" | sed '/^$/d' | sort -uV | tr '\n' ' ' | sed 's/ *$//')
+          # down with "-rc." and let the script apply the exact pattern.
+          tags=$(./scripts/list-docker-hub-tags.sh --repository "${KONG_IMAGE_REPO}" \
+            --regex "${KONG_RC_TAG_REGEX}" --name-filter "-rc." "${window[@]}")
           if [[ -z "${tags}" ]]; then
             echo "No new RC images found." | tee -a "${GITHUB_STEP_SUMMARY}"
           else
-            echo "New RC images found: ${tags}" | tee -a "${GITHUB_STEP_SUMMARY}"
+            echo "New RC images found: ${tags//$'\n'/ }" | tee -a "${GITHUB_STEP_SUMMARY}"
           fi
-          echo "tags=${tags}" >> "${GITHUB_OUTPUT}"
+          echo "tags=$(jq -Rnc '[inputs | select(length > 0)]' <<< "${tags}")" >> "${GITHUB_OUTPUT}"
+
+  # One matrix leg per tag, so each dispatch mints its own App token: installation
+  # tokens expire after 1 hour, which a single token would outlive with enough tags.
+  trigger-validation:
+    needs: find-images
+    if: ${{ needs.find-images.outputs.tags != '[]' }}
+    # One dispatch plus at most one DISPATCH_INTERVAL_SECONDS sleep.
+    timeout-minutes: 20
+    runs-on: ubuntu-latest
+    strategy:
+      # Dispatch one tag at a time, spaced out by the sleep below.
+      max-parallel: 1
+      # A failed dispatch must not skip the remaining tags.
+      fail-fast: false
+      matrix:
+        tag: ${{ fromJSON(needs.find-images.outputs.tags) }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
+        with:
+          egress-policy: audit
 
       # Short-lived App token, minted in the job that uses it.
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        if: ${{ steps.find.outputs.tags != '' }}
         id: app-token
         with:
           client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
@@ -80,32 +99,28 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: |
             kubernetes-ingress-controller
+          permission-actions: write
 
-      - name: checkout repository
-        if: ${{ steps.find.outputs.tags != '' }}
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-
-      - name: Trigger validation workflows
-        if: ${{ steps.find.outputs.tags != '' }}
+      - name: Trigger validation workflow
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          TAGS: ${{ steps.find.outputs.tags }}
+          GH_REPO: ${{ github.repository }}
+          TAG: ${{ matrix.tag }}
           REF: ${{ github.ref_name }}
+          JOB_INDEX: ${{ strategy.job-index }}
+          JOB_TOTAL: ${{ strategy.job-total }}
         run: |
           set -euo pipefail
-          first=true
-          for tag in ${TAGS}; do
-            if [[ "${first}" != "true" ]]; then
-              echo "Waiting ${DISPATCH_INTERVAL_SECONDS}s before triggering the next validation..."
-              sleep "${DISPATCH_INTERVAL_SECONDS}"
-            fi
-            first=false
-            # The effective version is the first 3 parts of the tag, e.g. 3.16.0.1-rc.3 -> 3.16.0.
-            effective_version=$(echo "${tag}" | cut -d. -f1-3)
-            echo "Triggering validation for ${KONG_IMAGE_REPO}:${tag} (effective version ${effective_version})"
-            gh workflow run validate_kong_image.yaml --ref "${REF}" \
-              -f kong-image-repo="${KONG_IMAGE_REPO}" \
-              -f kong-image-tag="${tag}" \
-              -f kong-effective-version="${effective_version}" \
-              -f send-slack-notification=true
-          done
+          # The effective version is the first 3 parts of the tag, e.g. 3.16.0.1-rc.3 -> 3.16.0.
+          effective_version=$(echo "${TAG}" | cut -d. -f1-3)
+          echo "Triggering validation for ${KONG_IMAGE_REPO}:${TAG} (effective version ${effective_version})"
+          gh workflow run validate_kong_image.yaml --ref "${REF}" \
+            -f kong-image-repo="${KONG_IMAGE_REPO}" \
+            -f kong-image-tag="${TAG}" \
+            -f kong-effective-version="${effective_version}" \
+            -f send-slack-notification=true
+
+          if (( JOB_INDEX + 1 < JOB_TOTAL )); then
+            echo "Waiting ${DISPATCH_INTERVAL_SECONDS}s before triggering the next validation..."
+            sleep "${DISPATCH_INTERVAL_SECONDS}"
+          fi

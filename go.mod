@@ -51,7 +51,7 @@ require (
 	github.com/prometheus/common v0.65.0
 	github.com/samber/lo v1.51.0
 	github.com/samber/mo v1.14.0
-	github.com/sethvargo/go-password v0.3.1
+	github.com/sethvargo/go-password v0.4.0
 	github.com/sourcegraph/conc v0.3.0
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/pflag v1.0.7

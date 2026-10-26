@@ -183,9 +183,9 @@ func (s *UpdateStrategyDBMode) HandleEvents(
 		case <-ctx.Done():
 			// Release resource error lock before sending diffs to diagnostic server to prevent blocking of main procedure of updating.
 			s.resourceErrorLock.Unlock()
-			if diagnostic != nil && diagnostic.Diffs != nil {
+			if diagnostic != nil && !diagnostic.IsEmpty() {
 				diff.Timestamp = time.Now().Format(time.RFC3339)
-				diagnostic.Diffs <- diff
+				diagnostic.SendDiff(diff)
 				s.logger.V(logging.DebugLevel).Info("recorded database update events and diff", "hash", hash)
 			}
 			return

@@ -8,6 +8,7 @@ Adding a new version? You'll need three changes:
   This is all the way at the bottom. It's the thing we always forget.
 --->
 
+- [3.5.14](#3514)
 - [3.5.13](#3513)
 - [3.5.12](#3512)
 - [3.5.11](#3511)
@@ -22,6 +23,7 @@ Adding a new version? You'll need three changes:
 - [3.5.2](#352)
 - [3.5.1](#351)
 - [3.5.0](#350)
+- [3.4.21](#3421)
 - [3.4.20](#3420)
 - [3.4.19](#3419)
 - [3.4.18](#3418)
@@ -136,7 +138,9 @@ Adding a new version? You'll need three changes:
 - [0.0.5](#005)
 - [0.0.4 and prior](#004-and-prior)
 
-## Unreleased
+## [3.5.14]
+
+> Release date: 2026-10-22
 
 ### Fixed
 
@@ -153,8 +157,9 @@ Adding a new version? You'll need three changes:
 
 ### Changed
 
-- Bump Go to 1.27.2.
-  [#8110](https://github.com/Kong/kubernetes-ingress-controller/pull/8110)
+- Bump Go to 1.27.3.
+  [#8108](https://github.com/Kong/kubernetes-ingress-controller/pull/8108)
+  [#8126](https://github.com/Kong/kubernetes-ingress-controller/pull/8126)
 
 ## [3.5.13]
 
@@ -404,6 +409,29 @@ Adding a new version? You'll need three changes:
   can be used for both hash_on (always) and hash_fallack (when primary hashing
   source is different than cookie).
   [#7582](https://github.com/Kong/kubernetes-ingress-controller/pull/7582)
+
+## [3.4.21]
+
+> Release date: 2026-10-22
+
+### Fixed
+
+- Inherit the tags of the translated Kong certificate from the one with earliest
+  creation timestamp, then lowest ID to keep the tags stable in merging certificates
+  from multiple `Secret`s with the same certificate content.
+  [#8085](https://github.com/Kong/kubernetes-ingress-controller/pull/8085)
+- Generate a distinct Kong route for each match when its parent `HTTPRoute` rule
+  contains `ReplacePrefixMatch` typed `URLRewrite` filter or `requestRedirect` filter.
+  NOTE: This would make the generate routes from the affected `HTTPRoute` rules
+  containing the filters to be deleted and re-created, and the names of the routes
+  are changed.
+  [#8081](https://github.com/Kong/kubernetes-ingress-controller/pull/8081)
+
+### Changed
+
+- Bump Go to 1.27.3.
+  [#8109](https://github.com/Kong/kubernetes-ingress-controller/pull/8109)
+  [#8125](https://github.com/Kong/kubernetes-ingress-controller/pull/8125)
 
 ## [3.4.20]
 
@@ -4591,6 +4619,7 @@ Please read the changelog and test in your environment.
 - The initial versions were rapildy iterated to deliver
   a working ingress controller.
 
+[3.5.14]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.13...v3.5.14
 [3.5.13]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.12...v3.5.13
 [3.5.12]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.11...v3.5.12
 [3.5.11]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.10...v3.5.11
@@ -4605,6 +4634,7 @@ Please read the changelog and test in your environment.
 [3.5.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.1...v3.5.2
 [3.5.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.0...v3.5.1
 [3.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.7...v3.5.0
+[3.4.21]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.20...v3.4.21
 [3.4.20]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.19...v3.4.20
 [3.4.19]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.18...v3.4.19
 [3.4.18]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.17...v3.4.18

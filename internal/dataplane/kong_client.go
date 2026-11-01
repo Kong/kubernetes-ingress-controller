@@ -899,13 +899,13 @@ func prepareSendDiagnosticFn(
 	targetContent *file.Content,
 	deckGenParams deckgen.GenerateDeckContentParams,
 ) sendDiagnosticFn {
-	if diagnosticConfig == (diagnostics.Client{}) {
+	if diagnosticConfig.IsEmpty() {
 		// noop, diagnostics won't be sent
 		return func(diagnostics.DumpMeta, []byte) {}
 	}
 
 	var config *file.Content
-	if diagnosticConfig.DumpsIncludeSensitive {
+	if diagnosticConfig.DumpsIncludeSensitive() {
 		config = targetContent
 	} else {
 		redactedConfig := deckgen.ToDeckContent(ctx,
@@ -923,14 +923,13 @@ func prepareSendDiagnosticFn(
 		// might not see exactly what they intend to see i.e. come failures
 		// or successfully send configs might be covered by those send
 		// later on but we're OK with this limitation of said API.
-		select {
-		case diagnosticConfig.Configs <- diagnostics.ConfigDump{
+		if ok := diagnosticConfig.SendConfig(diagnostics.ConfigDump{
 			Meta:            meta,
 			Config:          *config,
 			RawResponseBody: rawResponseBody,
-		}:
+		}); ok {
 			logger.V(logging.DebugLevel).Info("Shipping config to diagnostic server")
-		default:
+		} else {
 			logger.Error(nil, "Config diagnostic buffer full, dropping diagnostic config")
 		}
 	}
@@ -1081,13 +1080,16 @@ func (c *KongClient) logFallbackCacheMetadata(metadata fallback.GeneratedCacheMe
 }
 
 func (c *KongClient) maybeSendFallbackConfigDiagnostics(ctx context.Context, generatedCacheMetadata fallback.GeneratedCacheMetadata) error {
-	if ch := c.diagnostic.FallbackCacheMetadata; ch != nil {
-		select {
-		case ch <- generatedCacheMetadata:
+	if c.diagnostic.IsEmpty() {
+		return nil
+	}
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	default:
+		if ok := c.diagnostic.SendFallbackCacheMetadata(generatedCacheMetadata); ok {
 			c.logger.V(logging.DebugLevel).Info("Shipping fallback cache metadata to diagnostics server")
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
+		} else {
 			c.logger.Error(nil, "Fallback cache metadata buffer full, dropping diagnostics")
 		}
 	}

@@ -27,7 +27,7 @@ func TestDiagnosticsServer_ConfigDumps(t *testing.T) {
 	ctx := t.Context()
 
 	client, port := setupTestServer(ctx, t)
-	configsCh := client.Configs
+	configsCh := client.configs
 
 	// Use a WaitGroup to ensure that both the write and read operations are run simultaneously.
 	readWriteWg := sync.WaitGroup{}
@@ -78,7 +78,7 @@ func TestDiagnosticsServer_Diffs(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 	client, port := setupTestServer(ctx, t)
-	diffCh := client.Diffs
+	diffCh := client.diffs
 
 	// initially write the max number of cached diffs
 	configDumpsToWrite := diffHistorySize

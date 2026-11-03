@@ -18,7 +18,7 @@ go 1.27.3
 require (
 	cloud.google.com/go/container v1.44.0
 	dario.cat/mergo v1.0.2
-	github.com/Kong/sdk-konnect-go v0.6.0
+	github.com/Kong/sdk-konnect-go v0.9.1
 	github.com/Masterminds/sprig/v3 v3.3.0
 	github.com/avast/retry-go/v4 v4.6.1
 	github.com/blang/semver/v4 v4.0.0
@@ -37,7 +37,7 @@ require (
 	github.com/jpillora/backoff v1.0.0
 	github.com/kong/go-database-reconciler v1.31.6
 	github.com/kong/go-kong v0.78.0
-	github.com/kong/kubernetes-configuration/v2 v2.0.0-alpha.1
+	github.com/kong/kubernetes-configuration/v2 v2.0.1
 	github.com/kong/kubernetes-telemetry v0.1.10
 	github.com/kong/kubernetes-testing-framework v0.47.2-patch.3
 	github.com/kong/semver/v4 v4.0.1
@@ -66,12 +66,12 @@ require (
 	golang.org/x/sync v0.23.0
 	google.golang.org/api v0.264.0
 	google.golang.org/grpc v1.83.2
-	k8s.io/api v0.33.3
-	k8s.io/apiextensions-apiserver v0.33.2
-	k8s.io/apimachinery v0.33.3
+	k8s.io/api v0.33.4
+	k8s.io/apiextensions-apiserver v0.33.4
+	k8s.io/apimachinery v0.33.4
 	k8s.io/cli-runtime v0.33.3
-	k8s.io/client-go v0.33.3
-	k8s.io/component-base v0.33.3
+	k8s.io/client-go v0.33.4
+	k8s.io/component-base v0.33.4
 	k8s.io/kubectl v0.33.3
 	sigs.k8s.io/controller-runtime v0.21.0
 	sigs.k8s.io/e2e-framework v0.6.0
@@ -236,7 +236,7 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.12.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
-	k8s.io/apiserver v0.33.3 // indirect
+	k8s.io/apiserver v0.33.4 // indirect
 	k8s.io/component-helpers v0.33.3 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20250318190949-c8a335a9a2ff // indirect

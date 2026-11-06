@@ -215,15 +215,6 @@ jobs:
         with:
           go-version-file: go.mod
 
-      # TODO: Remove this pin once KTF's Kong addon can skip installing chart CRDs (`--skip-crds`)
-      # when the controller is enabled. Helm 4 (shipped in ubuntu-26.04 runners) applies chart CRDs
-      # with server-side apply, which conflicts with the Kong CRDs pre-installed by the test suite
-      # via client-side apply (TestUpgradeKICWithExistingPlugins).
-      - name: setup helm
-        uses: azure/setup-helm@9bc31f4ebc9c6b171d7bfbaa5d006ae7abdb4310 # v5.0.1
-        with:
-          version: v3.22.1
-
       - uses: jdx/mise-action@5ac50f778e26fac95da98d50503682459e86d566 # v3.2.0
         with:
           install: false

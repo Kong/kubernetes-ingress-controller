@@ -78,6 +78,7 @@ func GenerateKongBuilder(_ context.Context) (*kong.Builder, []string, error) {
 }
 
 // GenerateKongBuilderWithController generates a Kong builder that installs both KIC and Kong gateway.
+// CRDs from the chart are not installed, as they are expected to be already installed in the cluster.
 func GenerateKongBuilderWithController() (*kong.Builder, error) {
 	kongbuilder := kong.NewBuilder().WithNamespace(consts.ControllerNamespace)
 
@@ -89,6 +90,9 @@ func GenerateKongBuilderWithController() (*kong.Builder, error) {
 		kongbuilder = kongbuilder.WithProxyEnterpriseEnabled(licenseJSON)
 		if testenv.DBMode() != testenv.DBModeOff {
 			kongbuilder.WithProxyEnterpriseSuperAdminPassword(consts.KongTestPassword)
+			// KTF does not set the admin token for the controller when it is disabled (see below), so set it explicitly.
+			kongbuilder.WithAdditionalValue("ingressController.env.kong_admin_token.valueFrom.secretKeyRef.name", kong.DefaultEnterpriseAdminPasswordSecretName)
+			kongbuilder.WithAdditionalValue("ingressController.env.kong_admin_token.valueFrom.secretKeyRef.key", "password")
 		}
 	}
 
@@ -122,6 +126,14 @@ func GenerateKongBuilderWithController() (*kong.Builder, error) {
 	kongbuilder = kongbuilder.WithProxyEnvVar("router_flavor", string(flavor))
 
 	kongbuilder.WithProxyAdminServiceTypeLoadBalancer()
+
+	// Helm 4 installs CRDs from the chart's crds/ with server-side apply, which conflicts with the CRDs
+	// pre-installed by the test suite via client-side apply. KTF only passes --skip-crds when the controller
+	// is disabled, so disable it and re-enable it via an additional value (appended last, so it wins).
+	kongbuilder.WithControllerDisabled()
+	kongbuilder.WithAdditionalValue("ingressController.enabled", "true")
+	// WithControllerDisabled sets the proxy readiness probe path to /status, restore the chart's default.
+	kongbuilder.WithProxyReadinessProbePath("/status/ready")
 
 	return kongbuilder, nil
 }

@@ -1,440 +1,8 @@
 window.BENCHMARK_DATA = {
-  "lastUpdate": 1793177624037,
+  "lastUpdate": 1793957517194,
   "repoUrl": "https://github.com/Kong/kubernetes-ingress-controller",
   "entries": {
     "Go Benchmark": [
-      {
-        "commit": {
-          "author": {
-            "email": "pmalek@users.noreply.github.com",
-            "name": "Patryk Małek",
-            "username": "pmalek"
-          },
-          "committer": {
-            "email": "noreply@github.com",
-            "name": "GitHub",
-            "username": "web-flow"
-          },
-          "distinct": true,
-          "id": "2af62b1bee9fcb1d9cf28619f940472490927491",
-          "message": "fix: fix credential recreation on every Konnect sync (#7978)\n\n* fix: fix credential recreation on every Konnect sync\n\n* Update CHANGELOG.md\n\nCo-authored-by: Jintao Zhang <zhangjintao9020@gmail.com>\n\n* chore: rename credentialOps fields\n\n* chore: comment for credential interface\n\n---------\n\nCo-authored-by: Jintao Zhang <zhangjintao9020@gmail.com>",
-          "timestamp": "2026-06-16T11:14:03+02:00",
-          "tree_id": "7eec616d54b15c7c1af512295e53e8ddfbfdb3f9",
-          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/2af62b1bee9fcb1d9cf28619f940472490927491"
-        },
-        "date": 1781601477605,
-        "tool": "go",
-        "benches": [
-          {
-            "name": "BenchmarkSanitizedCopy",
-            "value": 841384,
-            "unit": "ns/op\t  819431 B/op\t       4 allocs/op",
-            "extra": "1200 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkSanitizedCopy - ns/op",
-            "value": 841384,
-            "unit": "ns/op",
-            "extra": "1200 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkSanitizedCopy - B/op",
-            "value": 819431,
-            "unit": "B/op",
-            "extra": "1200 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkSanitizedCopy - allocs/op",
-            "value": 4,
-            "unit": "allocs/op",
-            "extra": "1200 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkGetPluginRelations",
-            "value": 7780,
-            "unit": "ns/op\t    7600 B/op\t      66 allocs/op",
-            "extra": "152845 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkGetPluginRelations - ns/op",
-            "value": 7780,
-            "unit": "ns/op",
-            "extra": "152845 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkGetPluginRelations - B/op",
-            "value": 7600,
-            "unit": "B/op",
-            "extra": "152845 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkGetPluginRelations - allocs/op",
-            "value": 66,
-            "unit": "allocs/op",
-            "extra": "152845 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert",
-            "value": 72.47,
-            "unit": "ns/op\t       0 B/op\t       0 allocs/op",
-            "extra": "16600698 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - ns/op",
-            "value": 72.47,
-            "unit": "ns/op",
-            "extra": "16600698 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - B/op",
-            "value": 0,
-            "unit": "B/op",
-            "extra": "16600698 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert - allocs/op",
-            "value": 0,
-            "unit": "allocs/op",
-            "extra": "16600698 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkListHTTPRoutes/1000",
-            "value": 21849,
-            "unit": "ns/op\t   24576 B/op\t       2 allocs/op",
-            "extra": "54692 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkListHTTPRoutes/1000 - ns/op",
-            "value": 21849,
-            "unit": "ns/op",
-            "extra": "54692 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkListHTTPRoutes/1000 - B/op",
-            "value": 24576,
-            "unit": "B/op",
-            "extra": "54692 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkListHTTPRoutes/1000 - allocs/op",
-            "value": 2,
-            "unit": "allocs/op",
-            "extra": "54692 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkListHTTPRoutes/10000",
-            "value": 226350,
-            "unit": "ns/op\t  245760 B/op\t       2 allocs/op",
-            "extra": "4648 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkListHTTPRoutes/10000 - ns/op",
-            "value": 226350,
-            "unit": "ns/op",
-            "extra": "4648 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkListHTTPRoutes/10000 - B/op",
-            "value": 245760,
-            "unit": "B/op",
-            "extra": "4648 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkListHTTPRoutes/10000 - allocs/op",
-            "value": 2,
-            "unit": "allocs/op",
-            "extra": "4648 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkListHTTPRoutes/100000",
-            "value": 2451168,
-            "unit": "ns/op\t 2408448 B/op\t       2 allocs/op",
-            "extra": "469 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkListHTTPRoutes/100000 - ns/op",
-            "value": 2451168,
-            "unit": "ns/op",
-            "extra": "469 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkListHTTPRoutes/100000 - B/op",
-            "value": 2408448,
-            "unit": "B/op",
-            "extra": "469 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkListHTTPRoutes/100000 - allocs/op",
-            "value": 2,
-            "unit": "allocs/op",
-            "extra": "469 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkListHTTPRoutes/1000000",
-            "value": 43724776,
-            "unit": "ns/op\t24010752 B/op\t       2 allocs/op",
-            "extra": "76 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkListHTTPRoutes/1000000 - ns/op",
-            "value": 43724776,
-            "unit": "ns/op",
-            "extra": "76 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkListHTTPRoutes/1000000 - B/op",
-            "value": 24010752,
-            "unit": "B/op",
-            "extra": "76 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkListHTTPRoutes/1000000 - allocs/op",
-            "value": 2,
-            "unit": "allocs/op",
-            "extra": "76 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkCacheStores_TakeSnapshot/Small_Without_Cache",
-            "value": 9333,
-            "unit": "ns/op\t    7888 B/op\t     183 allocs/op",
-            "extra": "129861 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkCacheStores_TakeSnapshot/Small_Without_Cache - ns/op",
-            "value": 9333,
-            "unit": "ns/op",
-            "extra": "129861 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkCacheStores_TakeSnapshot/Small_Without_Cache - B/op",
-            "value": 7888,
-            "unit": "B/op",
-            "extra": "129861 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkCacheStores_TakeSnapshot/Small_Without_Cache - allocs/op",
-            "value": 183,
-            "unit": "allocs/op",
-            "extra": "129861 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkCacheStores_TakeSnapshot/Big_Without_Cache",
-            "value": 6647092,
-            "unit": "ns/op\t 4335500 B/op\t   63229 allocs/op",
-            "extra": "180 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkCacheStores_TakeSnapshot/Big_Without_Cache - ns/op",
-            "value": 6647092,
-            "unit": "ns/op",
-            "extra": "180 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkCacheStores_TakeSnapshot/Big_Without_Cache - B/op",
-            "value": 4335500,
-            "unit": "B/op",
-            "extra": "180 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkCacheStores_TakeSnapshot/Big_Without_Cache - allocs/op",
-            "value": 63229,
-            "unit": "allocs/op",
-            "extra": "180 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkCacheStores_TakeSnapshot/Small_With_Cache",
-            "value": 7663,
-            "unit": "ns/op\t    6688 B/op\t     170 allocs/op",
-            "extra": "156794 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkCacheStores_TakeSnapshot/Small_With_Cache - ns/op",
-            "value": 7663,
-            "unit": "ns/op",
-            "extra": "156794 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkCacheStores_TakeSnapshot/Small_With_Cache - B/op",
-            "value": 6688,
-            "unit": "B/op",
-            "extra": "156794 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkCacheStores_TakeSnapshot/Small_With_Cache - allocs/op",
-            "value": 170,
-            "unit": "allocs/op",
-            "extra": "156794 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkCacheStores_TakeSnapshot/Big_With_Cache",
-            "value": 840017,
-            "unit": "ns/op\t  392912 B/op\t    6173 allocs/op",
-            "extra": "1353 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkCacheStores_TakeSnapshot/Big_With_Cache - ns/op",
-            "value": 840017,
-            "unit": "ns/op",
-            "extra": "1353 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkCacheStores_TakeSnapshot/Big_With_Cache - B/op",
-            "value": 392912,
-            "unit": "B/op",
-            "extra": "1353 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkCacheStores_TakeSnapshot/Big_With_Cache - allocs/op",
-            "value": 6173,
-            "unit": "allocs/op",
-            "extra": "1353 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkCacheStores_TakeSnapshot/Small_With_Missed_Cache",
-            "value": 10658,
-            "unit": "ns/op\t    8288 B/op\t     190 allocs/op",
-            "extra": "108630 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkCacheStores_TakeSnapshot/Small_With_Missed_Cache - ns/op",
-            "value": 10658,
-            "unit": "ns/op",
-            "extra": "108630 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkCacheStores_TakeSnapshot/Small_With_Missed_Cache - B/op",
-            "value": 8288,
-            "unit": "B/op",
-            "extra": "108630 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkCacheStores_TakeSnapshot/Small_With_Missed_Cache - allocs/op",
-            "value": 190,
-            "unit": "allocs/op",
-            "extra": "108630 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkCacheStores_TakeSnapshot/Big_With_Missed_Cache",
-            "value": 7602286,
-            "unit": "ns/op\t 4722093 B/op\t   69239 allocs/op",
-            "extra": "158 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkCacheStores_TakeSnapshot/Big_With_Missed_Cache - ns/op",
-            "value": 7602286,
-            "unit": "ns/op",
-            "extra": "158 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkCacheStores_TakeSnapshot/Big_With_Missed_Cache - B/op",
-            "value": 4722093,
-            "unit": "B/op",
-            "extra": "158 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkCacheStores_TakeSnapshot/Big_With_Missed_Cache - allocs/op",
-            "value": 69239,
-            "unit": "allocs/op",
-            "extra": "158 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkFromK8sObject",
-            "value": 263.2,
-            "unit": "ns/op\t     336 B/op\t       2 allocs/op",
-            "extra": "5621702 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkFromK8sObject - ns/op",
-            "value": 263.2,
-            "unit": "ns/op",
-            "extra": "5621702 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkFromK8sObject - B/op",
-            "value": 336,
-            "unit": "B/op",
-            "extra": "5621702 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkFromK8sObject - allocs/op",
-            "value": 2,
-            "unit": "allocs/op",
-            "extra": "5621702 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkValidateProtocol",
-            "value": 10.21,
-            "unit": "ns/op\t       0 B/op\t       0 allocs/op",
-            "extra": "100000000 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkValidateProtocol - ns/op",
-            "value": 10.21,
-            "unit": "ns/op",
-            "extra": "100000000 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkValidateProtocol - B/op",
-            "value": 0,
-            "unit": "B/op",
-            "extra": "100000000 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkValidateProtocol - allocs/op",
-            "value": 0,
-            "unit": "allocs/op",
-            "extra": "100000000 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkGetCombinations/consumer_groups",
-            "value": 511.3,
-            "unit": "ns/op\t    1152 B/op\t       1 allocs/op",
-            "extra": "2349367 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkGetCombinations/consumer_groups - ns/op",
-            "value": 511.3,
-            "unit": "ns/op",
-            "extra": "2349367 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkGetCombinations/consumer_groups - B/op",
-            "value": 1152,
-            "unit": "B/op",
-            "extra": "2349367 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkGetCombinations/consumer_groups - allocs/op",
-            "value": 1,
-            "unit": "allocs/op",
-            "extra": "2349367 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkGetCombinations/consumers",
-            "value": 730.8,
-            "unit": "ns/op\t    1792 B/op\t       1 allocs/op",
-            "extra": "1638734 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkGetCombinations/consumers - ns/op",
-            "value": 730.8,
-            "unit": "ns/op",
-            "extra": "1638734 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkGetCombinations/consumers - B/op",
-            "value": 1792,
-            "unit": "B/op",
-            "extra": "1638734 times\n4 procs"
-          },
-          {
-            "name": "BenchmarkGetCombinations/consumers - allocs/op",
-            "value": 1,
-            "unit": "allocs/op",
-            "extra": "1638734 times\n4 procs"
-          }
-        ]
-      },
       {
         "commit": {
           "author": {
@@ -21600,6 +21168,438 @@ window.BENCHMARK_DATA = {
             "value": 1,
             "unit": "allocs/op",
             "extra": "1264816 times\n4 procs"
+          }
+        ]
+      },
+      {
+        "commit": {
+          "author": {
+            "email": "tao.yi@konghq.com",
+            "name": "Tao Yi",
+            "username": "randmonkey"
+          },
+          "committer": {
+            "email": "noreply@github.com",
+            "name": "GitHub",
+            "username": "web-flow"
+          },
+          "distinct": false,
+          "id": "79b7d5050d583005f21f61631851fda84b08deac",
+          "message": "test(integration):  Skip installing CRDs in deploying KIC and Kong for isolated integration tests (#8141)\n\n* Pin helm to v3 to fix conflicts in CRD installation\n\n* skip installing CRDs in integration tests",
+          "timestamp": "2026-11-06T08:52:34Z",
+          "tree_id": "2195de6bdc0f6c83c249056f5e643d4044c4c051",
+          "url": "https://github.com/Kong/kubernetes-ingress-controller/commit/79b7d5050d583005f21f61631851fda84b08deac"
+        },
+        "date": 1793957383052,
+        "tool": "go",
+        "benches": [
+          {
+            "name": "BenchmarkSanitizedCopy (github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate)",
+            "value": 627117,
+            "unit": "ns/op\t  819429 B/op\t       4 allocs/op",
+            "extra": "1812 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkSanitizedCopy (github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate) - ns/op",
+            "value": 627117,
+            "unit": "ns/op",
+            "extra": "1812 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkSanitizedCopy (github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate) - B/op",
+            "value": 819429,
+            "unit": "B/op",
+            "extra": "1812 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkSanitizedCopy (github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate) - allocs/op",
+            "value": 4,
+            "unit": "allocs/op",
+            "extra": "1812 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkGetPluginRelations (github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate)",
+            "value": 6093,
+            "unit": "ns/op\t    7600 B/op\t      66 allocs/op",
+            "extra": "194536 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkGetPluginRelations (github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate) - ns/op",
+            "value": 6093,
+            "unit": "ns/op",
+            "extra": "194536 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkGetPluginRelations (github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate) - B/op",
+            "value": 7600,
+            "unit": "B/op",
+            "extra": "194536 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkGetPluginRelations (github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/kongstate) - allocs/op",
+            "value": 66,
+            "unit": "allocs/op",
+            "extra": "194536 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert (github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig)",
+            "value": 57.05,
+            "unit": "ns/op\t       0 B/op\t       0 allocs/op",
+            "extra": "21028804 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert (github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig) - ns/op",
+            "value": 57.05,
+            "unit": "ns/op",
+            "extra": "21028804 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert (github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig) - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "21028804 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkDefaultContentToDBLessConfigConverter_Convert (github.com/kong/kubernetes-ingress-controller/v3/internal/dataplane/sendconfig) - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "21028804 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkListHTTPRoutes/1000 (github.com/kong/kubernetes-ingress-controller/v3/internal/store)",
+            "value": 17417,
+            "unit": "ns/op\t   24576 B/op\t       2 allocs/op",
+            "extra": "68120 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkListHTTPRoutes/1000 (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - ns/op",
+            "value": 17417,
+            "unit": "ns/op",
+            "extra": "68120 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkListHTTPRoutes/1000 (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - B/op",
+            "value": 24576,
+            "unit": "B/op",
+            "extra": "68120 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkListHTTPRoutes/1000 (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - allocs/op",
+            "value": 2,
+            "unit": "allocs/op",
+            "extra": "68120 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkListHTTPRoutes/10000 (github.com/kong/kubernetes-ingress-controller/v3/internal/store)",
+            "value": 156291,
+            "unit": "ns/op\t  245760 B/op\t       2 allocs/op",
+            "extra": "7682 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkListHTTPRoutes/10000 (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - ns/op",
+            "value": 156291,
+            "unit": "ns/op",
+            "extra": "7682 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkListHTTPRoutes/10000 (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - B/op",
+            "value": 245760,
+            "unit": "B/op",
+            "extra": "7682 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkListHTTPRoutes/10000 (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - allocs/op",
+            "value": 2,
+            "unit": "allocs/op",
+            "extra": "7682 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkListHTTPRoutes/100000 (github.com/kong/kubernetes-ingress-controller/v3/internal/store)",
+            "value": 1588840,
+            "unit": "ns/op\t 2408448 B/op\t       2 allocs/op",
+            "extra": "643 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkListHTTPRoutes/100000 (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - ns/op",
+            "value": 1588840,
+            "unit": "ns/op",
+            "extra": "643 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkListHTTPRoutes/100000 (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - B/op",
+            "value": 2408448,
+            "unit": "B/op",
+            "extra": "643 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkListHTTPRoutes/100000 (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - allocs/op",
+            "value": 2,
+            "unit": "allocs/op",
+            "extra": "643 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkListHTTPRoutes/1000000 (github.com/kong/kubernetes-ingress-controller/v3/internal/store)",
+            "value": 34296613,
+            "unit": "ns/op\t24010752 B/op\t       2 allocs/op",
+            "extra": "45 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkListHTTPRoutes/1000000 (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - ns/op",
+            "value": 34296613,
+            "unit": "ns/op",
+            "extra": "45 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkListHTTPRoutes/1000000 (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - B/op",
+            "value": 24010752,
+            "unit": "B/op",
+            "extra": "45 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkListHTTPRoutes/1000000 (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - allocs/op",
+            "value": 2,
+            "unit": "allocs/op",
+            "extra": "45 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkCacheStores_TakeSnapshot/Small_Without_Cache (github.com/kong/kubernetes-ingress-controller/v3/internal/store)",
+            "value": 8122,
+            "unit": "ns/op\t    7888 B/op\t     183 allocs/op",
+            "extra": "163458 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkCacheStores_TakeSnapshot/Small_Without_Cache (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - ns/op",
+            "value": 8122,
+            "unit": "ns/op",
+            "extra": "163458 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkCacheStores_TakeSnapshot/Small_Without_Cache (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - B/op",
+            "value": 7888,
+            "unit": "B/op",
+            "extra": "163458 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkCacheStores_TakeSnapshot/Small_Without_Cache (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - allocs/op",
+            "value": 183,
+            "unit": "allocs/op",
+            "extra": "163458 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkCacheStores_TakeSnapshot/Big_Without_Cache (github.com/kong/kubernetes-ingress-controller/v3/internal/store)",
+            "value": 5411500,
+            "unit": "ns/op\t 4335495 B/op\t   63229 allocs/op",
+            "extra": "210 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkCacheStores_TakeSnapshot/Big_Without_Cache (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - ns/op",
+            "value": 5411500,
+            "unit": "ns/op",
+            "extra": "210 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkCacheStores_TakeSnapshot/Big_Without_Cache (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - B/op",
+            "value": 4335495,
+            "unit": "B/op",
+            "extra": "210 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkCacheStores_TakeSnapshot/Big_Without_Cache (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - allocs/op",
+            "value": 63229,
+            "unit": "allocs/op",
+            "extra": "210 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkCacheStores_TakeSnapshot/Small_With_Cache (github.com/kong/kubernetes-ingress-controller/v3/internal/store)",
+            "value": 5593,
+            "unit": "ns/op\t    6688 B/op\t     170 allocs/op",
+            "extra": "217122 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkCacheStores_TakeSnapshot/Small_With_Cache (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - ns/op",
+            "value": 5593,
+            "unit": "ns/op",
+            "extra": "217122 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkCacheStores_TakeSnapshot/Small_With_Cache (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - B/op",
+            "value": 6688,
+            "unit": "B/op",
+            "extra": "217122 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkCacheStores_TakeSnapshot/Small_With_Cache (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - allocs/op",
+            "value": 170,
+            "unit": "allocs/op",
+            "extra": "217122 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkCacheStores_TakeSnapshot/Big_With_Cache (github.com/kong/kubernetes-ingress-controller/v3/internal/store)",
+            "value": 682255,
+            "unit": "ns/op\t  392908 B/op\t    6173 allocs/op",
+            "extra": "1704 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkCacheStores_TakeSnapshot/Big_With_Cache (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - ns/op",
+            "value": 682255,
+            "unit": "ns/op",
+            "extra": "1704 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkCacheStores_TakeSnapshot/Big_With_Cache (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - B/op",
+            "value": 392908,
+            "unit": "B/op",
+            "extra": "1704 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkCacheStores_TakeSnapshot/Big_With_Cache (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - allocs/op",
+            "value": 6173,
+            "unit": "allocs/op",
+            "extra": "1704 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkCacheStores_TakeSnapshot/Small_With_Missed_Cache (github.com/kong/kubernetes-ingress-controller/v3/internal/store)",
+            "value": 8052,
+            "unit": "ns/op\t    8288 B/op\t     190 allocs/op",
+            "extra": "146025 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkCacheStores_TakeSnapshot/Small_With_Missed_Cache (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - ns/op",
+            "value": 8052,
+            "unit": "ns/op",
+            "extra": "146025 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkCacheStores_TakeSnapshot/Small_With_Missed_Cache (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - B/op",
+            "value": 8288,
+            "unit": "B/op",
+            "extra": "146025 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkCacheStores_TakeSnapshot/Small_With_Missed_Cache (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - allocs/op",
+            "value": 190,
+            "unit": "allocs/op",
+            "extra": "146025 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkCacheStores_TakeSnapshot/Big_With_Missed_Cache (github.com/kong/kubernetes-ingress-controller/v3/internal/store)",
+            "value": 5884637,
+            "unit": "ns/op\t 4722106 B/op\t   69239 allocs/op",
+            "extra": "201 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkCacheStores_TakeSnapshot/Big_With_Missed_Cache (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - ns/op",
+            "value": 5884637,
+            "unit": "ns/op",
+            "extra": "201 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkCacheStores_TakeSnapshot/Big_With_Missed_Cache (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - B/op",
+            "value": 4722106,
+            "unit": "B/op",
+            "extra": "201 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkCacheStores_TakeSnapshot/Big_With_Missed_Cache (github.com/kong/kubernetes-ingress-controller/v3/internal/store) - allocs/op",
+            "value": 69239,
+            "unit": "allocs/op",
+            "extra": "201 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkFromK8sObject (github.com/kong/kubernetes-ingress-controller/v3/internal/util)",
+            "value": 199.3,
+            "unit": "ns/op\t     336 B/op\t       2 allocs/op",
+            "extra": "5997063 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkFromK8sObject (github.com/kong/kubernetes-ingress-controller/v3/internal/util) - ns/op",
+            "value": 199.3,
+            "unit": "ns/op",
+            "extra": "5997063 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkFromK8sObject (github.com/kong/kubernetes-ingress-controller/v3/internal/util) - B/op",
+            "value": 336,
+            "unit": "B/op",
+            "extra": "5997063 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkFromK8sObject (github.com/kong/kubernetes-ingress-controller/v3/internal/util) - allocs/op",
+            "value": 2,
+            "unit": "allocs/op",
+            "extra": "5997063 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkValidateProtocol (github.com/kong/kubernetes-ingress-controller/v3/internal/util)",
+            "value": 1.092,
+            "unit": "ns/op\t       0 B/op\t       0 allocs/op",
+            "extra": "1000000000 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkValidateProtocol (github.com/kong/kubernetes-ingress-controller/v3/internal/util) - ns/op",
+            "value": 1.092,
+            "unit": "ns/op",
+            "extra": "1000000000 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkValidateProtocol (github.com/kong/kubernetes-ingress-controller/v3/internal/util) - B/op",
+            "value": 0,
+            "unit": "B/op",
+            "extra": "1000000000 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkValidateProtocol (github.com/kong/kubernetes-ingress-controller/v3/internal/util) - allocs/op",
+            "value": 0,
+            "unit": "allocs/op",
+            "extra": "1000000000 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkGetCombinations/consumer_groups (github.com/kong/kubernetes-ingress-controller/v3/internal/util/rels)",
+            "value": 535.7,
+            "unit": "ns/op\t    1152 B/op\t       1 allocs/op",
+            "extra": "2232165 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkGetCombinations/consumer_groups (github.com/kong/kubernetes-ingress-controller/v3/internal/util/rels) - ns/op",
+            "value": 535.7,
+            "unit": "ns/op",
+            "extra": "2232165 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkGetCombinations/consumer_groups (github.com/kong/kubernetes-ingress-controller/v3/internal/util/rels) - B/op",
+            "value": 1152,
+            "unit": "B/op",
+            "extra": "2232165 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkGetCombinations/consumer_groups (github.com/kong/kubernetes-ingress-controller/v3/internal/util/rels) - allocs/op",
+            "value": 1,
+            "unit": "allocs/op",
+            "extra": "2232165 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkGetCombinations/consumers (github.com/kong/kubernetes-ingress-controller/v3/internal/util/rels)",
+            "value": 861.7,
+            "unit": "ns/op\t    1792 B/op\t       1 allocs/op",
+            "extra": "1602404 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkGetCombinations/consumers (github.com/kong/kubernetes-ingress-controller/v3/internal/util/rels) - ns/op",
+            "value": 861.7,
+            "unit": "ns/op",
+            "extra": "1602404 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkGetCombinations/consumers (github.com/kong/kubernetes-ingress-controller/v3/internal/util/rels) - B/op",
+            "value": 1792,
+            "unit": "B/op",
+            "extra": "1602404 times\n4 procs"
+          },
+          {
+            "name": "BenchmarkGetCombinations/consumers (github.com/kong/kubernetes-ingress-controller/v3/internal/util/rels) - allocs/op",
+            "value": 1,
+            "unit": "allocs/op",
+            "extra": "1602404 times\n4 procs"
           }
         ]
       }

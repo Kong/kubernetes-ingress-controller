@@ -109,6 +109,15 @@ func containerStateString(s corev1.ContainerState) string {
 // that the deployment rollout is finished and all the new replicas are ready to serve traffic before we proceed with
 // the test. It returns an error with a reason if the deployment is not ready yet.
 func allUpdatedReplicasRolledOutAndReady(d *appsv1.Deployment) error {
+	// Right after the deployment is updated, its status still describes the previous generation.
+	if specObserved := d.Status.ObservedGeneration >= d.Generation; !specObserved {
+		return fmt.Errorf(
+			"observed generation %d is behind generation %d",
+			d.Status.ObservedGeneration,
+			d.Generation,
+		)
+	}
+
 	if newReplicasRolledOut := d.Spec.Replicas != nil && d.Status.UpdatedReplicas < *d.Spec.Replicas; newReplicasRolledOut {
 		return fmt.Errorf(
 			"%d out of %d new replicas have been updated",

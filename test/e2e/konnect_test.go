@@ -87,8 +87,6 @@ func testKonnectLicenseActivationWithoutForceLicense(ctx context.Context, t *tes
 	const manifestFile = "manifests/all-in-one-dbless-konnect-enterprise.yaml"
 	ManifestDeploy{Path: manifestFile}.Run(ctx, t, env)
 
-	exposeAdminAPI(ctx, t, env, k8stypes.NamespacedName{Namespace: "kong", Name: "proxy-kong"})
-
 	t.Log("disabling license management")
 	kubeconfig := getTemporaryKubeconfig(t, env)
 	require.NoError(t, setEnv(setEnvParams{
@@ -108,9 +106,12 @@ func testKonnectLicenseActivationWithoutForceLicense(ctx context.Context, t *tes
 	err := cmd.Run()
 	require.NoErrorf(t, err, "restarting proxy failed: STDOUT(%s) STDERR(%s)", stdout.String(), stderr.String())
 
+	// Expose the admin API after the restart, as the port-forward is bound to a single proxy pod.
+	adminURL := exposeAdminAPI(ctx, t, env, k8stypes.NamespacedName{Namespace: "kong", Name: "proxy-kong"})
+
 	t.Log("confirming that the license is empty")
 	require.Eventually(t, func() bool {
-		license, err := getLicenseFromAdminAPI(ctx, env, "")
+		license, err := getLicenseFromAdminAPI(ctx, adminURL, "")
 		if err != nil {
 			t.Logf("failed to get license: %v", err)
 			return false
@@ -130,7 +131,7 @@ func testKonnectLicenseActivationWithoutForceLicense(ctx context.Context, t *tes
 
 	t.Log("confirming that the license is set")
 	assert.Eventually(t, func() bool {
-		license, err := getLicenseFromAdminAPI(ctx, env, "")
+		license, err := getLicenseFromAdminAPI(ctx, adminURL, "")
 		if err != nil {
 			t.Logf("failed to get license: %v", err)
 			return false
@@ -157,11 +158,11 @@ func testKonnectLicenseActivationWithForceLicense(ctx context.Context, t *testin
 			WithKonnectLicensingPatch(),
 		},
 	}.Run(ctx, t, env)
-	exposeAdminAPI(ctx, t, env, k8stypes.NamespacedName{Namespace: "kong", Name: "proxy-kong"})
+	adminURL := exposeAdminAPI(ctx, t, env, k8stypes.NamespacedName{Namespace: "kong", Name: "proxy-kong"})
 
 	t.Log("confirming that the license is set")
 	assert.Eventually(t, func() bool {
-		license, err := getLicenseFromAdminAPI(ctx, env, "")
+		license, err := getLicenseFromAdminAPI(ctx, adminURL, "")
 		if err != nil {
 			t.Logf("failed to get license: %v", err)
 			return false

@@ -25,9 +25,9 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
-	"github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
+	testhelpers "github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
+	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/testenv"
 )
 
@@ -57,9 +57,16 @@ func generateAdminPasswordSecret() (string, *corev1.Secret, error) {
 }
 
 // exposeAdminAPI will override the KONG_ADMIN_LISTEN for the cluster's proxy to expose the
-// Admin API via a service. Some deployments only expose this on localhost by default as there's
-// no authentication, so note that this is only for testing environment purposes.
-func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environment, proxyDeployment k8stypes.NamespacedName) {
+// Admin API on all interfaces and forward a local port to it. Some deployments only expose this
+// on localhost by default as there's no authentication, so note that this is only for testing
+// environment purposes.
+// It returns the base URL of the forwarded Admin API.
+//
+// A port-forward is used instead of a LoadBalancer service because a freshly provisioned cloud
+// load balancer (e.g. on GKE) may take minutes to start forwarding traffic reliably.
+func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environment, proxyDeployment k8stypes.NamespacedName) string {
+	t.Helper()
+
 	t.Log("updating the proxy container KONG_ADMIN_LISTEN to expose the admin api")
 	deployment, err := env.Cluster().Client().AppsV1().Deployments(proxyDeployment.Namespace).Get(ctx, proxyDeployment.Name, metav1.GetOptions{})
 	require.NoError(t, err)
@@ -73,35 +80,15 @@ func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environm
 		}
 	}
 
-	deployment, err = env.Cluster().Client().AppsV1().Deployments(proxyDeployment.Namespace).Update(ctx, deployment, metav1.UpdateOptions{})
+	_, err = env.Cluster().Client().AppsV1().Deployments(proxyDeployment.Namespace).Update(ctx, deployment, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
-	t.Log("creating a loadbalancer service for the admin API")
-	svcPorts := []corev1.ServicePort{{
-		Name:       "proxy",
-		Protocol:   corev1.ProtocolTCP,
-		TargetPort: intstr.IntOrString{IntVal: 8001},
-		Port:       80,
-	}}
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: adminServiceName,
-		},
-		Spec: corev1.ServiceSpec{
-			Type:     corev1.ServiceTypeLoadBalancer,
-			Selector: deployment.Spec.Selector.MatchLabels,
-			Ports:    svcPorts,
-		},
-	}
-	service, err = env.Cluster().Client().CoreV1().Services(namespace).Create(ctx, service, metav1.CreateOptions{})
-	require.NoError(t, err)
+	t.Log("waiting for the proxy deployment to roll out with the updated admin listen")
+	helpers.WaitForDeploymentRollout(ctx, t, env.Cluster(), proxyDeployment.Namespace, proxyDeployment.Name)
 
-	t.Log("waiting for loadbalancer ip to provision")
-	require.Eventually(t, func() bool {
-		service, err = env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, service.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		return len(service.Status.LoadBalancer.Ingress) == 1
-	}, ingressWait, time.Second)
+	t.Log("forwarding a local port to the admin API")
+	localPort := startPortForwarder(ctx, t, env, proxyDeployment.Namespace, "deployment/"+proxyDeployment.Name, "8001")
+	return fmt.Sprintf("http://localhost:%d", localPort)
 }
 
 // getTestManifest gets a manifest io.Reader, applying optional patches to the base manifest provided.
@@ -363,7 +350,7 @@ func getKongProxyNodePortIP(ctx context.Context, t *testing.T, env environments.
 func startPortForwarder(ctx context.Context, t *testing.T, env environments.Environment, namespace, name, targetPort string) int {
 	t.Helper()
 
-	localPort := helpers.GetFreePort(t)
+	localPort := testhelpers.GetFreePort(t)
 
 	kubeconfig := getTemporaryKubeconfig(t, env)
 	cmd := exec.CommandContext(ctx, "kubectl", "--kubeconfig", kubeconfig, "port-forward", "-n", namespace, name, fmt.Sprintf("%d:%s", localPort, targetPort))

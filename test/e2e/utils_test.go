@@ -22,9 +22,11 @@ import (
 	"github.com/sethvargo/go-password/password"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/util/retry"
 
 	testhelpers "github.com/kong/kubernetes-ingress-controller/v3/test/helpers"
 	"github.com/kong/kubernetes-ingress-controller/v3/test/internal/helpers"
@@ -68,20 +70,17 @@ func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environm
 	t.Helper()
 
 	t.Log("updating the proxy container KONG_ADMIN_LISTEN to expose the admin api")
-	deployment, err := env.Cluster().Client().AppsV1().Deployments(proxyDeployment.Namespace).Get(ctx, proxyDeployment.Name, metav1.GetOptions{})
-	require.NoError(t, err)
-	for i, containerSpec := range deployment.Spec.Template.Spec.Containers {
-		if containerSpec.Name == proxyContainerName {
-			for j, envVar := range containerSpec.Env {
-				if envVar.Name == "KONG_ADMIN_LISTEN" {
-					deployment.Spec.Template.Spec.Containers[i].Env[j].Value = "0.0.0.0:8001, 0.0.0.0:8444 ssl"
+	updateDeployment(ctx, t, env, proxyDeployment, func(deployment *appsv1.Deployment) {
+		for i, containerSpec := range deployment.Spec.Template.Spec.Containers {
+			if containerSpec.Name == proxyContainerName {
+				for j, envVar := range containerSpec.Env {
+					if envVar.Name == "KONG_ADMIN_LISTEN" {
+						deployment.Spec.Template.Spec.Containers[i].Env[j].Value = "0.0.0.0:8001, 0.0.0.0:8444 ssl"
+					}
 				}
 			}
 		}
-	}
-
-	_, err = env.Cluster().Client().AppsV1().Deployments(proxyDeployment.Namespace).Update(ctx, deployment, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	})
 
 	t.Log("waiting for the proxy deployment to roll out with the updated admin listen")
 	helpers.WaitForDeploymentRollout(ctx, t, env.Cluster(), proxyDeployment.Namespace, proxyDeployment.Name)
@@ -89,6 +88,27 @@ func exposeAdminAPI(ctx context.Context, t *testing.T, env environments.Environm
 	t.Log("forwarding a local port to the admin API")
 	localPort := startPortForwarder(ctx, t, env, proxyDeployment.Namespace, "deployment/"+proxyDeployment.Name, "8001")
 	return fmt.Sprintf("http://localhost:%d", localPort)
+}
+
+// updateDeployment applies mutate to the latest version of the deployment and updates it, retrying on conflicts
+// (e.g. with status updates written by the deployment controller during a rollout).
+// As every attempt starts from a freshly fetched deployment, mutate may safely append to its fields.
+func updateDeployment(
+	ctx context.Context, t *testing.T, env environments.Environment, nn k8stypes.NamespacedName, mutate func(*appsv1.Deployment),
+) {
+	t.Helper()
+
+	deploymentClient := env.Cluster().Client().AppsV1().Deployments(nn.Namespace)
+	err := retry.RetryOnConflict(retry.DefaultRetry, func() error {
+		deployment, err := deploymentClient.Get(ctx, nn.Name, metav1.GetOptions{})
+		if err != nil {
+			return err
+		}
+		mutate(deployment)
+		_, err = deploymentClient.Update(ctx, deployment, metav1.UpdateOptions{})
+		return err
+	})
+	require.NoError(t, err, "failed to update deployment %s", nn)
 }
 
 // getTestManifest gets a manifest io.Reader, applying optional patches to the base manifest provided.

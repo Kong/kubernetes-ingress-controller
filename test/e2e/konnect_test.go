@@ -105,6 +105,7 @@ func testKonnectLicenseActivationWithoutForceLicense(ctx context.Context, t *tes
 	cmd.Stderr = stderr
 	err := cmd.Run()
 	require.NoErrorf(t, err, "restarting proxy failed: STDOUT(%s) STDERR(%s)", stdout.String(), stderr.String())
+	helpers.WaitForDeploymentRollout(ctx, t, env.Cluster(), namespace, "proxy-kong")
 
 	// Expose the admin API after the restart, as the port-forward is bound to a single proxy pod.
 	adminURL := exposeAdminAPI(ctx, t, env, k8stypes.NamespacedName{Namespace: "kong", Name: "proxy-kong"})

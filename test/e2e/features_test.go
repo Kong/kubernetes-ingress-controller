@@ -22,6 +22,7 @@ import (
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -189,33 +190,30 @@ func TestWebhookUpdate(t *testing.T) {
 	}, time.Minute, time.Second)
 
 	t.Log("updating kong deployment to use admission certificate")
-	deployment := getManifestDeployments(dblessPath).GetController(ctx, t, env)
-	for i, container := range deployment.Spec.Template.Spec.Containers {
-		if container.Name == controllerContainerName {
-			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
-				corev1.EnvVar{Name: "CONTROLLER_ADMISSION_WEBHOOK_CERT_FILE", Value: "/admission-webhook/tls.crt"},
-				corev1.EnvVar{Name: "CONTROLLER_ADMISSION_WEBHOOK_KEY_FILE", Value: "/admission-webhook/tls.key"},
-				corev1.EnvVar{Name: "CONTROLLER_ADMISSION_WEBHOOK_LISTEN", Value: ":8080"})
+	updateDeployment(ctx, t, env, getManifestDeployments(dblessPath).ControllerNN, func(deployment *appsv1.Deployment) {
+		for i, container := range deployment.Spec.Template.Spec.Containers {
+			if container.Name == controllerContainerName {
+				deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
+					corev1.EnvVar{Name: "CONTROLLER_ADMISSION_WEBHOOK_CERT_FILE", Value: "/admission-webhook/tls.crt"},
+					corev1.EnvVar{Name: "CONTROLLER_ADMISSION_WEBHOOK_KEY_FILE", Value: "/admission-webhook/tls.key"},
+					corev1.EnvVar{Name: "CONTROLLER_ADMISSION_WEBHOOK_LISTEN", Value: ":8080"})
 
-			deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes,
-				corev1.Volume{
-					Name: "admission-cert",
-					VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{
-							SecretName: "admission-cert",
+				deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes,
+					corev1.Volume{
+						Name: "admission-cert",
+						VolumeSource: corev1.VolumeSource{
+							Secret: &corev1.SecretVolumeSource{
+								SecretName: "admission-cert",
+							},
 						},
-					},
-				})
+					})
 
-			deployment.Spec.Template.Spec.Containers[i].VolumeMounts = append(
-				deployment.Spec.Template.Spec.Containers[i].VolumeMounts,
-				corev1.VolumeMount{Name: "admission-cert", MountPath: "/admission-webhook"})
+				deployment.Spec.Template.Spec.Containers[i].VolumeMounts = append(
+					deployment.Spec.Template.Spec.Containers[i].VolumeMounts,
+					corev1.VolumeMount{Name: "admission-cert", MountPath: "/admission-webhook"})
+			}
 		}
-	}
-
-	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx,
-		deployment, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	})
 
 	checkCertificate := func(hostname string) {
 		require.EventuallyWithT(t, func(c *assert.CollectT) {
@@ -261,21 +259,19 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	}
 
 	t.Log("updating controller deployment to enable alpha Gateway feature gate")
-	controllerDeployment := deployments.GetController(ctx, t, env)
-	for i, container := range controllerDeployment.Spec.Template.Spec.Containers {
-		if container.Name == controllerContainerName {
-			controllerDeployment.Spec.Template.Spec.Containers[i].Env = append(
-				controllerDeployment.Spec.Template.Spec.Containers[i].Env,
-				corev1.EnvVar{
-					Name:  "CONTROLLER_FEATURE_GATES",
-					Value: fmt.Sprintf("%s=true", managercfg.GatewayAlphaFeature),
-				},
-			)
+	updateDeployment(ctx, t, env, controllerDeploymentNN, func(controllerDeployment *appsv1.Deployment) {
+		for i, container := range controllerDeployment.Spec.Template.Spec.Containers {
+			if container.Name == controllerContainerName {
+				controllerDeployment.Spec.Template.Spec.Containers[i].Env = append(
+					controllerDeployment.Spec.Template.Spec.Containers[i].Env,
+					corev1.EnvVar{
+						Name:  "CONTROLLER_FEATURE_GATES",
+						Value: fmt.Sprintf("%s=true", managercfg.GatewayAlphaFeature),
+					},
+				)
+			}
 		}
-	}
-
-	_, err = env.Cluster().Client().AppsV1().Deployments(namespace).Update(ctx, controllerDeployment, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	})
 
 	t.Log("verifying that KIC waits for Gateway API CRDs and prints proper log")
 	require.Eventually(t, func() bool {
@@ -373,15 +369,14 @@ func TestDeployAllInOneDBLESSGateway(t *testing.T) {
 	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayExperimentalCRDsKustomizeURL))
 
 	t.Log("updating proxy deployment to enable TCP listener")
-	proxyDeployment := deployments.GetProxy(ctx, t, env)
-	for i, container := range proxyDeployment.Spec.Template.Spec.Containers {
-		if container.Name == proxyContainerName {
-			proxyDeployment.Spec.Template.Spec.Containers[i].Env = append(proxyDeployment.Spec.Template.Spec.Containers[i].Env,
-				corev1.EnvVar{Name: "KONG_STREAM_LISTEN", Value: fmt.Sprintf("0.0.0.0:%d", tcpListenerPort)})
+	updateDeployment(ctx, t, env, deployments.ProxyNN, func(proxyDeployment *appsv1.Deployment) {
+		for i, container := range proxyDeployment.Spec.Template.Spec.Containers {
+			if container.Name == proxyContainerName {
+				proxyDeployment.Spec.Template.Spec.Containers[i].Env = append(proxyDeployment.Spec.Template.Spec.Containers[i].Env,
+					corev1.EnvVar{Name: "KONG_STREAM_LISTEN", Value: fmt.Sprintf("0.0.0.0:%d", tcpListenerPort)})
+			}
 		}
-	}
-	_, err = env.Cluster().Client().AppsV1().Deployments(namespace).Update(ctx, proxyDeployment, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	})
 
 	t.Log("updating kong proxy service to enable TCP listener")
 	proxyService, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
@@ -427,23 +422,22 @@ func TestDeployAllInOneDBLESSNoLoadBalancer(t *testing.T) {
 	t.Logf("deploying Gateway APIs CRDs from %s", consts.GatewayExperimentalCRDsKustomizeURL)
 	require.NoError(t, clusters.KustomizeDeployForCluster(ctx, env.Cluster(), consts.GatewayExperimentalCRDsKustomizeURL))
 
-	deployment := getManifestDeployments(dblessPath).GetController(ctx, t, env)
+	controllerDeploymentNN := getManifestDeployments(dblessPath).ControllerNN
 	t.Log("updating controller deployment to enable Gateway feature gate")
-	for i, container := range deployment.Spec.Template.Spec.Containers {
-		if container.Name == controllerContainerName {
-			deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
-				corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: consts.DefaultFeatureGates})
+	updateDeployment(ctx, t, env, controllerDeploymentNN, func(deployment *appsv1.Deployment) {
+		for i, container := range deployment.Spec.Template.Spec.Containers {
+			if container.Name == controllerContainerName {
+				deployment.Spec.Template.Spec.Containers[i].Env = append(deployment.Spec.Template.Spec.Containers[i].Env,
+					corev1.EnvVar{Name: "CONTROLLER_FEATURE_GATES", Value: consts.DefaultFeatureGates})
+			}
 		}
-	}
-	_, err = env.Cluster().Client().AppsV1().Deployments(deployment.Namespace).Update(ctx,
-		deployment, metav1.UpdateOptions{})
-	require.NoError(t, err)
+	})
 
 	t.Log("updating service type to NodePort")
-	svc, err := env.Cluster().Client().CoreV1().Services(deployment.Namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
+	svc, err := env.Cluster().Client().CoreV1().Services(controllerDeploymentNN.Namespace).Get(ctx, "kong-proxy", metav1.GetOptions{})
 	require.NoError(t, err)
 	svc.Spec.Type = corev1.ServiceTypeNodePort
-	_, err = env.Cluster().Client().CoreV1().Services(deployment.Namespace).Update(ctx, svc, metav1.UpdateOptions{})
+	_, err = env.Cluster().Client().CoreV1().Services(controllerDeploymentNN.Namespace).Update(ctx, svc, metav1.UpdateOptions{})
 	require.NoError(t, err)
 
 	t.Log("verifying controller updates associated Gateway resoures")

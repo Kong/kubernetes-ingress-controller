@@ -41,7 +41,6 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	k8stypes "k8s.io/apimachinery/pkg/types"
-	"k8s.io/apimachinery/pkg/util/intstr"
 
 	"github.com/kong/kubernetes-ingress-controller/v3/internal/annotations"
 	"github.com/kong/kubernetes-ingress-controller/v3/test"
@@ -69,9 +68,8 @@ const (
 	// parent Service to fully resolve into ready state.
 	gatewayUpdateWaitTime = time.Minute * 3
 
-	ingressClass     = "kong"
-	namespace        = "kong"
-	adminServiceName = "kong-admin-lb"
+	ingressClass = "kong"
+	namespace    = "kong"
 
 	tcpListenerPort = ktfkong.DefaultTCPServicePort
 
@@ -115,7 +113,7 @@ func setupE2ETest(t *testing.T, addons ...clusters.Addon) (context.Context, envi
 	t.Cleanup(func() {
 		output := helpers.DumpDiagnosticsIfFailed(ctx, t, env.Cluster())
 		if t.Failed() {
-			dumpKongConfiguration(ctx, t, env.Cluster(), output)
+			dumpKongConfiguration(ctx, t, env, output)
 		}
 		helpers.TeardownCluster(ctx, t, env.Cluster())
 	})
@@ -587,17 +585,11 @@ func verifyIngressWithEchoBackendsInAdminAPI(
 // verifyEnterprise performs some basic tests of the Kong Admin API in the provided
 // environment to ensure that the Admin API that responds is in fact the enterprise
 // version of Kong.
-func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Environment, adminPassword string) {
+func verifyEnterprise(ctx context.Context, t *testing.T, adminURL string, adminPassword string) {
 	t.Helper()
 
-	t.Log("finding the ip address for the admin API")
-	service, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, adminServiceName, metav1.GetOptions{})
-	require.NoError(t, err)
-	require.Equal(t, 1, len(service.Status.LoadBalancer.Ingress))
-	adminIP := service.Status.LoadBalancer.Ingress[0].IP
-
 	t.Log("building a GET request to gather admin api information")
-	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("http://%s/", adminIP), nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", adminURL+"/", nil)
 	require.NoError(t, err)
 	req.Header.Set("Kong-Admin-Token", adminPassword)
 
@@ -647,30 +639,34 @@ func verifyEnterprise(ctx context.Context, t *testing.T, env environments.Enviro
 	t.Log("License expiration date:", licenseInfo["license_expiration_date"])
 }
 
-func verifyEnterpriseWithPostgres(ctx context.Context, t *testing.T, env environments.Environment, adminPassword string) {
+func verifyEnterpriseWithPostgres(ctx context.Context, t *testing.T, adminURL string, adminPassword string) {
 	t.Helper()
 
-	t.Log("finding the ip address for the admin API")
-	service, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, adminServiceName, metav1.GetOptions{})
-	require.NoError(t, err)
-	require.Equal(t, 1, len(service.Status.LoadBalancer.Ingress))
-	adminIP := service.Status.LoadBalancer.Ingress[0].IP
-
-	t.Log("building a POST request to create a new kong workspace")
-	form := url.Values{"name": {"kic-e2e-tests"}}
-	req, err := http.NewRequestWithContext(ctx, "POST", fmt.Sprintf("http://%s/workspaces", adminIP), strings.NewReader(form.Encode()))
-	require.NoError(t, err)
-	req.Header.Set("Kong-Admin-Token", adminPassword)
-	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
-
 	t.Log("creating a workspace to validate enterprise functionality")
+	form := url.Values{"name": {"kic-e2e-tests"}}
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		// The request body is consumed on every attempt, so the request is rebuilt each time.
+		req, err := http.NewRequestWithContext(ctx, "POST", adminURL+"/workspaces", strings.NewReader(form.Encode()))
+		if !assert.NoError(c, err) {
+			return
+		}
+		req.Header.Set("Kong-Admin-Token", adminPassword)
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
 
-	resp, err := helpers.DefaultHTTPClient().Do(req)
-	require.NoError(t, err)
-	defer resp.Body.Close()
-	body, err := io.ReadAll(resp.Body)
-	require.NoError(t, err)
-	require.Equal(t, http.StatusCreated, resp.StatusCode, fmt.Sprintf("STATUS=(%s), BODY=(%s)", resp.Status, string(body)))
+		resp, err := helpers.DefaultHTTPClient().Do(req)
+		if !assert.NoError(c, err) {
+			return
+		}
+		defer resp.Body.Close()
+		body, err := io.ReadAll(resp.Body)
+		if !assert.NoError(c, err) {
+			return
+		}
+		// A previous attempt might have created the workspace while its response got lost,
+		// in which case Kong responds with 409 Conflict.
+		assert.Contains(c, []int{http.StatusCreated, http.StatusConflict}, resp.StatusCode,
+			fmt.Sprintf("STATUS=(%s), BODY=(%s)", resp.Status, string(body)))
+	}, adminAPIWait, time.Second)
 }
 
 // licenseOutput is the license section of the admin API root response.
@@ -686,20 +682,11 @@ type licenseOutput struct {
 	} `json:"license"`
 }
 
-func getLicenseFromAdminAPI(ctx context.Context, env environments.Environment, adminPassword string) (licenseOutput, error) {
+func getLicenseFromAdminAPI(ctx context.Context, adminURL string, adminPassword string) (licenseOutput, error) {
 	var license licenseOutput
-	// find the admin service
-	service, err := env.Cluster().Client().CoreV1().Services(namespace).Get(ctx, adminServiceName, metav1.GetOptions{})
-	if err != nil {
-		return license, fmt.Errorf("could not retrieve admin service: %w", err)
-	}
-	if len(service.Status.LoadBalancer.Ingress) == 0 {
-		return license, fmt.Errorf("service %s has no external IPs", service.Name)
-	}
-	adminIP := service.Status.LoadBalancer.Ingress[0].IP
 
 	// pull the root response
-	req, err := http.NewRequestWithContext(ctx, "GET", fmt.Sprintf("http://%s/", adminIP), nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", adminURL+"/", nil)
 	if err != nil {
 		return license, fmt.Errorf("could not create license request: %w", err)
 	}
@@ -911,62 +898,35 @@ func scaleDeployment(ctx context.Context, t *testing.T, env environments.Environ
 	}, time.Minute*3, time.Second, "deployment %s did not scale to %d replicas", deployment.Name, replicas)
 }
 
-func createGatewayAdminExposeService(ctx context.Context, t *testing.T, cluster clusters.Cluster, namespace string, selector map[string]string) *corev1.Service {
-	t.Helper()
-
-	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    namespace,
-			GenerateName: "kong-admin-expose-",
-		},
-		Spec: corev1.ServiceSpec{
-			Type:     corev1.ServiceTypeLoadBalancer,
-			Selector: selector,
-			Ports: []corev1.ServicePort{
-				{
-					Name:       "admin-tls",
-					Protocol:   corev1.ProtocolTCP,
-					Port:       8444,
-					TargetPort: intstr.FromInt(8444),
-				},
-			},
-		},
-	}
-
-	service, err := cluster.Client().CoreV1().Services(namespace).Create(ctx, service, metav1.CreateOptions{})
-	require.NoError(t, err)
-	return service
-}
-
-func getKongProxySelector(ctx context.Context, cluster clusters.Cluster, namespace string) map[string]string {
-	depList, err := cluster.Client().AppsV1().Deployments(namespace).List(ctx, metav1.ListOptions{
-		LabelSelector: "app in (ingress-kong,proxy-kong)",
-	})
-	if err != nil || len(depList.Items) == 0 {
-		return map[string]string{"app": "proxy-kong"}
-	}
-	return depList.Items[0].Spec.Selector.MatchLabels
-}
-
-func dumpKongConfiguration(ctx context.Context, t *testing.T, cluster clusters.Cluster, outputDir string) {
-	t.Helper()
-
-	t.Log("Creating a service to expose admin APIs to dump gateway configuration")
-	selector := getKongProxySelector(ctx, cluster, namespace)
-	adminExposeService := createGatewayAdminExposeService(ctx, t, cluster, namespace, selector)
-	adminExposeServiceIP := ""
-	require.Eventually(t, func() bool {
-		serviceClient := cluster.Client().CoreV1().Services(namespace)
-		svc, err := serviceClient.Get(ctx, adminExposeService.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		if len(svc.Status.LoadBalancer.Ingress) > 0 {
-			adminExposeServiceIP = svc.Status.LoadBalancer.Ingress[0].IP
-			return true
+// getKongProxyDeploymentName returns the name of the deployment running the Kong proxy container.
+// Manifests with separate controller and proxy deployments run the proxy in "proxy-kong",
+// single-deployment manifests run it in "ingress-kong".
+func getKongProxyDeploymentName(ctx context.Context, cluster clusters.Cluster, namespace string) (string, error) {
+	for _, name := range []string{"proxy-kong", controllerDeploymentName} {
+		_, err := cluster.Client().AppsV1().Deployments(namespace).Get(ctx, name, metav1.GetOptions{})
+		if err == nil {
+			return name, nil
 		}
-		return false
-	}, ingressWait, 5*time.Second, "Cannot get loadbalancer IP for service to expose admin APIs")
+		if !apierrors.IsNotFound(err) {
+			return "", err
+		}
+	}
+	return "", fmt.Errorf("no Kong proxy deployment found in namespace %s", namespace)
+}
 
-	t.Logf("Dumping Kong configuration from service %s/%s", namespace, adminExposeService.Name)
+func dumpKongConfiguration(ctx context.Context, t *testing.T, env environments.Environment, outputDir string) {
+	t.Helper()
+
+	proxyDeploymentName, err := getKongProxyDeploymentName(ctx, env.Cluster(), namespace)
+	if err != nil {
+		t.Logf("Skipping dumping Kong configuration: %v", err)
+		return
+	}
+
+	t.Logf("Forwarding a local port to admin APIs of %s/%s to dump gateway configuration", namespace, proxyDeploymentName)
+	localPort := startPortForwarder(ctx, t, env, namespace, "deployment/"+proxyDeploymentName, "8444")
+
+	t.Logf("Dumping Kong configuration from deployment %s/%s", namespace, proxyDeploymentName)
 	httpClient := &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{
@@ -974,9 +934,8 @@ func dumpKongConfiguration(ctx context.Context, t *testing.T, cluster clusters.C
 			},
 		},
 	}
-	kongClient, err := kong.NewTestClient(lo.ToPtr("https://"+adminExposeServiceIP+":8444"), httpClient)
+	kongClient, err := kong.NewTestClient(lo.ToPtr(fmt.Sprintf("https://localhost:%d", localPort)), httpClient)
 	require.NoError(t, err, "failed to create Kong client")
-	time.Sleep(5 * time.Second)
 	cfg, err := kongClient.Config(ctx)
 	require.NoError(t, err, "failed to dump configuration from Kong")
 	filepath := path.Join(outputDir, "kong-config.yaml")

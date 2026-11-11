@@ -194,7 +194,7 @@ Adding a new version? You'll need three changes:
 ### Fixed
 
 - Preserve only one CA certificate from secrets if there are multiple ones with
-  the duplicte IDs.
+  the duplicte IDs for fixing CVE-2026-16543.
   [#8025](https://github.com/Kong/kubernetes-ingress-controller/pull/8025)
 
 ## [3.5.10]
@@ -466,7 +466,7 @@ Adding a new version? You'll need three changes:
 ### Fixed
 
 - Preserve only one CA certificate from secrets if there are multiple ones with
-  the duplicate IDs.
+  the duplicte IDs for fixing CVE-2026-16543.
   [#8024](https://github.com/Kong/kubernetes-ingress-controller/pull/8024)
 
 ## [3.4.17]

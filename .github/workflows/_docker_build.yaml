@@ -45,7 +45,7 @@ jobs:
           input_string: ${{ inputs.tag }}
           version_extractor_regex: 'v(.*)$'
 
-      - uses: benjlevesque/short-sha@599815c8ee942a9616c92bcfb4f947a3b670ab0b # v3.0
+      - uses: benjlevesque/short-sha@927c81f2595b42017c0183c9f6f3336644908afa # v5.0
         id: short-sha
 
       - name: Add standard tag

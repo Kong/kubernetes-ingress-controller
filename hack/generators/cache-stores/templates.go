@@ -47,7 +47,7 @@ func NewCacheStores() CacheStores {
 }
 
 // Get checks whether or not there's already some version of the provided object present in the cache.
-func (c CacheStores) Get(obj runtime.Object) (item interface{}, exists bool, err error) {
+func (c CacheStores) Get(obj runtime.Object) (item any, exists bool, err error) {
 	c.l.RLock()
 	defer c.l.RUnlock()
 

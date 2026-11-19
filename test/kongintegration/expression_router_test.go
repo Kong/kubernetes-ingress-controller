@@ -96,6 +96,7 @@ func TestExpressionsRouterMatchers_GenerateValidExpressions(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			r := &kong.Route{
 				StripPath: kong.Bool(true),
+				Protocols: kong.StringSlice("http"),
 			}
 			atc.ApplyExpression(r, tc.matcher, 1)
 			req, err := kongClient.NewRequest(http.MethodPost, "/config", nil, marshalKongConfig(t, *s, *r))

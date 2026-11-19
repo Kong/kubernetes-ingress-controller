@@ -383,8 +383,8 @@ func ensureAllKongStateFieldsAreTested(t *testing.T, testedFields []string) {
 	allKongStateFields := func() []string {
 		var fields []string
 		typ := reflect.ValueOf(kongstate.KongState{}).Type()
-		for i := 0; i < typ.NumField(); i++ {
-			name := typ.Field(i).Name
+		for field := range typ.Fields() {
+			name := field.Name
 			if !lo.Contains(exempt, name) {
 				fields = append(fields, name)
 			}

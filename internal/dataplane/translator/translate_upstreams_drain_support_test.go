@@ -97,11 +97,6 @@ func TestTerminatingEndpointDrainSupport(t *testing.T) {
 func TestEndpointProcessingWithTerminatingCondition(t *testing.T) {
 	t.Run("ready and terminating endpoints should be included", func(t *testing.T) {
 		endpointSlice := &discoveryv1.EndpointSlice{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-endpoints",
-				Namespace: "default",
-			},
-
 			Endpoints: []discoveryv1.Endpoint{
 				{
 					Addresses: []string{"10.0.0.1"},

@@ -12,8 +12,8 @@ import (
 // If there is at least one match, the hostnames intersect.
 func HostnamesIntersect[H1, H2 gatewayapi.HostnameT](hostnameA H1, hostnameB H2) bool {
 	var (
-		a = (string)(hostnameA)
-		b = (string)(hostnameB)
+		a = string(hostnameA)
+		b = string(hostnameB)
 	)
 	return HostnamesMatch(a, b) || HostnamesMatch(b, a)
 }

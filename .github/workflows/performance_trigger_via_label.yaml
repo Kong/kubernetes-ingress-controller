@@ -13,11 +13,7 @@ jobs:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     if: contains(github.event.*.labels.*.name, 'ci/run-performance')
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      actions: write
     env:
-      GH_TOKEN: ${{ secrets.K8S_TEAM_BOT_GH_PAT }}
       WORKFLOW: .github/workflows/performance_targeted.yaml
       BRANCH: ${{ github.event.pull_request.head.ref }}
       PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -26,11 +22,22 @@ jobs:
     - uses: step-security/harden-runner@f4a75cfd619ee5ce8d5b864b0d183aff3c69b55a # v2.13.1
       with:
         egress-policy: audit
+    # Short-lived App token, minted in the job that uses it.
+    - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+      id: app-token
+      with:
+        client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
+        private-key: ${{ secrets.GH_APP__KONG_K8S__PRIVATE_KEY }}
+        owner: ${{ github.repository_owner }}
+        repositories: |
+          kubernetes-ingress-controller
     - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
     # Do not run e2e tests on GKE-based clusters for specific PR, because currently
     # there is no way to use an image built from PR's code for those tests.
     # https://github.com/Kong/kubernetes-testing-framework/issues/587
-    - run: |
+    - env:
+        GH_TOKEN: ${{ steps.app-token.outputs.token }}
+      run: |
         gh workflow run ${WORKFLOW} --ref ${BRANCH} \
           -f pr-number=${PR_NUMBER}

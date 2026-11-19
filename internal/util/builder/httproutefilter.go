@@ -43,7 +43,7 @@ func (b *HTTPRouteFilterBuilder) WithRequestRedirectHost(host string) *HTTPRoute
 		return b
 	}
 
-	preciseHost := (gatewayapi.PreciseHostname)(host)
+	preciseHost := gatewayapi.PreciseHostname(host)
 	b.httpRouteFilter.RequestRedirect.Hostname = lo.ToPtr(preciseHost)
 	return b
 }

@@ -18,8 +18,7 @@ func ExtractAPIErrors(err error) []*kong.APIError {
 	}
 
 	// It might be either a deckutils.ErrArray with APIErrors inside.
-	var deckErrArray deckutils.ErrArray
-	if errors.As(err, &deckErrArray) {
+	if deckErrArray, ok := errors.AsType[deckutils.ErrArray](err); ok {
 		return lo.FilterMap(deckErrArray.Errors, func(e error, _ int) (*kong.APIError, bool) {
 			return castAsErr[*kong.APIError](e)
 		})
@@ -35,8 +34,7 @@ func ExtractCRUDActionErrors(err error) []*crud.ActionError {
 	}
 
 	// It might be either a deckutils.ErrArray with ActionErrors inside.
-	var deckErrArray deckutils.ErrArray
-	if errors.As(err, &deckErrArray) {
+	if deckErrArray, ok := errors.AsType[deckutils.ErrArray](err); ok {
 		return lo.FilterMap(deckErrArray.Errors, func(e error, _ int) (*crud.ActionError, bool) {
 			return castAsErr[*crud.ActionError](e)
 		})

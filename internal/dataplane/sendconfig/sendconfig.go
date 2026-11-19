@@ -91,8 +91,7 @@ func PerformUpdate(
 	metricsProtocol := updateStrategy.MetricsProtocol()
 	if err != nil {
 		// For UpdateError, record the failure and return the error.
-		var updateError UpdateError
-		if errors.As(err, &updateError) {
+		if updateError, ok := errors.AsType[UpdateError](err); ok {
 			if isFallback {
 				promMetrics.RecordFallbackPushFailure(metricsProtocol, duration, updateError.ConfigSize(), client.BaseRootURL(), len(updateError.ResourceFailures()), updateError.err)
 			} else {

@@ -221,6 +221,14 @@ linters:
       - linters:
           - gosec
         text: "G115: integer overflow conversion"
+      - linters:
+          - gosec
+        path: _test\.go
+        text: "G705: XSS via taint analysis"
+      # TODO: migrate from the deprecated ctrl.Result.Requeue to RequeueAfter.
+      - linters:
+          - staticcheck
+        text: "SA1019: \\(sigs.k8s.io/controller-runtime.Result\\).Requeue is deprecated"
       - path: (.+)\.go$
         text: Error return value of .((os\.)?std(out|err)\..*|.*Close|.*Flush|os\.Remove(All)?|.*print(f|ln)?|os\.(Un)?Setenv). is not checked
       - path: (.+)\.go$

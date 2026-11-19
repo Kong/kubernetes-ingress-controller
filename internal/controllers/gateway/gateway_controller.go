@@ -743,9 +743,9 @@ func (r *GatewayReconciler) determineL4ListenersFromService(
 
 	for _, port := range svc.Spec.Ports {
 		listeners = append(listeners, gatewayapi.Listener{
-			Name:     (gatewayapi.SectionName)(port.Name),
-			Protocol: (gatewayapi.ProtocolType)(port.Protocol),
-			Port:     (gatewayapi.PortNumber)(port.Port),
+			Name:     gatewayapi.SectionName(port.Name),
+			Protocol: gatewayapi.ProtocolType(port.Protocol),
+			Port:     gatewayapi.PortNumber(port.Port),
 			AllowedRoutes: &gatewayapi.AllowedRoutes{
 				Kinds: []gatewayapi.RouteGroupKind{
 					protocolToRouteGroupKind[port.Protocol],
@@ -833,7 +833,7 @@ func (r *GatewayReconciler) determineListenersFromDataPlane(
 				listener.Protocol = gatewayapi.TLSProtocolType
 				listener.AllowedRoutes = &gatewayapi.AllowedRoutes{
 					Kinds: []gatewayapi.RouteGroupKind{
-						{Group: lo.ToPtr(gatewayapi.V1Group), Kind: (gatewayapi.Kind)("TLSRoute")},
+						{Group: lo.ToPtr(gatewayapi.V1Group), Kind: gatewayapi.Kind("TLSRoute")},
 					},
 				}
 			}
@@ -843,14 +843,14 @@ func (r *GatewayReconciler) determineListenersFromDataPlane(
 				listener.Protocol = gatewayapi.HTTPSProtocolType
 				listener.AllowedRoutes = &gatewayapi.AllowedRoutes{
 					Kinds: []gatewayapi.RouteGroupKind{
-						{Group: lo.ToPtr(gatewayapi.V1Group), Kind: (gatewayapi.Kind)("HTTPRoute")},
+						{Group: lo.ToPtr(gatewayapi.V1Group), Kind: gatewayapi.Kind("HTTPRoute")},
 					},
 				}
 			} else {
 				listener.Protocol = gatewayapi.HTTPProtocolType
 				listener.AllowedRoutes = &gatewayapi.AllowedRoutes{
 					Kinds: []gatewayapi.RouteGroupKind{
-						{Group: lo.ToPtr(gatewayapi.V1Group), Kind: (gatewayapi.Kind)("HTTPRoute")},
+						{Group: lo.ToPtr(gatewayapi.V1Group), Kind: gatewayapi.Kind("HTTPRoute")},
 					},
 				}
 			}

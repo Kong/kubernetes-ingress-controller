@@ -140,6 +140,13 @@ Adding a new version? You'll need three changes:
 
 ### Fixed
 
+- Bump go-kong to `v0.78.1`, which fixes `FillPluginsDefaults` replacing an
+  explicitly provided empty array of records in a plugin config with the field's
+  schema default. An empty array is the only way to ask for "none" when the
+  default is not what should be sent, so plugins that reject their own default
+  could not be configured, for example `key-auth`'s `identity_realms: []` with
+  `principals` enabled.
+  [Kong/go-kong#643](https://github.com/Kong/go-kong/pull/643)
 - Inherit the tags of the translated Kong certificate from the one with earliest
   creation timestamp, then lowest ID to keep the tags stable in merging certificates
   from multiple `Secret`s with the same certificate content.

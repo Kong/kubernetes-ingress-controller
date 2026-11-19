@@ -53,12 +53,12 @@ func NewCollector(logger logr.Logger, cfg managercfg.Config) *Collector {
 	return &Collector{
 		logger: logger,
 		diffs:  newDiffMap(diffHistorySize),
-		clientDiagnostic: Client{
-			DumpsIncludeSensitive: cfg.DumpSensitiveConfig,
-			Configs:               make(chan ConfigDump, diagnosticConfigBufferDepth),
-			FallbackCacheMetadata: make(chan fallback.GeneratedCacheMetadata, diagnosticConfigBufferDepth),
-			Diffs:                 make(chan ConfigDiff, diagnosticConfigBufferDepth),
-		},
+		clientDiagnostic: NewClient(
+			cfg.DumpSensitiveConfig,
+			diagnosticConfigBufferDepth,
+			diagnosticConfigBufferDepth,
+			diagnosticConfigBufferDepth,
+		),
 	}
 }
 
@@ -141,11 +141,11 @@ func (s *Collector) AvailableConfigDiffsHashes() []DiffIndex {
 func (s *Collector) receiveDiagnostics(ctx context.Context) error {
 	for {
 		select {
-		case dump := <-s.clientDiagnostic.Configs:
+		case dump := <-s.clientDiagnostic.Configs():
 			s.onConfigDump(dump)
-		case meta := <-s.clientDiagnostic.FallbackCacheMetadata:
+		case meta := <-s.clientDiagnostic.FallbackCacheMetadataCh():
 			s.onFallbackCacheMetadata(meta)
-		case diff := <-s.clientDiagnostic.Diffs:
+		case diff := <-s.clientDiagnostic.DiffsCh():
 			s.onDiff(diff)
 		case <-ctx.Done():
 			if err := ctx.Err(); err != nil && !errors.Is(err, context.Canceled) {

@@ -51,7 +51,7 @@ const (
 func DoRequest(ctx context.Context, httpClient *http.Client, req *http.Request) (*http.Response, error) {
 	req = addHeaderFromContext(ctx, req)
 
-	httpResp, err := httpClient.Do(req)
+	httpResp, err := httpClient.Do(req) //nolint:gosec // Request URL comes from the controller's Konnect configuration.
 	if err != nil {
 		return nil, err
 	}

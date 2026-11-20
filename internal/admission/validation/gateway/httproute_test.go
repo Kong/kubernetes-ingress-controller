@@ -66,7 +66,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 						Listeners: []gatewayapi.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
+							Protocol: gatewayapi.HTTPProtocolType,
 							AllowedRoutes: &gatewayapi.AllowedRoutes{
 								Kinds: []gatewayapi.RouteGroupKind{{
 									Group: &group,
@@ -110,7 +110,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 						Listeners: []gatewayapi.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
+							Protocol: gatewayapi.HTTPProtocolType,
 							AllowedRoutes: &gatewayapi.AllowedRoutes{
 								Kinds: []gatewayapi.RouteGroupKind{{
 									Group: &group,
@@ -150,7 +150,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 						Listeners: []gatewayapi.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
+							Protocol: gatewayapi.HTTPProtocolType,
 							AllowedRoutes: &gatewayapi.AllowedRoutes{
 								Kinds: []gatewayapi.RouteGroupKind{{
 									Group: &group,
@@ -193,7 +193,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 						Listeners: []gatewayapi.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
+							Protocol: gatewayapi.HTTPProtocolType,
 							AllowedRoutes: &gatewayapi.AllowedRoutes{
 								Kinds: []gatewayapi.RouteGroupKind{{
 									Group: &group,
@@ -257,7 +257,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 						Listeners: []gatewayapi.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
+							Protocol: gatewayapi.HTTPProtocolType,
 							AllowedRoutes: &gatewayapi.AllowedRoutes{
 								Kinds: []gatewayapi.RouteGroupKind{{
 									Group: &group,
@@ -326,7 +326,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 						Listeners: []gatewayapi.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
+							Protocol: gatewayapi.HTTPProtocolType,
 							AllowedRoutes: &gatewayapi.AllowedRoutes{
 								Kinds: []gatewayapi.RouteGroupKind{{
 									Group: &group,
@@ -387,7 +387,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 						Listeners: []gatewayapi.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
+							Protocol: gatewayapi.HTTPProtocolType,
 							AllowedRoutes: &gatewayapi.AllowedRoutes{
 								Kinds: []gatewayapi.RouteGroupKind{{
 									Group: &group,
@@ -447,7 +447,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 						Listeners: []gatewayapi.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
+							Protocol: gatewayapi.HTTPProtocolType,
 							AllowedRoutes: &gatewayapi.AllowedRoutes{
 								Kinds: []gatewayapi.RouteGroupKind{{
 									Group: &group,
@@ -510,7 +510,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 						Listeners: []gatewayapi.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
+							Protocol: gatewayapi.HTTPProtocolType,
 							AllowedRoutes: &gatewayapi.AllowedRoutes{
 								Kinds: []gatewayapi.RouteGroupKind{{
 									Group: &group,
@@ -589,7 +589,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 						Listeners: []gatewayapi.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
+							Protocol: gatewayapi.HTTPProtocolType,
 							AllowedRoutes: &gatewayapi.AllowedRoutes{
 								Kinds: []gatewayapi.RouteGroupKind{{
 									Group: &group,
@@ -668,7 +668,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 						Listeners: []gatewayapi.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
+							Protocol: gatewayapi.HTTPProtocolType,
 							AllowedRoutes: &gatewayapi.AllowedRoutes{
 								Kinds: []gatewayapi.RouteGroupKind{{
 									Group: &group,
@@ -731,7 +731,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 						Listeners: []gatewayapi.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
+							Protocol: gatewayapi.HTTPProtocolType,
 							AllowedRoutes: &gatewayapi.AllowedRoutes{
 								Kinds: []gatewayapi.RouteGroupKind{{
 									Group: &group,
@@ -776,7 +776,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 						Listeners: []gatewayapi.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
+							Protocol: gatewayapi.HTTPProtocolType,
 							AllowedRoutes: &gatewayapi.AllowedRoutes{
 								Kinds: []gatewayapi.RouteGroupKind{{
 									Group: &group,
@@ -832,7 +832,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 						Listeners: []gatewayapi.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
+							Protocol: gatewayapi.HTTPProtocolType,
 							AllowedRoutes: &gatewayapi.AllowedRoutes{
 								Kinds: []gatewayapi.RouteGroupKind{{
 									Group: &group,
@@ -884,7 +884,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 						Listeners: []gatewayapi.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
+							Protocol: gatewayapi.HTTPProtocolType,
 							AllowedRoutes: &gatewayapi.AllowedRoutes{
 								Kinds: []gatewayapi.RouteGroupKind{{
 									Group: &group,
@@ -939,7 +939,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 						Listeners: []gatewayapi.Listener{{
 							Name:     "http",
 							Port:     80,
-							Protocol: (gatewayapi.HTTPProtocolType),
+							Protocol: gatewayapi.HTTPProtocolType,
 							AllowedRoutes: &gatewayapi.AllowedRoutes{
 								Kinds: []gatewayapi.RouteGroupKind{{
 									Group: &group,

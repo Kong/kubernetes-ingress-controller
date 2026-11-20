@@ -66,9 +66,9 @@ func (rc RefChecker[T]) IsRefAllowedByGrant(
 		return isRefAllowedByGrant(
 			rc.log,
 			(*string)(br.Namespace),
-			(string)(br.Name),
-			(string)(*br.Group),
-			(string)(*br.Kind),
+			string(br.Name),
+			string(*br.Group),
+			string(*br.Kind),
 			allowedRefs,
 		)
 
@@ -81,9 +81,9 @@ func (rc RefChecker[T]) IsRefAllowedByGrant(
 		return isRefAllowedByGrant(
 			rc.log,
 			(*string)(br.Namespace),
-			(string)(br.Name),
-			(string)(*br.Group),
-			(string)(*br.Kind),
+			string(br.Name),
+			string(*br.Group),
+			string(*br.Kind),
 			allowedRefs,
 		)
 
@@ -95,8 +95,8 @@ func (rc RefChecker[T]) IsRefAllowedByGrant(
 
 		return isRefAllowedByGrant(
 			rc.log,
-			(br.Namespace),
-			(br.Name),
+			br.Namespace,
+			br.Name,
 			"configuration.konghq.com", // TODO https://github.com/Kong/kubernetes-ingress-controller/issues/6000
 			"KongPlugin",               // TODO These magic strings should become unnecessary once we work with client.Object
 			allowedRefs,

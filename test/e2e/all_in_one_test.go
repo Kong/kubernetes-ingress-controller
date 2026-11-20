@@ -355,7 +355,7 @@ func TestDeployAllInOneDBLESS(t *testing.T) {
 		<-time.After(10 * time.Second)
 
 		t.Log("ensure that controller pods didn't crash after scaling proxy to 0")
-		expectedControllerReplicas := *(deployments.GetController(ctx, t, env).Spec.Replicas)
+		expectedControllerReplicas := *deployments.GetController(ctx, t, env).Spec.Replicas
 		readyControllerReplicas := deployments.GetController(ctx, t, env).Status.ReadyReplicas
 		require.Equal(t, expectedControllerReplicas, readyControllerReplicas,
 			"controller replicas count should not change after scaling proxy to 0")

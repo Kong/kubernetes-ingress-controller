@@ -256,7 +256,7 @@ func getListenerStatus(
 			tlsResolvedRefReason := string(gatewayapi.ListenerReasonResolvedRefs)
 			for _, certRef := range listener.TLS.CertificateRefs {
 				// if the certificate is in the same namespace of the gateway, no ReferenceGrant is needed
-				if certRef.Namespace != nil && *certRef.Namespace != (gatewayapi.Namespace)(gateway.Namespace) {
+				if certRef.Namespace != nil && *certRef.Namespace != gatewayapi.Namespace(gateway.Namespace) {
 					// get the result of the certificate reference. If the returned reason is not successful, the loop
 					// must be broken because the secret reference isn't granted
 					tlsResolvedRefReason = getReferenceGrantConditionReason(gateway.Namespace, certRef, referenceGrants)
@@ -531,7 +531,7 @@ func getReferenceGrantConditionReason(
 	referenceGrants []gatewayapi.ReferenceGrant,
 ) string {
 	// no need to have this reference granted
-	if certRef.Namespace == nil || *certRef.Namespace == (gatewayapi.Namespace)(gatewayNamespace) {
+	if certRef.Namespace == nil || *certRef.Namespace == gatewayapi.Namespace(gatewayNamespace) {
 		return string(gatewayapi.ListenerReasonResolvedRefs)
 	}
 

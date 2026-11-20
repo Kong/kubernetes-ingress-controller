@@ -46,7 +46,7 @@ func main() {
 			defaultValue = fmt.Sprintf("`%s`", flag.DefValue)
 		}
 
-		markdown.WriteString(fmt.Sprintf("| %s | %s | %s | %s |\n", name, typ, description, defaultValue))
+		fmt.Fprintf(&markdown, "| %s | %s | %s | %s |\n", name, typ, description, defaultValue)
 	})
 
 	fmt.Print(markdown.String())

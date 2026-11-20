@@ -39,7 +39,7 @@ func UpdateReferencesToSecretOrConfigMap[t secretOrConfigMapT](
 ) error {
 	for nsName := range referencedSecretOrConfigMapNameMap {
 		var obj client.Object
-		switch (any)(referencedObject).(type) {
+		switch any(referencedObject).(type) {
 		case *corev1.Secret:
 			obj = &corev1.Secret{
 				TypeMeta: metav1.TypeMeta{

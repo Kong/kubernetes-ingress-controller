@@ -87,10 +87,9 @@ func (s *CheckServer) Start(ctx context.Context, addr string, logger logr.Logger
 	go func() {
 		<-ctx.Done()
 
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		// The original context is already done, so detach from its cancellation.
+		shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 5*time.Second)
 		defer cancel()
-		// We don't use the original context here as it's already done.
-		//nolint:contextcheck
 		err := server.Shutdown(shutdownCtx)
 		if err != nil {
 			logger.Error(err, "Healthz server shutdown failed")

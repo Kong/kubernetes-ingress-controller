@@ -8,6 +8,7 @@ Adding a new version? You'll need three changes:
   This is all the way at the bottom. It's the thing we always forget.
 --->
 
+- [3.5.15](#3515)
 - [3.5.14](#3514)
 - [3.5.13](#3513)
 - [3.5.12](#3512)
@@ -23,6 +24,7 @@ Adding a new version? You'll need three changes:
 - [3.5.2](#352)
 - [3.5.1](#351)
 - [3.5.0](#350)
+- [3.4.22](#3422)
 - [3.4.21](#3421)
 - [3.4.20](#3420)
 - [3.4.19](#3419)
@@ -138,9 +140,9 @@ Adding a new version? You'll need three changes:
 - [0.0.5](#005)
 - [0.0.4 and prior](#004-and-prior)
 
-## [3.5.14]
+## [3.5.15]
 
-> Release date: 2026-10-22
+> Release date: 2026-11-20
 
 ### Fixed
 
@@ -150,7 +152,15 @@ Adding a new version? You'll need three changes:
   default is not what should be sent, so plugins that reject their own default
   could not be configured, for example `key-auth`'s `identity_realms: []` with
   `principals` enabled.
+  [#8153](https://github.com/Kong/kubernetes-ingress-controller/pull/8153)
   [Kong/go-kong#643](https://github.com/Kong/go-kong/pull/643)
+
+## [3.5.14]
+
+> Release date: 2026-10-22
+
+### Fixed
+
 - Inherit the tags of the translated Kong certificate from the one with earliest
   creation timestamp, then lowest ID to keep the tags stable in merging certificates
   from multiple `Secret`s with the same certificate content.
@@ -416,6 +426,21 @@ Adding a new version? You'll need three changes:
   can be used for both hash_on (always) and hash_fallack (when primary hashing
   source is different than cookie).
   [#7582](https://github.com/Kong/kubernetes-ingress-controller/pull/7582)
+
+## [3.4.22]
+
+> Release date: 2026-11-20
+
+### Fixed
+
+- Bump go-kong to `v0.78.1`, which fixes `FillPluginsDefaults` replacing an
+  explicitly provided empty array of records in a plugin config with the field's
+  schema default. An empty array is the only way to ask for "none" when the
+  default is not what should be sent, so plugins that reject their own default
+  could not be configured, for example `key-auth`'s `identity_realms: []` with
+  `principals` enabled.
+  [#8153](https://github.com/Kong/kubernetes-ingress-controller/pull/8153)
+  [Kong/go-kong#643](https://github.com/Kong/go-kong/pull/643)
 
 ## [3.4.21]
 
@@ -4626,6 +4651,7 @@ Please read the changelog and test in your environment.
 - The initial versions were rapildy iterated to deliver
   a working ingress controller.
 
+[3.5.15]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.14...v3.5.15
 [3.5.14]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.13...v3.5.14
 [3.5.13]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.12...v3.5.13
 [3.5.12]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.11...v3.5.12
@@ -4641,6 +4667,7 @@ Please read the changelog and test in your environment.
 [3.5.2]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.1...v3.5.2
 [3.5.1]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.0...v3.5.1
 [3.5.0]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.7...v3.5.0
+[3.4.22]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.21...v3.4.22
 [3.4.21]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.20...v3.4.21
 [3.4.20]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.19...v3.4.20
 [3.4.19]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.4.18...v3.4.19

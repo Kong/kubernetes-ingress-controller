@@ -8,6 +8,7 @@ Adding a new version? You'll need three changes:
   This is all the way at the bottom. It's the thing we always forget.
 --->
 
+- [3.5.15](#3515)
 - [3.5.14](#3514)
 - [3.5.13](#3513)
 - [3.5.12](#3512)
@@ -136,6 +137,21 @@ Adding a new version? You'll need three changes:
 - [0.1.0](#010)
 - [0.0.5](#005)
 - [0.0.4 and prior](#004-and-prior)
+
+## [3.5.15]
+
+> Release date: 2026-11-20
+
+### Fixed
+
+- Bump go-kong to `v0.78.1`, which fixes `FillPluginsDefaults` replacing an
+  explicitly provided empty array of records in a plugin config with the field's
+  schema default. An empty array is the only way to ask for "none" when the
+  default is not what should be sent, so plugins that reject their own default
+  could not be configured, for example `key-auth`'s `identity_realms: []` with
+  `principals` enabled.
+  [#8153](https://github.com/Kong/kubernetes-ingress-controller/pull/8153)
+  [Kong/go-kong#643](https://github.com/Kong/go-kong/pull/643)
 
 ## [3.5.14]
 
@@ -4382,6 +4398,7 @@ Please read the changelog and test in your environment.
  - The initial versions  were rapildy iterated to deliver
    a working ingress controller.
 
+[3.5.15]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.14...v3.5.15
 [3.5.14]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.13...v3.5.14
 [3.5.13]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.12...v3.5.13
 [3.5.12]: https://github.com/kong/kubernetes-ingress-controller/compare/v3.5.11...v3.5.12

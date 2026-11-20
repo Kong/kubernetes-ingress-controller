@@ -2,6 +2,7 @@ package deckgen
 
 import (
 	"context"
+	"encoding/json"
 	"testing"
 
 	"github.com/go-logr/zapr"
@@ -55,6 +56,71 @@ func TestToDeckContent(t *testing.T) {
 			require.Equal(t, tc.expected, result)
 		})
 	}
+}
+
+// A KongPlugin that explicitly asks for an empty identity_realms must keep it:
+// key-auth rejects the schema default when principals are enabled (FTI-8081).
+func TestToDeckContent_KeepsEmptyIdentityRealms(t *testing.T) {
+	const keyAuthSchema = `{
+		"fields": [{
+			"config": {
+				"type": "record",
+				"fields": [{
+					"identity_realms": {
+						"type": "set",
+						"elements": {
+							"type": "record",
+							"fields": [
+								{ "scope": { "type": "string" } },
+								{ "id": { "type": "string" } },
+								{ "region": { "type": "string" } }
+							]
+						},
+						"default": [ { "scope": "cp", "region": null, "id": null } ]
+					}
+				}, {
+					"principals": {
+						"type": "record",
+						"fields": [
+							{ "enabled": { "type": "boolean", "default": false } },
+							{ "directory": { "type": "string", "default": "default" } }
+						]
+					}
+				}]
+			}
+		}]
+	}`
+
+	var schema map[string]any
+	require.NoError(t, json.Unmarshal([]byte(keyAuthSchema), &schema))
+
+	state := &kongstate.KongState{
+		Plugins: []kongstate.Plugin{
+			{
+				Plugin: kong.Plugin{
+					Name: kong.String("key-auth"),
+					Config: kong.Configuration{
+						"identity_realms": []any{},
+						"principals": map[string]any{
+							"enabled":   true,
+							"directory": "my-dir",
+						},
+					},
+				},
+			},
+		},
+	}
+
+	content := ToDeckContent(t.Context(), zapr.NewLogger(zap.NewNop()), state, GenerateDeckContentParams{
+		PluginSchemas: &mockPluginSchemaStore{schema: schema},
+	})
+
+	require.Len(t, content.Plugins, 1)
+	realms, err := json.Marshal(content.Plugins[0].Config["identity_realms"])
+	require.NoError(t, err)
+	t.Logf("identity_realms sent to the control plane: %s", realms)
+
+	require.Equal(t, []any{}, content.Plugins[0].Config["identity_realms"])
 }
 
 func TestFillPlugin(t *testing.T) {

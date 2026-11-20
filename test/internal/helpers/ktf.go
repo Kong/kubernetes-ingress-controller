@@ -83,7 +83,10 @@ func GenerateKongBuilder(_ context.Context) (*kong.Builder, []string, error) {
 	if testenv.DBMode() == testenv.DBModePostgres {
 		kongbuilder = kongbuilder.WithPostgreSQL()
 		// Use bitnamilegacy/postgresql since the bitnami/postgresql repository is gone.
+		kongbuilder = kongbuilder.WithAdditionalValue("postgresql.image.registry", "docker.io")
 		kongbuilder = kongbuilder.WithAdditionalValue("postgresql.image.repository", "bitnamilegacy/postgresql")
+		// Chart 3.x no longer defaults the tag; keep the one chart 2.x used.
+		kongbuilder = kongbuilder.WithAdditionalValue("postgresql.image.tag", "13.11.0-debian-11-r20")
 	}
 
 	flavor := testenv.KongRouterFlavor()
@@ -133,7 +136,10 @@ func GenerateKongBuilderWithController() (*kong.Builder, error) {
 	if testenv.DBMode() == testenv.DBModePostgres {
 		kongbuilder = kongbuilder.WithPostgreSQL()
 		// Use bitnamilegacy/postgresql since the bitnami/postgresql repository is gone.
+		kongbuilder = kongbuilder.WithAdditionalValue("postgresql.image.registry", "docker.io")
 		kongbuilder = kongbuilder.WithAdditionalValue("postgresql.image.repository", "bitnamilegacy/postgresql")
+		// Chart 3.x no longer defaults the tag; keep the one chart 2.x used.
+		kongbuilder = kongbuilder.WithAdditionalValue("postgresql.image.tag", "13.11.0-debian-11-r20")
 	}
 
 	flavor := testenv.KongRouterFlavor()

@@ -79,7 +79,7 @@ ARG REPO_INFO
 RUN CGO_ENABLED=0 GOOS=linux GOARCH="${TARGETARCH}" GO111MODULE=on make _build.fips
 
 ### distroless FIPS 140-2
-FROM gcr.io/distroless/static:nonroot@sha256:e8a4044e0b4ae4257efa45fc026c0bc30ad320d43bd4c1a7d5271bd241e386d0 AS distroless-fips
+FROM gcr.io/distroless/static:nonroot@sha256:2b7c93f6d6648c11f0e80a48558c8f77885eb0445213b8e69a6a0d7c89fc6ae4 AS distroless-fips
 WORKDIR /
 COPY --from=builder-fips /workspace/manager .
 USER 1000:1000
@@ -89,7 +89,7 @@ ENTRYPOINT ["/manager"]
 ### Distroless/default
 # Use distroless as minimal base image to package the manager binary
 # Refer to https://github.com/GoogleContainerTools/distroless for more details
-FROM gcr.io/distroless/static:nonroot@sha256:e8a4044e0b4ae4257efa45fc026c0bc30ad320d43bd4c1a7d5271bd241e386d0 AS distroless
+FROM gcr.io/distroless/static:nonroot@sha256:2b7c93f6d6648c11f0e80a48558c8f77885eb0445213b8e69a6a0d7c89fc6ae4 AS distroless
 ARG TAG
 ARG TARGETPLATFORM
 ARG TARGETOS

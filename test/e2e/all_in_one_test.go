@@ -64,14 +64,14 @@ func TestDeployAllInOneEnterpriseDBLESS(t *testing.T) {
 	}.Run(ctx, t, env)
 
 	t.Log("exposing the admin api so that enterprise features can be verified")
-	exposeAdminAPI(ctx, t, env, deployments.ProxyNN)
+	adminURL := exposeAdminAPI(ctx, t, env, deployments.ProxyNN)
 
 	t.Log("running ingress tests to verify all-in-one deployed ingress controller and proxy are functional")
 	deployIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 
 	t.Log("verifying enterprise mode was enabled properly")
-	verifyEnterprise(ctx, t, env, adminPassword)
+	verifyEnterprise(ctx, t, adminURL, adminPassword)
 }
 
 const postgresPath = "manifests/all-in-one-postgres.yaml"
@@ -264,11 +264,11 @@ func TestDeployAllInOneEnterprisePostgres(t *testing.T) {
 	verifyIngressWithEchoBackends(ctx, t, env, numberOfEchoBackends)
 
 	t.Log("exposing the admin api so that enterprise features can be verified")
-	exposeAdminAPI(ctx, t, env, deployments.ProxyNN)
+	adminURL := exposeAdminAPI(ctx, t, env, deployments.ProxyNN)
 
 	t.Log("this deployment used enterprise kong, verifying that enterprise functionality was set up properly")
-	verifyEnterprise(ctx, t, env, adminPassword)
-	verifyEnterpriseWithPostgres(ctx, t, env, adminPassword)
+	verifyEnterprise(ctx, t, adminURL, adminPassword)
+	verifyEnterpriseWithPostgres(ctx, t, adminURL, adminPassword)
 }
 
 func TestDeployAllInOnePostgresGatewayDiscovery(t *testing.T) {

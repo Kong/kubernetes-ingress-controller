@@ -43,6 +43,9 @@ PROJECT_DIR := $(shell dirname $(abspath $(lastword $(MAKEFILE_LIST))))
 TOOLS_VERSIONS_FILE = .tools_versions.yaml
 
 MISE := $(shell which mise)
+# aqua names release assets after the Go platform (darwin-arm64, linux-amd64).
+PLATFORM_OS := $(shell go env GOOS)
+PLATFORM_ARCH := $(shell go env GOARCH)
 .PHONY: mise
 mise:
 	@mise -V >/dev/null || (echo "mise - https://github.com/jdx/mise - not found. Please install it." && exit 1)
@@ -55,50 +58,45 @@ export MISE_DATA_DIR = $(PROJECT_DIR)/bin/
 # NOTE: mise targets use -q to silence the output.
 # Users can use MISE_VERBOSE=1 MISE_DEBUG=1 to get more verbose output.
 
-.PHONY: mise-plugin-install
-mise-plugin-install: mise
-	@$(MISE) plugin install --yes -q $(DEP) $(URL)
-
 .PHONY: mise-install
 mise-install: mise
 	@$(MISE) install -q $(DEP_VER)
 
+# Backend prefixes are explicit: aqua wherever it can install the tool, github
+# for controller-tools (its aqua package is go_install, which the aqua backend
+# rejects), go for crd-ref-docs and dlv (no installable aqua package).
+
 # Do not store yq's version in .tools_versions.yaml as it is used to get tool versions.
 # renovate: datasource=github-releases depName=mikefarah/yq
 YQ_VERSION = 4.47.2
-YQ = $(PROJECT_DIR)/bin/installs/yq/$(YQ_VERSION)/bin/yq
+YQ = $(PROJECT_DIR)/bin/installs/aqua-mikefarah-yq/$(YQ_VERSION)/yq
 .PHONY: yq
 yq: mise # Download yq locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=yq
-	@$(MAKE) mise-install DEP_VER=yq@$(YQ_VERSION)
+	@$(MAKE) mise-install DEP_VER=aqua:mikefarah/yq@$(YQ_VERSION)
 
 CONTROLLER_GEN_VERSION = $(shell $(YQ) -ojson -r '.controller-tools' < $(TOOLS_VERSIONS_FILE))
-CONTROLLER_GEN = $(PROJECT_DIR)/bin/installs/kube-controller-tools/$(CONTROLLER_GEN_VERSION)/bin/controller-gen
+CONTROLLER_GEN = $(PROJECT_DIR)/bin/installs/github-kubernetes-sigs-controller-tools/$(CONTROLLER_GEN_VERSION)/controller-gen
 .PHONY: controller-gen
 controller-gen: mise yq ## Download controller-gen locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=kube-controller-tools
-	@$(MAKE) mise-install DEP_VER=kube-controller-tools@$(CONTROLLER_GEN_VERSION)
+	@$(MAKE) mise-install DEP_VER=github:kubernetes-sigs/controller-tools@$(CONTROLLER_GEN_VERSION)
 
 KUSTOMIZE_VERSION = $(shell $(YQ) -ojson -r '.kustomize' < $(TOOLS_VERSIONS_FILE))
-KUSTOMIZE = $(PROJECT_DIR)/bin/installs/kustomize/$(KUSTOMIZE_VERSION)/bin/kustomize
+KUSTOMIZE = $(PROJECT_DIR)/bin/installs/aqua-kubernetes-sigs-kustomize/$(KUSTOMIZE_VERSION)/kustomize
 .PHONY: kustomize
 kustomize: mise yq ## Download kustomize locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=kustomize
-	@$(MAKE) mise-install DEP_VER=kustomize@$(KUSTOMIZE_VERSION)
+	@$(MAKE) mise-install DEP_VER=aqua:kubernetes-sigs/kustomize@$(KUSTOMIZE_VERSION)
 
 GOLANGCI_LINT_VERSION = $(shell $(YQ) -ojson -r '.golangci-lint' < $(TOOLS_VERSIONS_FILE))
-GOLANGCI_LINT = $(PROJECT_DIR)/bin/installs/golangci-lint/$(GOLANGCI_LINT_VERSION)/bin/golangci-lint
+GOLANGCI_LINT = $(PROJECT_DIR)/bin/installs/aqua-golangci-golangci-lint/$(GOLANGCI_LINT_VERSION)/golangci-lint-$(GOLANGCI_LINT_VERSION)-$(PLATFORM_OS)-$(PLATFORM_ARCH)/golangci-lint
 .PHONY: golangci-lint.download
 golangci-lint.download: mise yq ## Download golangci-lint locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=golangci-lint
-	@$(MAKE) mise-install DEP_VER=golangci-lint@$(GOLANGCI_LINT_VERSION)
+	@$(MAKE) mise-install DEP_VER=aqua:golangci/golangci-lint@$(GOLANGCI_LINT_VERSION)
 
 GOTESTSUM_VERSION = $(shell $(YQ) -ojson -r '.gotestsum' < $(TOOLS_VERSIONS_FILE))
-GOTESTSUM = $(PROJECT_DIR)/bin/installs/gotestsum/$(GOTESTSUM_VERSION)/bin/gotestsum
+GOTESTSUM = $(PROJECT_DIR)/bin/installs/aqua-gotestyourself-gotestsum/$(GOTESTSUM_VERSION)/gotestsum
 .PHONY: gotestsum
 gotestsum: yq ## Download gotestsum locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=gotestsum
-	@$(MAKE) mise-install DEP_VER=gotestsum@$(GOTESTSUM_VERSION)
+	@$(MAKE) mise-install DEP_VER=aqua:gotestyourself/gotestsum@$(GOTESTSUM_VERSION)
 
 CRD_REF_DOCS_VERSION = $(shell $(YQ) -ojson -r '.crd-ref-docs' < $(TOOLS_VERSIONS_FILE))
 CRD_REF_DOCS = $(PROJECT_DIR)/bin/installs/go-github-com-elastic-crd-ref-docs/$(CRD_REF_DOCS_VERSION)/bin/crd-ref-docs
@@ -107,11 +105,10 @@ crd-ref-docs: yq ## Download crd-ref-docs locally if necessary.
 	$(MAKE) mise-install DEP_VER=go:github.com/elastic/crd-ref-docs@$(CRD_REF_DOCS_VERSION)
 
 SKAFFOLD_VERSION = $(shell $(YQ) -ojson -r '.skaffold' < $(TOOLS_VERSIONS_FILE))
-SKAFFOLD = $(PROJECT_DIR)/bin/installs/skaffold/$(SKAFFOLD_VERSION)/bin/skaffold
+SKAFFOLD = $(PROJECT_DIR)/bin/installs/aqua-google-container-tools-skaffold/$(SKAFFOLD_VERSION)/skaffold-$(PLATFORM_OS)-$(PLATFORM_ARCH)
 .PHONY: skaffold
 skaffold: mise yq ## Download skaffold locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=skaffold
-	@$(MAKE) mise-install DEP_VER=skaffold@$(SKAFFOLD_VERSION)
+	@$(MAKE) mise-install DEP_VER=aqua:GoogleContainerTools/skaffold@$(SKAFFOLD_VERSION)
 
 DELVE_VERSION = $(shell $(YQ) -ojson -r '.delve' < $(TOOLS_VERSIONS_FILE))
 DLV = $(PROJECT_DIR)/bin/installs/go-github-com-go-delve-delve-cmd-dlv/$(DELVE_VERSION)/bin/dlv
@@ -120,39 +117,34 @@ dlv: yq ## Download dlv locally if necessary.
 	$(MAKE) mise-install DEP_VER=go:github.com/go-delve/delve/cmd/dlv@$(DELVE_VERSION)
 
 SETUP_ENVTEST_VERSION = $(shell $(YQ) -ojson -r '.setup-envtest' < $(TOOLS_VERSIONS_FILE))
-SETUP_ENVTEST = $(PROJECT_DIR)/bin/installs/setup-envtest/$(SETUP_ENVTEST_VERSION)/bin/setup-envtest
+SETUP_ENVTEST = $(PROJECT_DIR)/bin/installs/aqua-kubernetes-sigs-controller-runtime-setup-envtest/$(SETUP_ENVTEST_VERSION)/setup-envtest
 .PHONY: setup-envtest
 setup-envtest: mise yq ## Download setup-envtest locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=setup-envtest
-	@$(MAKE) mise-install DEP_VER=setup-envtest@$(SETUP_ENVTEST_VERSION)
+	@$(MAKE) mise-install DEP_VER=aqua:kubernetes-sigs/controller-runtime/setup-envtest@$(SETUP_ENVTEST_VERSION)
 
 STATICCHECK_VERSION = $(shell $(YQ) -ojson -r '.staticcheck' < $(TOOLS_VERSIONS_FILE))
-STATICCHECK = $(PROJECT_DIR)/bin/installs/staticcheck/$(STATICCHECK_VERSION)/bin/staticcheck
+STATICCHECK = $(PROJECT_DIR)/bin/installs/aqua-dominikh-go-tools-staticcheck/$(STATICCHECK_VERSION)/staticcheck/staticcheck
 .PHONY: staticcheck.download
 staticcheck.download: yq ## Download staticcheck locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=staticcheck
-	@$(MISE) install staticcheck@$(STATICCHECK_VERSION)
+	@$(MAKE) mise-install DEP_VER=aqua:dominikh/go-tools/staticcheck@$(STATICCHECK_VERSION)
 
 GOJUNIT_REPORT_VERSION = $(shell $(YQ) -ojson -r '.gojunit-report' < $(TOOLS_VERSIONS_FILE))
-GOJUNIT_REPORT = $(PROJECT_DIR)/bin/installs/go-junit-report/$(GOJUNIT_REPORT_VERSION)/bin/go-junit-report
+GOJUNIT_REPORT = $(PROJECT_DIR)/bin/installs/aqua-jstemmer-go-junit-report/$(GOJUNIT_REPORT_VERSION)/go-junit-report
 .PHONY: go-junit-report
 go-junit-report: yq ## Download go-junit-report locally if necessary.
-	@$(MAKE) mise-plugin-install DEP=go-junit-report
-	@$(MISE) install go-junit-report@$(GOJUNIT_REPORT_VERSION)
+	@$(MAKE) mise-install DEP_VER=aqua:jstemmer/go-junit-report@$(GOJUNIT_REPORT_VERSION)
 
 ACTIONLINT_VERSION = $(shell $(YQ) -r '.actionlint' < $(TOOLS_VERSIONS_FILE))
-ACTIONLINT = $(PROJECT_DIR)/bin/installs/actionlint/$(ACTIONLINT_VERSION)/bin/actionlint
+ACTIONLINT = $(PROJECT_DIR)/bin/installs/aqua-rhysd-actionlint/$(ACTIONLINT_VERSION)/actionlint
 .PHONY: download.actionlint
 download.actionlint: mise yq ## Download actionlint locally if necessary.
-	@$(MISE) plugin install --yes -q actionlint
-	@$(MISE) install -q actionlint@$(ACTIONLINT_VERSION)
+	@$(MAKE) mise-install DEP_VER=aqua:rhysd/actionlint@$(ACTIONLINT_VERSION)
 
 SHELLCHECK_VERSION = $(shell $(YQ) -r '.shellcheck' < $(TOOLS_VERSIONS_FILE))
-SHELLCHECK = $(PROJECT_DIR)/bin/installs/shellcheck/$(SHELLCHECK_VERSION)/bin/shellcheck
+SHELLCHECK = $(PROJECT_DIR)/bin/installs/aqua-koalaman-shellcheck/$(SHELLCHECK_VERSION)/shellcheck-v$(SHELLCHECK_VERSION)/shellcheck
 .PHONY: download.shellcheck
 download.shellcheck: mise yq ## Download shellcheck locally if necessary.
-	@$(MISE) plugin install --yes -q shellcheck
-	@$(MISE) install -q shellcheck@$(SHELLCHECK_VERSION)
+	@$(MAKE) mise-install DEP_VER=aqua:koalaman/shellcheck@$(SHELLCHECK_VERSION)
 
 MODERNIZE_VERSION = $(shell $(YQ) -r '.modernize' < $(TOOLS_VERSIONS_FILE))
 MODERNIZE = $(PROJECT_DIR)/bin/modernize

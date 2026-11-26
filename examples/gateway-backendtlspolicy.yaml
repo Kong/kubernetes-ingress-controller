@@ -51,12 +51,12 @@ spec:
   options:
     tls-verify-depth: "1"
   targetRefs:
-  - group: core
+  - group: ""
     kind: Service
     name: goecho
   validation:
     caCertificateRefs:
-    - group: core
+    - group: ""
       kind: ConfigMap
       name: ca
     hostname: goecho

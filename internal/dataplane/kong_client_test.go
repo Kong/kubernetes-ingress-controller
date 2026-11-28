@@ -981,7 +981,7 @@ func TestKongClient_FallbackConfiguration_SuccessfulRecovery(t *testing.T) {
 	ctx := t.Context()
 	configChangeDetector := mocks.ConfigurationChangeDetector{ConfigurationChanged: true}
 	lastValidConfigFetcher := &mockKongLastValidConfigFetcher{}
-	diagnosticsCh := make(chan diagnostics.ConfigDump, 10) // make it buffered to avoid blocking
+	diagnosticClient := diagnostics.NewClient(false, 10, 10, 10)
 
 	// We'll use KongConsumer as an example of a broken object, but it could be any supported type
 	// for the purpose of this test as the fallback config generator is mocked anyway.
@@ -1033,9 +1033,7 @@ func TestKongClient_FallbackConfiguration_SuccessfulRecovery(t *testing.T) {
 				&originalCache,
 				fallbackConfigGenerator,
 				mocks.MetricsRecorder{},
-				WithDiagnosticsClient(diagnostics.Client{
-					Configs: diagnosticsCh,
-				}),
+				WithDiagnosticsClient(diagnosticClient),
 			)
 			require.NoError(t, err)
 
@@ -1126,7 +1124,7 @@ func TestKongClient_FallbackConfiguration_SuccessfulRecovery(t *testing.T) {
 	// silly hack to churn through those until we get to the successful fallback.
 	var dump diagnostics.ConfigDump
 	require.Eventually(t, func() bool {
-		dump = <-diagnosticsCh
+		dump = <-diagnosticClient.Configs()
 		return dump.Meta.Fallback
 	}, time.Second, time.Nanosecond)
 
@@ -1146,7 +1144,7 @@ func TestKongClient_FallbackConfiguration_SkipsUpdateWhenInSync(t *testing.T) {
 	configBuilder := newMockKongConfigBuilder()
 	lastValidConfigFetcher := &mockKongLastValidConfigFetcher{}
 	fallbackConfigGenerator := newMockFallbackConfigGenerator()
-	diagnosticsCh := make(chan diagnostics.ConfigDump, 10) // make it buffered to avoid blocking
+	diagnosticClient := diagnostics.NewClient(false, 10, 10, 10)
 
 	// We'll use KongConsumer as an example of an object, but it could be any supported type
 	// for the purpose of this test as the fallback config generator is mocked anyway.
@@ -1167,9 +1165,7 @@ func TestKongClient_FallbackConfiguration_SkipsUpdateWhenInSync(t *testing.T) {
 		&originalCache,
 		fallbackConfigGenerator,
 		mocks.MetricsRecorder{},
-		WithDiagnosticsClient(diagnostics.Client{
-			Configs: diagnosticsCh,
-		}),
+		WithDiagnosticsClient(diagnosticClient),
 	)
 	require.NoError(t, err)
 
@@ -1290,7 +1286,7 @@ func TestKongClient_FallbackConfiguration_FailedRecovery(t *testing.T) {
 	configBuilder := newMockKongConfigBuilder()
 	lastValidConfigFetcher := &mockKongLastValidConfigFetcher{}
 	fallbackConfigGenerator := newMockFallbackConfigGenerator()
-	diagnosticsCh := make(chan diagnostics.ConfigDump, 10) // make it buffered to avoid blocking
+	diagnosticClient := diagnostics.NewClient(false, 10, 10, 10)
 
 	// We'll use KongConsumer as an example of a broken object, but it could be any supported type
 	// for the purpose of this test as the fallback config generator is mocked anyway.
@@ -1312,9 +1308,7 @@ func TestKongClient_FallbackConfiguration_FailedRecovery(t *testing.T) {
 		&originalCache,
 		fallbackConfigGenerator,
 		mocks.MetricsRecorder{},
-		WithDiagnosticsClient(diagnostics.Client{
-			Configs: diagnosticsCh,
-		}),
+		WithDiagnosticsClient(diagnosticClient),
 	)
 	require.NoError(t, err)
 
@@ -1348,7 +1342,7 @@ func TestKongClient_FallbackConfiguration_FailedRecovery(t *testing.T) {
 	// silly hack to churn through those until we get to the failed fallback.
 	var dump diagnostics.ConfigDump
 	require.Eventually(t, func() bool {
-		dump = <-diagnosticsCh
+		dump = <-diagnosticClient.Configs()
 		return dump.Meta.Fallback
 	}, time.Second, time.Nanosecond)
 
@@ -1494,16 +1488,12 @@ func TestKongClient_ConfigDumpSanitization(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			diagnosticsCh := make(chan diagnostics.ConfigDump, 1) // make it buffered to avoid blocking
-			kongClient.diagnostic = diagnostics.Client{
-				Configs:               diagnosticsCh,
-				DumpsIncludeSensitive: tc.dumpsIncludeSensitive,
-			}
+			kongClient.diagnostic = diagnostics.NewClient(tc.dumpsIncludeSensitive, 1, 1, 1)
 			ctx := t.Context()
 			err := kongClient.Update(ctx)
 			require.NoError(t, err)
 
-			dump := <-diagnosticsCh
+			dump := <-kongClient.diagnostic.Configs()
 			require.NotNil(t, dump.Config)
 			require.Len(t, dump.Config.Certificates, 1)
 			dumpedCert := dump.Config.Certificates[0]
